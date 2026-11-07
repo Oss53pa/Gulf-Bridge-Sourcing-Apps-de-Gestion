@@ -277,6 +277,7 @@
   "mettre_en_attente": "Mettre en attente du tiers",
   "nature": {
    "delai": "Délais en alerte",
+   "ouverture": "Ouverture menacée",
    "piece": "Pièces manquantes",
    "point_bloquant": "Points bloquants",
    "tache": "Tâches"
@@ -470,11 +471,13 @@
   "GBS_COMPTE_DEJA_VERIFIE": "Compte déjà vérifié.",
   "GBS_COMPTE_NON_VERIFIE": "Paiement refusé : le compte n'est pas vérifié.",
   "GBS_CONTRAT_NON_SIGNE": "La commission se facture à la signature du premier contrat fournisseur.",
+  "GBS_DATE_OUVERTURE_ABSENTE": "Ce dossier n'a pas de date d'ouverture du site.",
   "GBS_DATE_OUVERTURE_OBLIGATOIRE": "Un dossier d'équipement d'un site exige la date d'ouverture, le forfait et le taux réduit.",
   "GBS_DATE_RECEPTION_FUTURE": "La date de réception ne peut pas être dans le futur.",
   "GBS_DD_DEJA_STATUEE": "Due diligence déjà statuée.",
   "GBS_DD_FIGEE": "La référence d'une due diligence ne se modifie pas.",
   "GBS_DD_REQUISE": "Due diligence validée et en cours de validité exigée.",
+  "GBS_DELAIS_CIBLES_MANQUANTS": "Délais cibles manquants : définissez-les dans le paramétrage.",
   "GBS_DEPOT_ECHEC": "Le dépôt du fichier a échoué. Réessayez.",
   "GBS_DEROGATION_ADMIN": "Dérogation réservée à l'administratrice.",
   "GBS_DEVISE_COMPTE": "La devise ne correspond pas au compte.",
@@ -908,6 +911,19 @@
  "origines": {
   "agent_pays": "Agent pays",
   "direct": "Direct"
+ },
+ "ouverture": {
+  "aide": "Dates au plus tard calculées à rebours depuis l'ouverture avec les délais cibles, en jours ouvrés ; fin projetée calculée depuis l'état réel du dossier. La clôture suit l'ouverture et n'entre pas dans le calcul.",
+  "appliquer": "Reporter dans le planning",
+  "avance": "Avance sur la date d'ouverture : {{n}} jour(s) ouvré(s).",
+  "cibles_manquantes": "Planning à rebours impossible : délai cible non défini pour {{liste}} (Paramétrage → Délais cibles).",
+  "debut_au_plus_tard": "Début au plus tard",
+  "en_retard": "En retard sur le planning",
+  "fin_au_plus_tard": "Fin au plus tard",
+  "fin_projetee": "Fin projetée",
+  "intenable": "Date d'ouverture intenable : fin projetée le {{date}}, soit {{n}} jour(s) ouvré(s) de retard.",
+  "intenable_tache": "Date d'ouverture intenable : {{n}} jour(s) ouvré(s) de retard projeté",
+  "titre": "Planning à rebours — ouverture le {{date}}"
  },
  "paiements": {
   "a_traiter": "À traiter",

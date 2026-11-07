@@ -782,6 +782,24 @@ E.update({
  'GBS_AVENANT_PERIME': ('La commande a changé depuis la rédaction de l\'avenant : rédigez-en un nouveau.', 'The order changed since the amendment was drafted: draft a new one.', '起草后订单已变更：请重新起草补充协议。'),
  'GBS_PIECE_DEJA_FOURNIE': ('Cette pièce a déjà été fournie.', 'This document has already been provided.', '该文件已提交。'),
 })
+T.update({
+ 'delais.nature.ouverture': ('Ouverture menacée', 'Opening at risk', '开业日期受威胁'),
+ 'ouverture.titre': ('Planning à rebours — ouverture le {{date}}', 'Backward schedule — opening on {{date}}', '倒排计划 — 开业日期 {{date}}'),
+ 'ouverture.appliquer': ('Reporter dans le planning', 'Apply to the schedule', '写入计划'),
+ 'ouverture.cibles_manquantes': ('Planning à rebours impossible : délai cible non défini pour {{liste}} (Paramétrage → Délais cibles).', 'Backward schedule impossible: no target lead time for {{liste}} (Settings → Target lead times).', '无法倒排计划：{{liste}} 未设定目标期限（参数设置 → 目标期限）。'),
+ 'ouverture.intenable': ('Date d\'ouverture intenable : fin projetée le {{date}}, soit {{n}} jour(s) ouvré(s) de retard.', 'Opening date not achievable: projected end on {{date}}, {{n}} working day(s) late.', '开业日期无法实现：预计完成于 {{date}}，延误 {{n}} 个工作日。'),
+ 'ouverture.avance': ('Avance sur la date d\'ouverture : {{n}} jour(s) ouvré(s).', 'Ahead of the opening date: {{n}} working day(s).', '较开业日期提前 {{n}} 个工作日。'),
+ 'ouverture.debut_au_plus_tard': ('Début au plus tard', 'Latest start', '最迟开始'),
+ 'ouverture.fin_au_plus_tard': ('Fin au plus tard', 'Latest finish', '最迟完成'),
+ 'ouverture.fin_projetee': ('Fin projetée', 'Projected finish', '预计完成'),
+ 'ouverture.en_retard': ('En retard sur le planning', 'Behind schedule', '落后于计划'),
+ 'ouverture.aide': ('Dates au plus tard calculées à rebours depuis l\'ouverture avec les délais cibles, en jours ouvrés ; fin projetée calculée depuis l\'état réel du dossier. La clôture suit l\'ouverture et n\'entre pas dans le calcul.', 'Latest dates computed backwards from the opening using target lead times, in working days; projected finish computed from the actual state of the file. Closing follows the opening and is not included.', '最迟日期按目标期限从开业日倒推（工作日）；预计完成日期按项目实际进度计算。结案在开业之后，不计入。'),
+ 'ouverture.intenable_tache': ('Date d\'ouverture intenable : {{n}} jour(s) ouvré(s) de retard projeté', 'Opening date not achievable: {{n}} working day(s) projected delay', '开业日期无法实现：预计延误 {{n}} 个工作日'),
+})
+E.update({
+ 'GBS_DATE_OUVERTURE_ABSENTE': ('Ce dossier n\'a pas de date d\'ouverture du site.', 'This file has no site opening date.', '该项目没有开业日期。'),
+ 'GBS_DELAIS_CIBLES_MANQUANTS': ('Délais cibles manquants : définissez-les dans le paramétrage.', 'Target lead times missing: set them in the settings.', '缺少目标期限：请在参数设置中设定。'),
+})
 for code, v in E.items():
     T['erreurs.' + code] = v
 

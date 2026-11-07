@@ -277,6 +277,7 @@
   "mettre_en_attente": "设为等待第三方",
   "nature": {
    "delai": "期限预警",
+   "ouverture": "开业日期受威胁",
    "piece": "缺失文件",
    "point_bloquant": "阻碍事项",
    "tache": "任务"
@@ -470,11 +471,13 @@
   "GBS_COMPTE_DEJA_VERIFIE": "账户已核验。",
   "GBS_COMPTE_NON_VERIFIE": "付款被拒：账户未核验。",
   "GBS_CONTRAT_NON_SIGNE": "首个供应商合同签署后方可开具佣金发票。",
+  "GBS_DATE_OUVERTURE_ABSENTE": "该项目没有开业日期。",
   "GBS_DATE_OUVERTURE_OBLIGATOIRE": "场所配套项目必须填写开业日期、包干费和优惠费率。",
   "GBS_DATE_RECEPTION_FUTURE": "收到日期不能晚于当前时间。",
   "GBS_DD_DEJA_STATUEE": "尽职调查已有结论。",
   "GBS_DD_FIGEE": "尽职调查编号不可更改。",
   "GBS_DD_REQUISE": "需有效的尽职调查。",
+  "GBS_DELAIS_CIBLES_MANQUANTS": "缺少目标期限：请在参数设置中设定。",
   "GBS_DEPOT_ECHEC": "文件上传失败，请重试。",
   "GBS_DEROGATION_ADMIN": "例外放行仅限管理员。",
   "GBS_DEVISE_COMPTE": "币种与账户不符。",
@@ -908,6 +911,19 @@
  "origines": {
   "agent_pays": "国家代理",
   "direct": "直接"
+ },
+ "ouverture": {
+  "aide": "最迟日期按目标期限从开业日倒推（工作日）；预计完成日期按项目实际进度计算。结案在开业之后，不计入。",
+  "appliquer": "写入计划",
+  "avance": "较开业日期提前 {{n}} 个工作日。",
+  "cibles_manquantes": "无法倒排计划：{{liste}} 未设定目标期限（参数设置 → 目标期限）。",
+  "debut_au_plus_tard": "最迟开始",
+  "en_retard": "落后于计划",
+  "fin_au_plus_tard": "最迟完成",
+  "fin_projetee": "预计完成",
+  "intenable": "开业日期无法实现：预计完成于 {{date}}，延误 {{n}} 个工作日。",
+  "intenable_tache": "开业日期无法实现：预计延误 {{n}} 个工作日",
+  "titre": "倒排计划 — 开业日期 {{date}}"
  },
  "paiements": {
   "a_traiter": "待处理",

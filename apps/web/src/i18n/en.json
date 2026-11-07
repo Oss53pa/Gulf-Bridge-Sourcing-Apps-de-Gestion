@@ -277,6 +277,7 @@
   "mettre_en_attente": "Set waiting for third party",
   "nature": {
    "delai": "Deadline alerts",
+   "ouverture": "Opening at risk",
    "piece": "Missing documents",
    "point_bloquant": "Blocking issues",
    "tache": "Tasks"
@@ -470,11 +471,13 @@
   "GBS_COMPTE_DEJA_VERIFIE": "Account already verified.",
   "GBS_COMPTE_NON_VERIFIE": "Payment refused: the account is not verified.",
   "GBS_CONTRAT_NON_SIGNE": "Commission is invoiced when the first supplier contract is signed.",
+  "GBS_DATE_OUVERTURE_ABSENTE": "This file has no site opening date.",
   "GBS_DATE_OUVERTURE_OBLIGATOIRE": "A site fit-out file requires the opening date, the fee and the reduced rate.",
   "GBS_DATE_RECEPTION_FUTURE": "The receipt date cannot be in the future.",
   "GBS_DD_DEJA_STATUEE": "Due diligence already decided.",
   "GBS_DD_FIGEE": "A due diligence reference cannot change.",
   "GBS_DD_REQUISE": "A validated, unexpired due diligence is required.",
+  "GBS_DELAIS_CIBLES_MANQUANTS": "Target lead times missing: set them in the settings.",
   "GBS_DEPOT_ECHEC": "File upload failed. Try again.",
   "GBS_DEROGATION_ADMIN": "Waiver reserved to the administrator.",
   "GBS_DEVISE_COMPTE": "Currency does not match the account.",
@@ -908,6 +911,19 @@
  "origines": {
   "agent_pays": "Country agent",
   "direct": "Direct"
+ },
+ "ouverture": {
+  "aide": "Latest dates computed backwards from the opening using target lead times, in working days; projected finish computed from the actual state of the file. Closing follows the opening and is not included.",
+  "appliquer": "Apply to the schedule",
+  "avance": "Ahead of the opening date: {{n}} working day(s).",
+  "cibles_manquantes": "Backward schedule impossible: no target lead time for {{liste}} (Settings → Target lead times).",
+  "debut_au_plus_tard": "Latest start",
+  "en_retard": "Behind schedule",
+  "fin_au_plus_tard": "Latest finish",
+  "fin_projetee": "Projected finish",
+  "intenable": "Opening date not achievable: projected end on {{date}}, {{n}} working day(s) late.",
+  "intenable_tache": "Opening date not achievable: {{n}} working day(s) projected delay",
+  "titre": "Backward schedule — opening on {{date}}"
  },
  "paiements": {
   "a_traiter": "To handle",

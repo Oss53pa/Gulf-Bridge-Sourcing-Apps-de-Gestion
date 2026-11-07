@@ -266,7 +266,8 @@ Ces points sont à vérifier ou à trancher. Ils ne sont pas couverts par le cod
 | Application inspecteur hors ligne, interface mandarin validée | Le chinois est traduit mais **non validé** par un locuteur natif | 1 |
 | Jours ouvrés et fériés, délais cibles avec voyants, attente d'un tiers, mes tâches, délégation en cas d'absence | **Fait** (migration 14). Délais cibles à saisir par la fondatrice ; calendrier chinois officiel et fêtes musulmanes à saisir chaque année ; jours fériés proposés « à confirmer » | 1 |
 | Avenants (prix et planning recalculés à la signature), demande et relance des pièces manquantes, passage en point bloquant | **Fait** (migration 15). Relance sous forme de tâche interne tant que la page de suivi client, les formulaires fournisseurs et l'e-mail n'existent pas ; délais de relance (3 j) et de blocage (10 j) à confirmer | 1 |
-| Rétroplanning depuis la date d'ouverture du site, signature électronique des avenants | Non commencé | 1 |
+| Planning à rebours depuis la date d'ouverture du site (M33) : dates au plus tard, fin projetée, avance ou retard, alerte « ouverture intenable » | **Fait** (migration 16). Exige les délais cibles de toutes les phases ; l'avance sera affichée au client avec la page de suivi | 1 |
+| Signature électronique intégrée (mandats, contrats, avenants) | Non commencé (document signé déposé et validé par l'administratrice) | 1 |
 | Négoce complet, entrepôt, conformité à l'import, garanties, appels d'offres, trésorerie, SAV, portails avec compte, rentabilité | Non commencé | 2 |
 | WeChat, WeChat Pay et Alipay connectés, suivi automatique des conteneurs, IA | Non commencé | 3 |
 | Écrans de la maquette hors lot 0 (Prospection, Gantt, Productivité, etc.) | Affichés dans le Sommaire avec leur lot, non ouvrables | 1 à 3 |

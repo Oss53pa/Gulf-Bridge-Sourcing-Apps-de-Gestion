@@ -29,8 +29,14 @@ interface Tache {
   id: string; dossier_id: string | null; phase: string | null; libelle: string; details: string | null; assigne_a: string;
   echeance: string | null; statut: string; cree_par: string | null;
 }
+interface PlanningOuverture {
+  date_ouverture: string | null; cibles_manquantes?: string[]; debut_au_plus_tard?: string | null; fin_projetee?: string | null;
+  marge_jours_ouvres?: number | null; intenable?: boolean;
+  phases?: { phase: string; ordre: number; statut: string; cible: number | null; debut_au_plus_tard: string | null;
+    fin_au_plus_tard: string | null; fin_projetee: string | null; en_retard: boolean }[];
+}
 interface ElementMesTaches {
-  nature: 'tache' | 'point_bloquant' | 'piece' | 'delai'; objet_id: string; dossier_id: string | null;
+  nature: 'tache' | 'point_bloquant' | 'piece' | 'delai' | 'ouverture'; objet_id: string; dossier_id: string | null;
   dossier_reference: string | null; libelle: string; echeance: string | null; urgence: number;
 }
 
@@ -93,6 +99,7 @@ export function DelaisDossier({ dossier, phases, onChange }: { dossier: Dossier;
         </table>
       )}
       <p className="mute">{t('delais.aide_horloge')}</p>
+      {dossier.date_ouverture_site && <PlanningOuvertureDossier dossier={dossier} peutAppliquer={peutPiloter} onChange={onChange} />}
       {peutPiloter && courante && (
         <div className="actions" style={{ flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <Champ label={t('delais.responsable_phase')}>
@@ -167,6 +174,45 @@ function NouvelleTache({ dossierId, phase, equipe, onClose, onSaved }: {
   );
 }
 
+function PlanningOuvertureDossier({ dossier, peutAppliquer, onChange }: { dossier: Dossier; peutAppliquer: boolean; onChange: () => void }) {
+  const { t } = useTranslation();
+  const { langue } = useAuth();
+  const p = useAsync(async () => ok(await supabase.rpc('planning_ouverture', { p_dossier: dossier.id })) as PlanningOuverture, [dossier.id]);
+  const a = useAction();
+  const d = p.data;
+  if (!d || !d.date_ouverture) return p.erreur ? <Bandeau type="err">{p.erreur}</Bandeau> : null;
+  const manquantes = d.cibles_manquantes ?? [];
+  const appliquer = async () => {
+    if (await a.executer(async () => ok(await supabase.rpc('appliquer_planning_ouverture', { p_dossier: dossier.id })))) { void p.recharger(); onChange(); }
+  };
+  return (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div className="section-titre">{t('ouverture.titre', { date: date(d.date_ouverture, langue) })}</div>
+        {peutAppliquer && manquantes.length === 0 &&
+          <Bouton petit disabled={a.enCours} onClick={() => void appliquer()}>{t('ouverture.appliquer')}</Bouton>}
+      </div>
+      <Bandeau type="err">{a.erreur}</Bandeau>
+      {manquantes.length > 0 ? (
+        <Bandeau>{t('ouverture.cibles_manquantes', { liste: manquantes.map((x) => t(`phases.${x}`)).join(', ') })}</Bandeau>
+      ) : d.marge_jours_ouvres == null ? null : d.intenable ? (
+        <Bandeau type="err">{t('ouverture.intenable', { n: Math.abs(d.marge_jours_ouvres), date: d.fin_projetee ? date(d.fin_projetee, langue) : '—' })}</Bandeau>
+      ) : (
+        <Bandeau type="ok">{t('ouverture.avance', { n: d.marge_jours_ouvres })}</Bandeau>
+      )}
+      <table className="t"><thead><tr><th>{t('champs.phase')}</th><th>{t('ouverture.debut_au_plus_tard')}</th><th>{t('ouverture.fin_au_plus_tard')}</th>
+        <th>{t('ouverture.fin_projetee')}</th><th /></tr></thead>
+        <tbody>{(d.phases ?? []).map((x) => (
+          <tr key={x.phase}><td>{x.ordre}. {t(`phases.${x.phase}`)}</td>
+            <td className="ref">{x.debut_au_plus_tard ? date(x.debut_au_plus_tard, langue) : '—'}</td>
+            <td className="ref">{x.fin_au_plus_tard ? date(x.fin_au_plus_tard, langue) : '—'}</td>
+            <td className="ref">{x.fin_projetee ? date(x.fin_projetee, langue) : '—'}</td>
+            <td>{x.en_retard && <Statut statut="err" libelle={t('ouverture.en_retard')} />}</td></tr>))}</tbody></table>
+      <p className="mute">{t('ouverture.aide')}</p>
+    </section>
+  );
+}
+
 // ----------------------------------------------------------------------------- mes tâches
 export function MesTaches() {
   const { t } = useTranslation();
@@ -190,7 +236,7 @@ export function MesTaches() {
         </>} />
       <Kpis items={[
         { lib: t('delais.nature.tache'), val: compte('tache') },
-        { lib: t('delais.nature.delai'), val: compte('delai') },
+        { lib: t('delais.nature.delai'), val: compte('delai') + compte('ouverture') },
         { lib: t('delais.nature.point_bloquant'), val: compte('point_bloquant') },
         { lib: t('delais.nature.piece'), val: compte('piece') },
       ]} />
@@ -203,7 +249,8 @@ export function MesTaches() {
               <tr key={x.nature + x.objet_id}>
                 <td><Statut statut={x.urgence === 1 ? 'err' : x.urgence === 2 ? 'att' : 'info'} libelle={t(`delais.urgence_${x.urgence}`)} /></td>
                 <td>{t(`delais.nature.${x.nature}`)}</td>
-                <td>{x.nature === 'delai' ? t('delais.phase_en_retard', { phase: t(`phases.${x.libelle}`) }) : x.libelle}</td>
+                <td>{x.nature === 'delai' ? t('delais.phase_en_retard', { phase: t(`phases.${x.libelle}`) })
+                  : x.nature === 'ouverture' ? t('ouverture.intenable_tache', { n: Math.abs(Number(x.libelle)) }) : x.libelle}</td>
                 <td className="ref">{x.dossier_id ? <Link to={`/dossiers/${x.dossier_id}`}>{x.dossier_reference}</Link> : '—'}</td>
                 <td className="ref">{x.echeance ? date(x.echeance, langue) : '—'}</td>
                 <td className="num">{x.nature === 'tache' && <Bouton petit disabled={a.enCours} onClick={() => void terminer(x.objet_id)}>{t('delais.marquer_faite')}</Bouton>}</td>
