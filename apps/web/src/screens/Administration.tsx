@@ -92,39 +92,88 @@ export function Parametrage() {
   );
 }
 
+interface ParamCatalogue { cle: string; definition: string; type: 'taux' | 'nombre' | 'entier' | 'json'; minimum: number | null; maximum: number | null;
+  module: string; libelle: string; valeur: unknown; date_effet: string; commentaire: string | null }
+interface Saisie { cle: string; type: ParamCatalogue['type']; libelle: string; minimum: number | null; maximum: number | null; valeur: string; date_effet: string; commentaire: string }
+
+/** Valeur lisible : les taux en pourcentage, les nombres formatés, le JSON abrégé. */
+function afficherParam(p: { type: string; valeur: unknown }, langue: string) {
+  if (p.type === 'taux' && typeof p.valeur === 'number') return `${(p.valeur * 100).toLocaleString(langue, { maximumFractionDigits: 4 })} %`;
+  if (typeof p.valeur === 'number') return p.valeur.toLocaleString(langue);
+  return JSON.stringify(p.valeur).slice(0, 120);
+}
+
 function Parametres() {
   const { t } = useTranslation();
   const { langue } = useAuth();
-  const l = useAsync(async () => ok(await supabase.from('parametres').select('*').order('cle').order('date_effet', { ascending: false })) as Parametre[], []);
-  const [f, setF] = useState<{ cle: string; valeur: string; date_effet: string; commentaire: string } | null>(null);
+  const l = useAsync(async () => ok(await supabase.rpc('catalogue_parametres')) as ParamCatalogue[], []);
+  const [filtre, setFiltre] = useState('');
+  const [f, setF] = useState<Saisie | null>(null);
+  const h = useAsync(async () => (f ? ok(await supabase.from('parametres').select('*').eq('cle', f.cle).order('date_effet', { ascending: false })) as Parametre[] : []), [f?.cle]);
   const a = useAction();
+  const aujourdhui = () => new Date().toISOString().slice(0, 10);
+  const ouvrir = (p: ParamCatalogue) => setF({ cle: p.cle, type: p.type, libelle: p.libelle, minimum: p.minimum, maximum: p.maximum, date_effet: aujourdhui(), commentaire: '',
+    valeur: p.type === 'taux' && typeof p.valeur === 'number' ? String(Number((p.valeur * 100).toFixed(6))) : p.type === 'json' ? JSON.stringify(p.valeur, null, 2) : String(p.valeur) });
   const enregistrer = async () => {
     if (!f) return;
     let val: unknown;
-    try { val = JSON.parse(f.valeur); } catch { a.setErreur(t('parametrage.json_invalide')); return; }
+    if (f.type === 'json') {
+      try { val = JSON.parse(f.valeur); } catch { a.setErreur(t('parametrage.json_invalide')); return; }
+    } else {
+      const n = Number(f.valeur.replace(',', '.').trim());
+      // Le taux se saisit en pourcentage : 25 signifie 25 %, enregistré 0,25.
+      val = f.type === 'taux' ? Number((n / 100).toFixed(8)) : n;
+      if (f.valeur.trim() === '' || !Number.isFinite(n) || (f.type === 'entier' && !Number.isInteger(n))) { a.setErreur(t('formulaire.invalide')); return; }
+    }
+    // Contrôle indicatif ; la base applique la définition (type, bornes, validateur) et refuse le reste.
     const v = z.object({ cle: z.string().regex(/^[a-zA-Z0-9_.]{2,80}$/), valeur: z.unknown(), date_effet: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), commentaire: z.string().max(500).nullable() }).strict()
-      .safeParse({ ...f, valeur: val, commentaire: f.commentaire || null });
+      .safeParse({ cle: f.cle.trim(), valeur: val, date_effet: f.date_effet, commentaire: f.commentaire.trim() || null });
     if (!v.success || JSON.stringify(val).length > 10000) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.from('parametres').insert(v.data)))) { setF(null); void l.recharger(); }
   };
+  const q = filtre.trim().toLowerCase();
+  const liste = (l.data ?? []).filter((p) => !q || p.cle.toLowerCase().includes(q) || p.libelle.toLowerCase().includes(q));
+  const modules = [...new Set(liste.map((p) => p.module))];
+  const bornes = f && f.type !== 'json' && (f.minimum != null || f.maximum != null)
+    ? t('parametrage.bornes', { min: f.type === 'taux' ? `${(f.minimum ?? 0) * 100} %` : f.minimum ?? '—', max: f.type === 'taux' ? `${(f.maximum ?? 0) * 100} %` : f.maximum ?? '—' }) : '';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <p className="mute">{t('parametrage.aide')}</p>
+      <div className="actions">
+        <input placeholder={t('parametrage.filtrer')} aria-label={t('parametrage.filtrer')} maxLength={80} value={filtre} onChange={(e) => setFiltre(e.target.value)} />
+        <Bouton petit onClick={() => setF({ cle: '', type: 'json', libelle: '', minimum: null, maximum: null, valeur: '', date_effet: aujourdhui(), commentaire: '' })}>{t('parametrage.nouvelle_cle')}</Bouton>
+      </div>
       <Bandeau type="err">{l.erreur}</Bandeau>
-      <table className="t"><thead><tr><th>{t('parametrage.cle')}</th><th>{t('parametrage.valeur')}</th><th>{t('parametrage.date_effet')}</th><th>{t('champs.commentaire')}</th><th /></tr></thead>
-        <tbody>{(l.data ?? []).map((p) => (
-          <tr key={p.id}><td className="ref">{p.cle}</td><td><code style={{ fontSize: 12 }}>{JSON.stringify(p.valeur).slice(0, 120)}</code></td><td className="ref">{date(p.date_effet, langue)}</td>
-            <td className="mute">{p.commentaire ?? ''}</td>
-            <td className="num"><Bouton petit onClick={() => setF({ cle: p.cle, valeur: JSON.stringify(p.valeur), date_effet: new Date().toISOString().slice(0, 10), commentaire: '' })}>{t('parametrage.nouvelle_valeur')}</Bouton></td></tr>))}</tbody></table>
+      {modules.map((m) => (
+        <section key={m} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="section-titre">{t(`parametrage.modules.${m}`, { defaultValue: m })}</div>
+          <table className="t"><thead><tr><th>{t('parametrage.libelle')}</th><th>{t('parametrage.valeur')}</th><th>{t('parametrage.date_effet')}</th><th>{t('champs.commentaire')}</th><th /></tr></thead>
+            <tbody>{liste.filter((p) => p.module === m).map((p) => (
+              <tr key={p.cle}><td>{p.libelle}<div className="mute ref">{p.cle}</div></td>
+                <td><code style={{ fontSize: 12 }}>{afficherParam(p, langue)}</code></td><td className="ref">{date(p.date_effet, langue)}</td>
+                <td className="mute">{p.commentaire ?? ''}</td>
+                <td className="num"><Bouton petit onClick={() => ouvrir(p)}>{t('parametrage.nouvelle_valeur')}</Bouton></td></tr>))}</tbody></table>
+        </section>
+      ))}
       {f && (
         <Tiroir titre={t('parametrage.nouvelle_valeur')} onClose={() => setF(null)}>
           <p className="sec">{t('parametrage.aide_date')}</p>
-          <Champ label={t('parametrage.cle')}><input value={f.cle} maxLength={80} onChange={(e) => setF({ ...f, cle: e.target.value })} /></Champ>
-          <Champ label={t('parametrage.valeur_json')}><textarea value={f.valeur} maxLength={10000} onChange={(e) => setF({ ...f, valeur: e.target.value })} /></Champ>
+          {f.libelle ? <Champ label={t('parametrage.cle')}><div>{f.libelle}<div className="mute ref">{f.cle}</div></div></Champ>
+            : <Champ label={t('parametrage.cle')}><input value={f.cle} maxLength={80} onChange={(e) => setF({ ...f, cle: e.target.value })} /><div className="mute">{t('parametrage.aide_cle')}</div></Champ>}
+          {f.type === 'json'
+            ? <Champ label={t('parametrage.valeur_json')}><textarea rows={8} value={f.valeur} maxLength={10000} onChange={(e) => setF({ ...f, valeur: e.target.value })} /></Champ>
+            : <Champ label={f.type === 'taux' ? t('parametrage.valeur_pourcent') : t('parametrage.valeur')}>
+                <input inputMode="decimal" value={f.valeur} onChange={(e) => setF({ ...f, valeur: e.target.value })} />{bornes && <div className="mute">{bornes}</div>}</Champ>}
           <Champ label={t('parametrage.date_effet')}><input type="date" value={f.date_effet} onChange={(e) => setF({ ...f, date_effet: e.target.value })} /></Champ>
           <Champ label={t('champs.commentaire')}><input value={f.commentaire} maxLength={500} onChange={(e) => setF({ ...f, commentaire: e.target.value })} /></Champ>
           <Bandeau type="err">{a.erreur}</Bandeau>
           <Bouton variante="primaire" disabled={a.enCours} onClick={() => void enregistrer()}>{t('commun.enregistrer')}</Bouton>
+          {(h.data ?? []).length > 0 && (
+            <table className="t" style={{ marginTop: 12 }}><thead><tr><th>{t('parametrage.historique')}</th><th>{t('parametrage.date_effet')}</th></tr></thead>
+              <tbody>{(h.data ?? []).map((x) => (
+                <tr key={x.id}><td><code style={{ fontSize: 12 }}>{afficherParam({ type: f.type, valeur: x.valeur }, langue)}</code>{x.commentaire && <div className="mute">{x.commentaire}</div>}</td>
+                  <td className="ref">{date(x.date_effet, langue)}</td></tr>))}</tbody></table>
+          )}
         </Tiroir>
       )}
     </div>

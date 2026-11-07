@@ -751,6 +751,8 @@
   "GBS_PAIEMENT_FIGE": "Un ordre de paiement ne se modifie pas : refusez-le et préparez-en un autre.",
   "GBS_PAIEMENT_NON_VALIDE": "L'ordre doit d'abord être validé.",
   "GBS_PARAMETRES_INVALIDES": "Données invalides.",
+  "GBS_PARAMETRE_INCONNU": "Clé de paramètre inconnue du registre.",
+  "GBS_PARAMETRE_INVALIDE": "Valeur refusée : type, bornes ou format non conformes à la définition du paramètre (un taux s'écrit 0,25 pour 25 %).",
   "GBS_PARAM_MANQUANT": "Paramètre manquant : prévenez l'administratrice.",
   "GBS_PAYS_AGENT_REQUIS": "Le pays de l'agent est obligatoire.",
   "GBS_PENALITE_SUR_SOLDE": "Une pénalité ne se retient que sur le solde.",
@@ -1177,6 +1179,7 @@
    "terminee": "Terminée"
   },
   "taux": "Taux horaire (FCFA)",
+  "taux_correction": "Taux horaire corrigé (FCFA, facultatif)",
   "technicien": "Technicien",
   "techniciens": "Techniciens",
   "temps": "Temps passé",
@@ -1491,17 +1494,33 @@
  "parametrage": {
   "actif": "Actif",
   "aide": "Un paramètre ne se modifie pas : on crée une nouvelle valeur avec une date d'effet. Un dossier garde la règle en vigueur à son ouverture.",
+  "aide_cle": "Seules les clés prévues par le registre sont acceptées (ex. cout_global.energie_xof_kwh.SN pour un nouveau pays).",
   "aide_date": "La valeur s'appliquera aux dossiers ouverts à partir de la date d'effet.",
   "aide_taux": "1 unité de devise = n XOF. XOF et XAF ont la même parité fixe avec l'euro mais restent deux codes distincts.",
   "aide_utilisateurs": "Un compte créé n'a aucun droit tant que l'administratrice ne lui attribue pas un rôle. Le double facteur est exigé à chaque connexion.",
+  "bornes": "Valeur admise : de {{min}} à {{max}}",
   "cle": "Clé",
   "creee_le": "Créée le",
   "date_effet": "Date d'effet",
   "dates": "aucune valeur écrite en dur",
   "delegue": "Second validateur",
   "delegue_aide": "Seconde personne désignée pour valider les paiements préparés par l'administratrice",
+  "filtrer": "Filtrer les paramètres",
+  "historique": "Valeurs datées",
   "inactif": "Désactivé",
   "json_invalide": "La valeur doit être du JSON valide.",
+  "libelle": "Paramètre",
+  "modules": {
+   "achats": "Achats",
+   "administration": "Administration",
+   "commercial": "Commercial",
+   "dossiers": "Dossiers et délais",
+   "finance": "Finance",
+   "interventions": "Interventions sur site",
+   "qualite": "Qualité",
+   "tarifs": "Tarifs"
+  },
+  "nouvelle_cle": "Valeur pour une nouvelle clé",
   "nouvelle_valeur": "Nouvelle valeur datée",
   "onglets": {
    "calendrier": "Jours fériés",
@@ -1518,7 +1537,8 @@
   "taux_xof": "Taux en XOF",
   "titre": "Paramètres datés, taux, utilisateurs et sociétés",
   "valeur": "Valeur",
-  "valeur_json": "Valeur (JSON)"
+  "valeur_json": "Valeur (JSON)",
+  "valeur_pourcent": "Valeur (en %)"
  },
  "penalites": {
   "aide": "Montant = valeur des marchandises × taux par jour × jours de retard, dans la limite du plafond du contrat. La date promise suit les avenants signés.",

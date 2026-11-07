@@ -751,6 +751,8 @@
   "GBS_PAIEMENT_FIGE": "A payment order cannot change: reject it and prepare another.",
   "GBS_PAIEMENT_NON_VALIDE": "The order must first be approved.",
   "GBS_PARAMETRES_INVALIDES": "Invalid data.",
+  "GBS_PARAMETRE_INCONNU": "Setting key not defined in the registry.",
+  "GBS_PARAMETRE_INVALIDE": "Value rejected: type, bounds or format do not match the setting definition (a rate is written 0.25 for 25%).",
   "GBS_PARAM_MANQUANT": "Missing setting: tell the administrator.",
   "GBS_PAYS_AGENT_REQUIS": "The agent's country is mandatory.",
   "GBS_PENALITE_SUR_SOLDE": "A penalty is withheld only from the balance.",
@@ -1177,6 +1179,7 @@
    "terminee": "Completed"
   },
   "taux": "Hourly rate (CFA francs)",
+  "taux_correction": "Override hourly rate (CFA francs, optional)",
   "technicien": "Technician",
   "techniciens": "Technicians",
   "temps": "Time spent",
@@ -1491,17 +1494,33 @@
  "parametrage": {
   "actif": "Active",
   "aide": "A setting is never edited: you create a new value with an effective date. A file keeps the rule in force when it was opened.",
+  "aide_cle": "Only keys defined in the registry are accepted (e.g. cout_global.energie_xof_kwh.SN for a new country).",
   "aide_date": "The value will apply to files opened from the effective date.",
   "aide_taux": "1 currency unit = n XOF. XOF and XAF share the same fixed euro peg but remain two distinct codes.",
   "aide_utilisateurs": "A new account has no rights until the administrator assigns a role. Two-factor authentication is required at every sign-in.",
+  "bornes": "Allowed value: from {{min}} to {{max}}",
   "cle": "Key",
   "creee_le": "Created on",
   "date_effet": "Effective date",
   "dates": "no hard-coded value",
   "delegue": "Second approver",
   "delegue_aide": "Second person designated to approve payments prepared by the administrator",
+  "filtrer": "Filter settings",
+  "historique": "Dated values",
   "inactif": "Deactivated",
   "json_invalide": "The value must be valid JSON.",
+  "libelle": "Setting",
+  "modules": {
+   "achats": "Purchasing",
+   "administration": "Administration",
+   "commercial": "Sales",
+   "dossiers": "Files and lead times",
+   "finance": "Finance",
+   "interventions": "On-site work",
+   "qualite": "Quality",
+   "tarifs": "Pricing"
+  },
+  "nouvelle_cle": "Value for a new key",
   "nouvelle_valeur": "New dated value",
   "onglets": {
    "calendrier": "Public holidays",
@@ -1518,7 +1537,8 @@
   "taux_xof": "Rate in XOF",
   "titre": "Dated settings, rates, users and companies",
   "valeur": "Value",
-  "valeur_json": "Value (JSON)"
+  "valeur_json": "Value (JSON)",
+  "valeur_pourcent": "Value (in %)"
  },
  "penalites": {
   "aide": "Amount = goods value × daily rate × days late, within the contract cap. The promised date follows signed amendments.",

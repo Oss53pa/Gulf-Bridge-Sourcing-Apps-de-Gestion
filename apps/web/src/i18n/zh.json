@@ -751,6 +751,8 @@
   "GBS_PAIEMENT_FIGE": "付款指令不可修改：请拒绝后重新制单。",
   "GBS_PAIEMENT_NON_VALIDE": "指令须先审批。",
   "GBS_PARAMETRES_INVALIDES": "数据无效。",
+  "GBS_PARAMETRE_INCONNU": "登记表中没有该参数键。",
+  "GBS_PARAMETRE_INVALIDE": "值被拒绝：类型、范围或格式不符合参数定义（比率 25% 写作 0.25）。",
   "GBS_PARAM_MANQUANT": "缺少参数：请联系管理员。",
   "GBS_PAYS_AGENT_REQUIS": "必须填写代理所在国家。",
   "GBS_PENALITE_SUR_SOLDE": "罚款只能从尾款中扣除。",
@@ -1177,6 +1179,7 @@
    "terminee": "已完成"
   },
   "taux": "小时费率（西非法郎）",
+  "taux_correction": "修正小时费率（西非法郎，可选）",
   "technicien": "技术人员",
   "techniciens": "技术人员",
   "temps": "工时",
@@ -1491,17 +1494,33 @@
  "parametrage": {
   "actif": "启用",
   "aide": "参数不可修改：需新增一个带生效日期的值。项目沿用开立时有效的规则。",
+  "aide_cle": "仅接受登记表中定义的键（例如新国家 cout_global.energie_xof_kwh.SN）。",
   "aide_date": "该值适用于生效日期之后开立的项目。",
   "aide_taux": "1 单位外币 = n XOF。XOF 与 XAF 对欧元固定汇率相同，但为两个不同代码。",
   "aide_utilisateurs": "新账户在管理员分配角色前没有任何权限。每次登录均需双重认证。",
+  "bornes": "允许范围：{{min}} 至 {{max}}",
   "cle": "键",
   "creee_le": "成立日期",
   "date_effet": "生效日期",
   "dates": "无硬编码值",
   "delegue": "第二审批人",
   "delegue_aide": "指定审批管理员所制付款的第二人",
+  "filtrer": "筛选参数",
+  "historique": "历史值",
   "inactif": "停用",
   "json_invalide": "值必须是有效的 JSON。",
+  "libelle": "参数",
+  "modules": {
+   "achats": "采购",
+   "administration": "管理",
+   "commercial": "销售",
+   "dossiers": "项目与期限",
+   "finance": "财务",
+   "interventions": "现场作业",
+   "qualite": "质量",
+   "tarifs": "价格"
+  },
+  "nouvelle_cle": "新键的值",
   "nouvelle_valeur": "新的带日期值",
   "onglets": {
    "calendrier": "法定节假日",
@@ -1518,7 +1537,8 @@
   "taux_xof": "XOF 汇率",
   "titre": "带生效日期的参数、汇率、用户与公司",
   "valeur": "值",
-  "valeur_json": "值（JSON）"
+  "valeur_json": "值（JSON）",
+  "valeur_pourcent": "值（%）"
  },
  "penalites": {
   "aide": "金额 = 货值 × 日费率 × 延迟天数，以合同上限为限。承诺日期随已签补充协议调整。",

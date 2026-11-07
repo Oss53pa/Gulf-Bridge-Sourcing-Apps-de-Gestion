@@ -36,6 +36,9 @@ export function NonConformites() {
   const [fiche, setFiche] = useState<string | null>(null);
   const l = useAsync(async () => ok(await supabase.from('non_conformites').select('*').order('cree_le', { ascending: false }).limit(1000)) as FicheNcData[], []);
   const q = useAsync(async () => ok(await supabase.rpc('qualite_fournisseurs')) as Qualite[], []);
+  const seuils = useAsync(async () => (ok(await supabase.from('parametres').select('valeur').eq('cle', 'qualite.seuils_note').lte('date_effet', aujourdhui())
+    .order('date_effet', { ascending: false }).limit(1)) as { valeur: { vert: number; orange: number } }[])[0]?.valeur ?? { vert: 80, orange: 60 }, []);
+  const sv = seuils.data ?? { vert: 80, orange: 60 };
   const toutes = l.data ?? [];
   const liste = toutes.filter((n) => filtre === 'toutes' || (filtre === 'en_retard' ? enRetard(n) : n.statut !== 'close'));
   return (
@@ -74,7 +77,7 @@ export function NonConformites() {
               <tbody>{(q.data ?? []).map((x) => (
                 <tr key={x.fournisseur_id}><td>{x.fournisseur}</td><td className="num">{x.nc_12_mois}</td><td className="num">{x.critiques_12_mois}</td>
                   <td className="num">{x.nc_ouvertes}</td><td className="num">{x.nc_en_retard}</td>
-                  <td className="num"><Statut statut={Number(x.note_qualite) >= 80 ? 'ok' : Number(x.note_qualite) >= 60 ? 'att' : 'err'} libelle={`${Number(x.note_qualite)} / 100`} /></td></tr>))}</tbody></table>
+                  <td className="num"><Statut statut={Number(x.note_qualite) >= sv.vert ? 'ok' : Number(x.note_qualite) >= sv.orange ? 'att' : 'err'} libelle={`${Number(x.note_qualite)} / 100`} /></td></tr>))}</tbody></table>
           )}
           <p className="mute">{t('nc.aide_note')}</p>
         </CadreTableau>

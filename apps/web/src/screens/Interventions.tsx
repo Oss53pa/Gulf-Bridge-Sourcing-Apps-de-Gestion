@@ -37,7 +37,7 @@ export function Interventions() {
   const [fiche, setFiche] = useState<string | null>(null);
   const dossiers = useNoms('dossiers');
   const l = useAsync(async () => ok(await supabase.from('interventions').select('*').order('date_debut', { ascending: false }).limit(500)) as Intervention[], []);
-  const h = useAsync(async () => (gere ? ok(await supabase.rpc('habilitations_a_renouveler', { p_jours: 30 })) as Habilitation[] : []), [gere]);
+  const h = useAsync(async () => (gere ? ok(await supabase.rpc('habilitations_a_renouveler', { p_jours: null })) as Habilitation[] : []), [gere]);
   const r = useAsync(async () => ok(await supabase.from('incidents_hse').select('*').order('survenu_le', { ascending: false }).limit(500)) as Incident[], []);
   const items: { id: 'planning' | 'habilitations' | 'hse'; lib: string }[] = [{ id: 'planning', lib: t('interventions.planning') }, { id: 'hse', lib: t('interventions.registre_hse') }];
   if (gere) items.splice(1, 0, { id: 'habilitations', lib: t('interventions.habilitations') });
@@ -201,6 +201,7 @@ function FicheIntervention({ id, onClose, onChange }: { id: string; onClose: () 
   const a = useAction();
   const [ajout, setAjout] = useState('');
   const [p, setP] = useState({ type: '', numero: '', delivre_par: '', valide_du: aujourdhui(), valide_au: aujourdhui(), document: '' });
+  const admin = profil?.role === 'admin';
   const [tm, setTm] = useState({ technicien_id: profil?.id ?? '', date_travail: aujourdhui(), heures: '', taux: '', travaux: '' });
   const [inc, setInc] = useState({ nature: 'presque_accident', description: '', mesures: '' });
   const [fin, setFin] = useState({ compte_rendu: '', pv: '' });
@@ -219,9 +220,10 @@ function FicheIntervention({ id, onClose, onChange }: { id: string; onClose: () 
   };
   const ajouterTemps = async () => {
     const v = z.object({ intervention_id: z.string().uuid(), technicien_id: z.string().uuid(), date_travail: DATE, heures: z.number().positive().max(16),
-      taux_horaire_xof: z.number().int().positive().max(1_000_000), travaux: z.string().trim().min(3).max(1000) }).strict()
+      taux_horaire_xof: z.number().int().positive().max(1_000_000).nullable(), travaux: z.string().trim().min(3).max(1000) }).strict()
+      // Taux horaire : celui du paramètre, sauf correction de l'administratrice (la base l'impose).
       .safeParse({ intervention_id: id, technicien_id: tm.technicien_id, date_travail: tm.date_travail, heures: Number(tm.heures.replace(',', '.')),
-        taux_horaire_xof: Number(tm.taux), travaux: tm.travaux });
+        taux_horaire_xof: admin && tm.taux ? Number(tm.taux) : null, travaux: tm.travaux });
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
     await inserer('intervention_temps', v.data, () => setTm({ ...tm, heures: '', travaux: '' }));
   };
@@ -280,7 +282,7 @@ function FicheIntervention({ id, onClose, onChange }: { id: string; onClose: () 
             {techniciens.map((y) => <option key={y} value={y}>{profils[y] ?? y}</option>)}</select>}
           <input type="date" aria-label={t('reception.date')} min={x.date_debut} max={aujourdhui()} value={tm.date_travail} onChange={(e) => setTm({ ...tm, date_travail: e.target.value })} />
           <input inputMode="decimal" placeholder={t('interventions.heures')} aria-label={t('interventions.heures')} value={tm.heures} onChange={(e) => setTm({ ...tm, heures: e.target.value })} />
-          <input inputMode="numeric" placeholder={t('interventions.taux')} aria-label={t('interventions.taux')} value={tm.taux} onChange={(e) => setTm({ ...tm, taux: e.target.value.replace(/\D/g, '') })} />
+          {admin && <input inputMode="numeric" placeholder={t('interventions.taux_correction')} aria-label={t('interventions.taux_correction')} value={tm.taux} onChange={(e) => setTm({ ...tm, taux: e.target.value.replace(/\D/g, '') })} />}
           <input placeholder={t('interventions.travaux')} aria-label={t('interventions.travaux')} maxLength={1000} value={tm.travaux} onChange={(e) => setTm({ ...tm, travaux: e.target.value })} />
           <Bouton petit disabled={a.enCours} onClick={() => void ajouterTemps()}>{t('commun.ajouter')}</Bouton>
         </div>}
