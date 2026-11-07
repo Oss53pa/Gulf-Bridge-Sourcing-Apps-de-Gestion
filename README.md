@@ -215,6 +215,25 @@ select cron.schedule('gbs-mensualites-cadre', '0 7 1 * *',
   perform gbs.facturer_mensualites_cadre(current_date); end $$$c$);
 ```
 
+### Taux de change automatiques (BCE)
+
+Les taux USD et CNY sont importés chaque jour ouvré depuis les taux de référence de la Banque centrale européenne. Le XOF ayant une parité fixe avec l'euro (655,957), 1 USD = 655,957 ÷ (USD pour 1 EUR publié par la BCE), et de même pour le CNY. L'import passe par `pg_net`, sans clé ni service tiers, et contrôle chaque réponse avant toute écriture :
+
+- statut HTTP 200, taille inférieure à 64 Ko, XML valide sans `DOCTYPE` ni `ENTITY` ;
+- date de publication dans les 7 derniers jours ;
+- taux dans des bornes de plausibilité (`taux.borne.USD`, `taux.borne.CNY`) ;
+- variation inférieure à 10 % (`taux.variation_max`) par rapport au dernier taux connu.
+
+Une publication refusée n'écrit rien, n'est pas redemandée le même jour et reste tracée dans `gbs.imports_taux` (lisible par l'administratrice et la comptabilité) : le taux se saisit alors à la main. Les erreurs réseau sont retentées, au plus 6 requêtes par jour (`taux.requetes_max_jour`).
+
+```sql
+select cron.schedule('gbs-taux-bce', '*/15 15-17 * * 1-5',
+  $c$do $$ begin perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform gbs.importer_taux_bce(); end $$$c$);
+```
+
+Les taux de la BCE sont des taux de référence, pas les taux appliqués par une banque : pour un paiement fournisseur, le taux réellement obtenu reste à saisir sur le paiement.
+
 ## Avant la mise en production
 
 Ces points sont à vérifier ou à trancher. Ils ne sont pas couverts par le code.

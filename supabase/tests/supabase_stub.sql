@@ -25,3 +25,14 @@ create table if not exists public.dossiers (id int primary key, libelle text);
 create table if not exists public.societes (id int primary key, nom text);
 grant select, insert on public.dossiers, public.societes to authenticated, anon;
 insert into public.dossiers values (1, 'autre application') on conflict do nothing;
+
+-- Simulation de pg_net : les requêtes sont enregistrées, les tests écrivent les réponses.
+create schema if not exists net;
+create sequence if not exists net.seq;
+create table if not exists net.requetes (id bigint primary key, url text, cree_le timestamptz default now());
+create table if not exists net._http_response (
+  id bigint primary key, status_code int, content text, timed_out boolean, error_msg text,
+  created timestamptz default now());
+create or replace function net.http_get(url text, params jsonb default '{}', headers jsonb default '{}',
+  timeout_milliseconds int default 5000) returns bigint language sql as $$
+  insert into net.requetes (id, url) values (nextval('net.seq'), url) returning id $$;
