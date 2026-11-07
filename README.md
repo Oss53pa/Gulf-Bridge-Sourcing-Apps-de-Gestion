@@ -14,7 +14,7 @@ Ce dépôt livre le **lot 0** du cahier des charges (`docs/cahier-des-charges.md
 | Interface | React 18 + TypeScript + Vite, `apps/web` | Écrans du lot 0, polices servies par l'application (aucune ressource Google, section 10) |
 | Tests | Vitest + PostgreSQL | 83 tests de recette en base, 8 tests d'interface |
 
-Principe : l'interface masque ce qui est interdit, mais c'est la base qui refuse. Chaque action sensible passe par une fonction `public.*` qui contrôle les droits. Ces actions sont : agrément, vérification de compte, validation de paiement, mandat, contrat, inspection, dérogation, facture et FNE. Les tables refusent les écritures directes sur les champs protégés.
+Principe : l'interface masque ce qui est interdit, mais c'est la base qui refuse. Chaque action sensible passe par une fonction `gbs.*` qui contrôle les droits. Ces actions sont : agrément, vérification de compte, validation de paiement, mandat, contrat, inspection, dérogation, facture et FNE. Les tables refusent les écritures directes sur les champs protégés.
 
 ### Ce que la base garantit (lot 0)
 
@@ -115,16 +115,18 @@ supabase db push
 
 Le seed ne s'applique qu'en local et en recette. Ne l'exécutez jamais en production.
 
+**Projet partagé avec d'autres applications.** Tout GBS vit dans les schémas `gbs` (tables, vues, fonctions appelables) et `gbs_private` (fonctions internes), plus le bucket privé `gbs-documents`. Les migrations ne touchent à aucun objet existant : aucun `drop`, aucune modification du schéma `public`. Une seule étape manuelle est indispensable : dans le tableau de bord Supabase, **Project Settings → Data API → Exposed schemas**, ajoutez `gbs`. N'y ajoutez jamais `gbs_private`. Sans cette étape, l'application reçoit une erreur à chaque appel.
+
 ### Premier compte administrateur
 
 L'inscription libre est désactivée (`supabase/config.toml`).
 
-1. Invitez l'administratrice depuis le tableau de bord Supabase (Authentication → Users → Invite). Son profil est créé automatiquement, sans aucun rôle.
+1. Créez ou invitez l'administratrice avec la métadonnée utilisateur `{"app": "gbs", "nom": "…"}`. Seuls les comptes portant `app = gbs` reçoivent un profil GBS : les utilisateurs des autres applications du projet n'en ont pas et n'accèdent à rien. Le profil est créé sans aucun rôle.
 2. Attribuez-lui le rôle une seule fois, dans l'éditeur SQL du projet :
 
 ```sql
-update public.profils
-   set role = 'admin', societes = (select array_agg(id) from public.societes)
+update gbs.profils
+   set role = 'admin', societes = (select array_agg(id) from gbs.societes)
  where email = 'adresse-de-l-administratrice';
 ```
 
@@ -146,14 +148,18 @@ supabase secrets set GBS_ORIGINE=https://adresse-de-l-application
 
 ### Tâches planifiées
 
-L'escalade des points bloquants échus et la facturation mensuelle des accords-cadres (idempotente : un mois déjà facturé ne l'est jamais deux fois) se planifient avec `pg_cron` :
+L'escalade des points bloquants échus et la facturation mensuelle des accords-cadres (idempotente : un mois déjà facturé ne l'est jamais deux fois) se planifient avec `pg_cron`. Une tâche `pg_cron` n'a pas de jeton : elle doit se déclarer `service_role`, sinon les fonctions refusent l'appel (`GBS_ACCES_REFUSE`).
 
 ```sql
-select cron.schedule('escalade', '0 6 * * *', $$select public.escalader_points_bloquants()$$);
+select cron.schedule('gbs-escalade', '0 6 * * *',
+  $c$do $$ begin perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform gbs.escalader_points_bloquants(); end $$$c$);
 ```
 
 ```sql
-select cron.schedule('mensualites-cadre', '0 7 1 * *', $$select public.facturer_mensualites_cadre(current_date)$$);
+select cron.schedule('gbs-mensualites-cadre', '0 7 1 * *',
+  $c$do $$ begin perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform gbs.facturer_mensualites_cadre(current_date); end $$$c$);
 ```
 
 ## Avant la mise en production

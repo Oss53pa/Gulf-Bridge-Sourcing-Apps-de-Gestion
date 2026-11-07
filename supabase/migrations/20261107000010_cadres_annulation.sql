@@ -213,6 +213,9 @@ begin
     'frais_engages', 'à refacturer au coût par une facture séparée');
 end $$;
 
+revoke execute on function gbs.facturer_mensualites_cadre(date), gbs.cadres_a_echeance(),
+  gbs.annuler_dossier(uuid, text), gbs_private.emettre_facture_interne(uuid), gbs_private.emettre_avoir(uuid, text),
+  gbs_private.depuis_xof(numeric, text, date), gbs_private.devise_facturation(text, text) from public;
 grant execute on function gbs.facturer_mensualites_cadre(date), gbs.cadres_a_echeance(),
   gbs.annuler_dossier(uuid, text) to authenticated;
 grant execute on function gbs.facturer_mensualites_cadre(date) to service_role;
