@@ -12,6 +12,7 @@ import { FicheDossier } from './screens/FicheDossier';
 import { MesTaches } from './screens/Delais';
 import { PageSuivi } from './screens/Suivi';
 import { NotesFrais, Rentabilite } from './screens/Couts';
+import { ImprimerRapportOffres } from './screens/RapportOffres';
 import { Articles, Clients, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, MiseEnConcurrence } from './screens/Achats';
 import { Expeditions, FicheExpedition, Inspections, RapportInspection } from './screens/Operations';
@@ -39,6 +40,7 @@ export function App() {
       <Route path="/imprimer/facture/:id" element={g('factures', <ImprimerFacture />)} />
       <Route path="/imprimer/inspection/:id" element={g('inspections', <ImprimerInspection />)} />
       <Route path="/imprimer/due-diligence/:id" element={g('fournisseurs', <ImprimerDueDiligence />)} />
+      <Route path="/imprimer/rapport-offres/:id" element={g('portefeuille', <ImprimerRapportOffres />)} />
       <Route path="*" element={
         <Coque>
           <Routes>

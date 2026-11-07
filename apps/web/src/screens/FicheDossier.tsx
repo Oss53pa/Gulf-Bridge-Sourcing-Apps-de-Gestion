@@ -16,8 +16,9 @@ import { DelaisDossier } from './Delais';
 import { AvenantsDossier, DemanderPiece } from './Avenants';
 import { LiensSuivi } from './Suivi';
 import { CoutsMarge } from './Couts';
+import { ListeRapports } from './RapportOffres';
 
-type Onglet = 'phases' | 'delais' | 'blocages' | 'devis' | 'commandes' | 'avenants' | 'suivi' | 'couts' | 'journal';
+type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'devis' | 'commandes' | 'avenants' | 'suivi' | 'couts' | 'journal';
 
 export function FicheDossier() {
   const { id = '' } = useParams();
@@ -43,6 +44,7 @@ export function FicheDossier() {
     { id: 'delais', lib: t('fiche.delais_taches') },
     { id: 'blocages', lib: t('fiche.points_bloquants') },
   ];
+  if (['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role ?? '')) onglets.push({ id: 'rapports', lib: t('fiche.rapports_offres') });
   if (['admin', 'hub_afrique', 'agent_pays', 'comptable'].includes(role ?? '')) onglets.push({ id: 'devis', lib: t('fiche.devis') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'commandes', lib: t('fiche.commandes') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'avenants', lib: t('fiche.avenants') });
@@ -69,6 +71,7 @@ export function FicheDossier() {
         {onglet === 'phases' && <PhasesPieces dossier={d} phases={phases.data ?? []} pieces={pieces.data ?? []} onChange={recharger} />}
         {onglet === 'delais' && <DelaisDossier dossier={d} phases={phases.data ?? []} onChange={recharger} />}
         {onglet === 'blocages' && <Blocages dossierId={d.id} />}
+        {onglet === 'rapports' && <ListeRapports dossierId={d.id} />}
         {onglet === 'devis' && <DevisDossier dossier={d} />}
         {onglet === 'commandes' && <CommandesDossier dossier={d} />}
         {onglet === 'avenants' && <AvenantsDossier dossier={d} />}

@@ -10,6 +10,7 @@ import type { Article, Commande, Compte, Dossier, Fournisseur, Inspection, Ligne
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
 import { Depot } from '../components/Depot';
 import { useNoms } from '../lib/referentiels';
+import { DonneesCoutGlobal, ListeRapports } from './RapportOffres';
 
 const INCOTERMS = ['FOB', 'FCA', 'FAS', 'EXW', 'CFR', 'CPT', 'CIF', 'CIP'] as const;
 
@@ -19,6 +20,7 @@ interface Ligne { id: string; fournisseur_id: string; incoterm: string; devise: 
   delai_jours: number | null; garantie_mois: number | null; note_technique: number | null; retenue: boolean; rang_prix: number; anormalement_basse: boolean; cout_global_manquant: boolean; }
 
 export function MiseEnConcurrence() {
+  const [donnees, setDonnees] = useState<string | null>(null);
   const { t } = useTranslation();
   const { langue, fuseau } = useAuth();
   const dossiers = useNoms('dossiers');
@@ -84,12 +86,17 @@ export function MiseEnConcurrence() {
                     <td className="num">{montant(o.montant, o.devise, langue)}</td><td className="num">{montant(o.fob_xof, 'XOF', langue)}</td>
                     <td className="num">{o.delai_jours ?? '—'}</td>
                     <td className="sec">{[o.anormalement_basse && t('rfq.anormalement_basse'), o.cout_global_manquant && t('rfq.cout_global_manquant')].filter(Boolean).join(' · ') || '—'}</td>
-                    <td className="num"><Bouton petit variante={o.retenue ? 'primaire' : undefined} onClick={() => void retenir(o)}>{o.retenue ? t('rfq.retenue') : t('rfq.retenir')}</Bouton></td></tr>))}</tbody></table>
+                    <td className="num"><span className="actions" style={{ justifyContent: 'flex-end' }}>
+                      <Bouton petit onClick={() => setDonnees(o.id)}>{t('rapport.cout_global_court')}</Bouton>
+                      <Bouton petit variante={o.retenue ? 'primaire' : undefined} onClick={() => void retenir(o)}>{o.retenue ? t('rfq.retenue') : t('rfq.retenir')}</Bouton></span></td></tr>))}</tbody></table>
             )}
+            <div className="filet" />
+            <ListeRapports consultationId={r.id} peutGenerer={!ferme && (comparatif.data ?? []).length > 0} />
           </>)}
         </aside>
       </div>
       {creer && <NouvelleRfq onClose={() => setCreer(false)} onOk={() => { setCreer(false); void l.recharger(); }} />}
+      {donnees && <DonneesCoutGlobal offreId={donnees} onClose={() => setDonnees(null)} onSaved={() => { setDonnees(null); void comparatif.recharger(); }} />}
       {saisie && r && <SaisieOffre rfq={r} invites={(invites.data ?? []).map((i) => i.fournisseur_id)} onClose={() => setSaisie(false)} onOk={() => { setSaisie(false); void comparatif.recharger(); }} />}
     </div>
   );
