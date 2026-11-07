@@ -117,6 +117,20 @@ Le seed ne s'applique qu'en local et en recette. Ne l'exécutez jamais en produc
 
 **Projet partagé avec d'autres applications.** Tout GBS vit dans les schémas `gbs` (tables, vues, fonctions appelables) et `gbs_private` (fonctions internes), plus le bucket privé `gbs-documents`. Les migrations ne touchent à aucun objet existant : aucun `drop`, aucune modification du schéma `public`. Une seule étape manuelle est indispensable : dans le tableau de bord Supabase, **Project Settings → Data API → Exposed schemas**, ajoutez `gbs`. N'y ajoutez jamais `gbs_private`. Sans cette étape, l'application reçoit une erreur à chaque appel.
 
+**Piège du projet partagé `vgtmljfayiysuvrcmunt`.** Une autre application y a fixé la liste des schémas exposés directement sur le rôle `authenticator` (`pgrst.db_schemas`). Ce réglage en base l'emporte sur le tableau de bord : cocher un schéma dans Data API ne suffit pas. Il faut aussi mettre à jour le rôle, en conservant tous les schémas déjà présents, puis recharger l'API :
+
+```sql
+select setconfig from pg_db_role_setting s join pg_roles r on r.oid = s.setrole where r.rolname = 'authenticator';
+```
+
+```sql
+alter role authenticator set pgrst.db_schemas = 'public, atlas_people, atlasbanx, folio, dgs, gbs';
+notify pgrst, 'reload config';
+notify pgrst, 'reload schema';
+```
+
+Le même rôle exécute `atlas_people.mfa_pre_request` avant chaque requête ; cette fonction ignore les requêtes qui ne visent pas `atlas_people` et n'affecte donc pas GBS.
+
 ### Premier compte administrateur
 
 L'inscription libre est désactivée (`supabase/config.toml`).
