@@ -17,9 +17,10 @@ import { AvenantsDossier, DemanderPiece } from './Avenants';
 import { LiensSuivi } from './Suivi';
 import { CoutsMarge } from './Couts';
 import { ReceptionsDossier } from './Receptions';
+import { InterventionsDossier } from './Interventions';
 import { ListeRapports } from './RapportOffres';
 
-type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'devis' | 'commandes' | 'avenants' | 'receptions' | 'suivi' | 'couts' | 'journal';
+type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'devis' | 'commandes' | 'avenants' | 'receptions' | 'interventions' | 'suivi' | 'couts' | 'journal';
 
 export function FicheDossier() {
   const { id = '' } = useParams();
@@ -50,6 +51,7 @@ export function FicheDossier() {
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'commandes', lib: t('fiche.commandes') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'avenants', lib: t('fiche.avenants') });
   if (['admin', 'achats_chine', 'hub_afrique'].includes(role ?? '')) onglets.push({ id: 'receptions', lib: t('fiche.receptions') });
+  if (['admin', 'achats_chine', 'hub_afrique'].includes(role ?? '')) onglets.push({ id: 'interventions', lib: t('fiche.interventions') });
   if (['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role ?? '')) onglets.push({ id: 'suivi', lib: t('fiche.suivi_client') });
   if (['admin', 'comptable'].includes(role ?? '')) onglets.push({ id: 'couts', lib: t('fiche.couts_marge') });
   if (['admin', 'comptable'].includes(role ?? '')) onglets.push({ id: 'journal', lib: t('fiche.journal') });
@@ -78,6 +80,7 @@ export function FicheDossier() {
         {onglet === 'commandes' && <CommandesDossier dossier={d} />}
         {onglet === 'avenants' && <AvenantsDossier dossier={d} />}
         {onglet === 'receptions' && <ReceptionsDossier dossierId={d.id} />}
+        {onglet === 'interventions' && <InterventionsDossier dossierId={d.id} />}
         {onglet === 'suivi' && <LiensSuivi dossier={d} />}
         {onglet === 'couts' && <CoutsMarge dossier={d} />}
         {onglet === 'journal' && <JournalDossier dossierId={d.id} />}

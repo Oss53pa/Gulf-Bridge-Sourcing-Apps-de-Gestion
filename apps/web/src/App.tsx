@@ -3,6 +3,7 @@ import { Commissions } from './screens/Commissions';
 import { Prospection } from './screens/Prospection';
 import { NonConformites } from './screens/NonConformites';
 import { ReservesOuvertes } from './screens/Receptions';
+import { Interventions } from './screens/Interventions';
 import type { ReactNode } from 'react';
 import { useAuth } from './lib/auth';
 import { configurationOk } from './lib/supabase';
@@ -68,6 +69,7 @@ export function App() {
             <Route path="/non-conformites" element={g('non_conformites', <NonConformites />)} />
             <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
             <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
+            <Route path="/interventions" element={g('interventions', <Interventions />)} />
             <Route path="/reserves" element={g('reserves', <ReservesOuvertes />)} />
             <Route path="/expeditions/:id" element={g('expeditions', <FicheExpedition />)} />
             <Route path="/factures" element={g('factures', <Factures />)} />
