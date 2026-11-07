@@ -173,6 +173,16 @@ update gbs.profils
  where email = 'adresse-de-l-administratrice';
 ```
 
+Si la personne a déjà un compte dans une autre application du projet partagé, aucun profil GBS n'est créé (sa métadonnée `app` appartient à l'autre application et ne doit pas être modifiée). Créez alors le profil vous-même avant l'étape 2 :
+
+```sql
+insert into gbs.profils (id, nom, email)
+select id, 'Nom Prénom', email from auth.users where lower(email) = lower('adresse')
+on conflict (id) do nothing;
+```
+
+Le compte, le mot de passe et le second facteur restent communs à toutes les applications du projet.
+
 3. À la première connexion, l'application impose l'inscription du double facteur (QR code TOTP).
 
 Ensuite, l'administratrice attribue les rôles depuis **Paramétrage → Utilisateurs et rôles**.
