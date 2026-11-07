@@ -12,8 +12,9 @@ import { Bandeau, Bouton, Champ, Chargement, Entete, Jauge, Kpis, Onglets, Statu
 import { useNoms } from '../lib/referentiels';
 import { useCompletude } from './Dossiers';
 import { Depot } from '../components/Depot';
+import { DelaisDossier } from './Delais';
 
-type Onglet = 'phases' | 'blocages' | 'devis' | 'commandes' | 'journal';
+type Onglet = 'phases' | 'delais' | 'blocages' | 'devis' | 'commandes' | 'journal';
 
 export function FicheDossier() {
   const { id = '' } = useParams();
@@ -36,6 +37,7 @@ export function FicheDossier() {
   const recharger = () => { void dossier.recharger(); void phases.recharger(); void pieces.recharger(); };
   const onglets: { id: Onglet; lib: string }[] = [
     { id: 'phases', lib: t('fiche.phases_pieces') },
+    { id: 'delais', lib: t('fiche.delais_taches') },
     { id: 'blocages', lib: t('fiche.points_bloquants') },
   ];
   if (['admin', 'hub_afrique', 'agent_pays', 'comptable'].includes(role ?? '')) onglets.push({ id: 'devis', lib: t('fiche.devis') });
@@ -59,6 +61,7 @@ export function FicheDossier() {
       <Onglets actif={onglet} onChange={setOnglet} items={onglets} />
       <div className="cadre">
         {onglet === 'phases' && <PhasesPieces dossier={d} phases={phases.data ?? []} pieces={pieces.data ?? []} onChange={recharger} />}
+        {onglet === 'delais' && <DelaisDossier dossier={d} phases={phases.data ?? []} onChange={recharger} />}
         {onglet === 'blocages' && <Blocages dossierId={d.id} />}
         {onglet === 'devis' && <DevisDossier dossier={d} />}
         {onglet === 'commandes' && <CommandesDossier dossier={d} />}

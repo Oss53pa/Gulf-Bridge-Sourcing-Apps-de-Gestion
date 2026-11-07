@@ -258,7 +258,8 @@ Ces points sont à vérifier ou à trancher. Ils ne sont pas couverts par le cod
 | Signature électronique intégrée, formulaires fournisseurs et transitaires par lien | Non commencé (lot 0 : document signé déposé et validé par l'administratrice) | 1 |
 | Messagerie, page de suivi client, guide d'expression du besoin, rapport des 3 offres automatique et coût global | Non commencé (l'offre porte déjà un champ « coût global » et l'alerte « coût global manquant ») | 1 |
 | Application inspecteur hors ligne, interface mandarin validée | Le chinois est traduit mais **non validé** par un locuteur natif | 1 |
-| Jours ouvrés et fériés, mes tâches, avenants, rétroplanning | Non commencé | 1 |
+| Jours ouvrés et fériés, délais cibles avec voyants, attente d'un tiers, mes tâches, délégation en cas d'absence | **Fait** (migration 14). Délais cibles à saisir par la fondatrice ; calendrier chinois officiel et fêtes musulmanes à saisir chaque année ; jours fériés proposés « à confirmer » | 1 |
+| Avenants, rétroplanning, relance automatique des pièces manquantes devenant points bloquants | Non commencé | 1 |
 | Négoce complet, entrepôt, conformité à l'import, garanties, appels d'offres, trésorerie, SAV, portails avec compte, rentabilité | Non commencé | 2 |
 | WeChat, WeChat Pay et Alipay connectés, suivi automatique des conteneurs, IA | Non commencé | 3 |
 | Écrans de la maquette hors lot 0 (Prospection, Gantt, Productivité, etc.) | Affichés dans le Sommaire avec leur lot, non ouvrables | 1 à 3 |

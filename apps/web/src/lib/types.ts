@@ -30,7 +30,10 @@ export interface Dossier {
   statut: string; phase_courante: string; chef_id: string | null; lettre_credit: boolean; reference_domiciliation: string | null;
   forfait_consultation_ht: number | null; forfait_projet_ht: number | null; taux_commission_projet: number | null; cadre_id: string | null;
 }
-export interface Phase { id: string; dossier_id: string; phase: string; ordre: number; statut: string; reelle_debut: string | null; reelle_fin: string | null; }
+export interface Phase {
+  id: string; dossier_id: string; phase: string; ordre: number; statut: string; reelle_debut: string | null; reelle_fin: string | null;
+  responsable_id: string | null; attente_tiers: string | null;
+}
 export interface Piece {
   id: string; dossier_id: string; phase: string; code: string; libelle: string; obligatoire: boolean; statut: string;
   fournie_par: string | null; document_chemin: string | null; statut_le: string | null; commentaire: string | null;

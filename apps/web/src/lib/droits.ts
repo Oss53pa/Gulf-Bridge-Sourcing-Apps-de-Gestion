@@ -38,7 +38,7 @@ export const ECRANS: Ecran[] = [
   { id: 'retroplanning', chemin: '', module: 'pilotage', roles: TOUS, lot: 1 },
   { id: 'portefeuille', chemin: '/dossiers', module: 'dossiers', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'nouveau_dossier', chemin: '/dossiers/nouveau', module: 'dossiers', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 0 },
-  { id: 'mes_taches', chemin: '', module: 'dossiers', roles: TOUS, lot: 1 },
+  { id: 'mes_taches', chemin: '/mes-taches', module: 'dossiers', roles: TOUS, lot: 1 },
   { id: 'gantt', chemin: '', module: 'dossiers', roles: TOUS, lot: 2 },
   { id: 'clients', chemin: '/clients', module: 'commercial', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'prospection', chemin: '', module: 'commercial', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 1 },
