@@ -1,6 +1,6 @@
 // Lot 1, M28 : réception sur site — procès-verbal, réserves, levée, réception définitive.
 import { afterAll, describe, expect, it } from 'vitest';
-import { as, asRoot, closePool, dossier, expectError, monde, one, rows, withTx, type Db, type Monde } from './helpers';
+import { as, asRoot, closePool, commande, dossier, expectError, monde, one, rows, withTx, type Db, type Monde } from './helpers';
 
 afterAll(closePool);
 
@@ -82,5 +82,37 @@ describe('Réception sur site (M28)', () => {
     await as(db, m.hub);
     await expectError(db, 'GBS_DATE_INVALIDE', `insert into gbs.receptions (dossier_id, date_reception, lieu) values ($1, current_date + 1, 'Assinie')`, [d]);
     await expectError(db, 'GBS_PHOTOS_INVALIDES', `update gbs.receptions set photos = $2 where id = $1`, [r, ['http://x/y.jpg']]);
+  }));
+  it('réserve majeure ou bloquante du fournisseur : non-conformité ouverte sur sa commande à la signature', () => withTx(async (db) => {
+    const m = await monde(db);
+    const d = await dossier(db, m);
+    const c = await commande(db, m, d, [{ qte: 40, pu: 300 }]);
+    const r = await reception(db, m, d);
+    await reserve(db, r, 'majeure', 'Sommiers fendus sur 6 lits');
+    await reserve(db, r, 'mineure', 'Étiquettes manquantes');
+    await as(db, m.hub);
+    await db.query(`insert into gbs.reserves_reception (reception_id, description, gravite, responsable) values ($1, 'Carton écrasé au déchargement', 'majeure', 'transitaire')`, [r]);
+    await signer(db, r, d);
+    await asRoot(db);
+    const nc = await rows(db, `select n.gravite, n.commande_id, n.fournisseur_id, x.numero from gbs.reserves_reception x
+      join gbs.non_conformites n on n.id = x.non_conformite_id where x.reception_id = $1`, [r]);
+    expect(nc).toEqual([{ gravite: 'majeur', commande_id: c, fournisseur_id: m.fournisseur, numero: 1 }]);
+    await as(db, m.achats);
+    expect(Number((await one(db, `select note_qualite from gbs.qualite_fournisseurs() where fournisseur_id = $1`, [m.fournisseur])).note_qualite)).toBe(92);
+  }));
+
+  it('plusieurs commandes : la commande de la réserve du fournisseur doit être précisée', () => withTx(async (db) => {
+    const m = await monde(db);
+    const d = await dossier(db, m);
+    const c1 = await commande(db, m, d, [{ qte: 40, pu: 300 }]);
+    await commande(db, m, d, [{ qte: 10, pu: 100 }]);
+    const r = await reception(db, m, d);
+    const x = await reserve(db, r, 'bloquante', 'Armoires livrées sans portes');
+    await expectError(db, 'GBS_COMMANDE_REQUISE', `select gbs.signer_reception($1, 'refusee', 'Mme Kouassi', $2, current_date)`, [r, fichier(d, 1)]);
+    await as(db, m.hub);
+    await db.query(`update gbs.reserves_reception set commande_id = $2 where id = $1`, [x.id, c1]);
+    await signer(db, r, d, 'refusee');
+    await asRoot(db);
+    expect((await one(db, `select n.gravite from gbs.reserves_reception x join gbs.non_conformites n on n.id = x.non_conformite_id where x.id = $1`, [x.id])).gravite).toBe('critique');
   }));
 });

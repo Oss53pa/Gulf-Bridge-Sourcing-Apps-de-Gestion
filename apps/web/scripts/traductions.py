@@ -710,10 +710,14 @@ T = {
  'reception.aucune_reserve_ouverte': ('Aucune réserve ouverte.', 'No open reservation.', '暂无未解除保留意见。'),
  'reception.ouvertes': ('Ouvertes', 'Open', '未解除'), 'reception.ouvertes_sous': ('à lever', 'to lift', '待解除'),
  'reception.en_retard': ('En retard', 'Overdue', '已逾期'), 'reception.en_retard_sous': ('délai dépassé', 'deadline passed', '超过期限'),
+ 'reception.commande': ('Commande concernée', 'Order concerned', '相关订单'),
+ 'reception.aide_nc': ('Réserve majeure ou bloquante du fournisseur : une non-conformité sera ouverte sur sa commande à la signature et comptera dans sa note qualité.', 'Major or blocking supplier reservation: a non-conformity will be opened on its order at signature and will count in its quality score.', '供应商严重或阻断性保留意见：签署时将对其订单开立不合格项，并计入质量评分。'),
+ 'reception.nc_ouverte': ('Non-conformité ouverte sur la commande du fournisseur', 'Non-conformity opened on the supplier order', '已对供应商订单开立不合格项'),
  'reception.majeures': ('Majeures', 'Major', '严重'), 'reception.majeures_sous': ('à traiter en priorité', 'to handle first', '优先处理'),
 }
 
 E = {
+ 'GBS_COMMANDE_REQUISE': ('Précisez la commande concernée par la réserve du fournisseur.', 'Specify the order concerned by the supplier reservation.', '请指明供应商保留意见涉及的订单。'),
  'GBS_EXPEDITION_NON_ARRIVEE': ('La réception suit l\'arrivée de l\'expédition du dossier.', 'Reception follows the arrival of the file\'s shipment.', '验收须在本项目货物到达后进行。'),
  'GBS_RECEPTION_FIGEE': ('Le dossier, l\'expédition et le représentant d\'une réception ne changent pas.', 'A reception\'s file, shipment and representative cannot change.', '验收的项目、货运及代表不可更改。'),
  'GBS_RESERVE_FIGEE': ('Une réserve reste rattachée à son procès-verbal.', 'A reservation stays attached to its report.', '保留意见须保留在原验收单中。'),

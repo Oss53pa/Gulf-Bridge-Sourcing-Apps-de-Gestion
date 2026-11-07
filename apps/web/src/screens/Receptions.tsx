@@ -16,7 +16,8 @@ interface Reception { id: string; reference: string; dossier_id: string; expedit
   client_signataire: string | null; constat: string | null; photos: string[]; statut: 'brouillon' | 'signee' | 'definitive' | 'refusee';
   pv_document: string | null; signe_le: string | null; pv_levee_document: string | null; definitive_le: string | null }
 interface Reserve { id: string; reception_id: string; numero: number; description: string; gravite: 'mineure' | 'majeure' | 'bloquante';
-  responsable: string; delai: string | null; photos: string[]; statut: 'ouverte' | 'levee'; preuve: string | null; photos_levee: string[]; levee_le: string | null }
+  responsable: string; commande_id: string | null; non_conformite_id: string | null; delai: string | null; photos: string[]; statut: 'ouverte' | 'levee';
+  preuve: string | null; photos_levee: string[]; levee_le: string | null }
 interface ReserveOuverte { reserve_id: string; reception: string; dossier_id: string; dossier: string; numero: number; description: string;
   gravite: string; responsable: string; delai: string | null; en_retard: boolean }
 const STATUT = { brouillon: 'neutre', signee: 'att', definitive: 'ok', refusee: 'err' } as const;
@@ -116,7 +117,8 @@ function FicheReception({ id, onClose, onChange }: { id: string; onClose: () => 
   const r = useAsync(async () => ok(await supabase.from('receptions').select('*').eq('id', id).maybeSingle()) as Reception | null, [id]);
   const rs = useAsync(async () => ok(await supabase.from('reserves_reception').select('*').eq('reception_id', id).order('numero')) as Reserve[], [id]);
   const a = useAction();
-  const [res, setRes] = useState({ description: '', gravite: 'mineure', responsable: 'fournisseur', delai: '' });
+  const [res, setRes] = useState({ description: '', gravite: 'mineure', responsable: 'fournisseur', delai: '', commande_id: '' });
+  const cmds = useAsync(async () => (r.data ? ok(await supabase.from('commandes').select('id, reference').eq('dossier_id', r.data.dossier_id).neq('statut', 'annulee')) as { id: string; reference: string }[] : []), [r.data?.dossier_id]);
   const [resPhotos, setResPhotos] = useState<string[]>([]);
   const [sig, setSig] = useState({ decision: 'acceptee', signataire: '', document: '', date: aujourdhui() });
   const [levee, setLevee] = useState<{ id: string; preuve: string; photos: string[] } | null>(null);
@@ -125,11 +127,13 @@ function FicheReception({ id, onClose, onChange }: { id: string; onClose: () => 
   const recharger = () => { void r.recharger(); void rs.recharger(); onChange(); };
   const ajouterReserve = async () => {
     const v = z.object({ reception_id: z.string().uuid(), description: z.string().trim().min(3).max(2000), gravite: z.enum(['mineure', 'majeure', 'bloquante']),
-      responsable: z.enum(['fournisseur', 'transitaire', 'gbs', 'client']), delai: DATE.nullable(), photos: z.array(z.string().max(400)).max(20) }).strict()
-      .safeParse({ reception_id: id, description: res.description, gravite: res.gravite, responsable: res.responsable, delai: res.delai || null, photos: resPhotos });
+      responsable: z.enum(['fournisseur', 'transitaire', 'gbs', 'client']), delai: DATE.nullable(), photos: z.array(z.string().max(400)).max(20),
+      commande_id: z.string().uuid().nullable() }).strict()
+      .safeParse({ reception_id: id, description: res.description, gravite: res.gravite, responsable: res.responsable, delai: res.delai || null, photos: resPhotos,
+        commande_id: res.responsable === 'fournisseur' && res.commande_id ? res.commande_id : null });
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.from('reserves_reception').insert(v.data)))) {
-      setRes({ description: '', gravite: 'mineure', responsable: 'fournisseur', delai: '' }); setResPhotos([]); recharger();
+      setRes({ description: '', gravite: 'mineure', responsable: 'fournisseur', delai: '', commande_id: '' }); setResPhotos([]); recharger();
     }
   };
   const signer = async () => {
@@ -170,7 +174,8 @@ function FicheReception({ id, onClose, onChange }: { id: string; onClose: () => 
         {reserves.length === 0 ? <span className="mute">{t('reception.sans_reserve')}</span> : (
           <table className="t"><tbody>{reserves.map((s) => (
             <tr key={s.id}><td>{s.numero}</td><td>{s.description}<div className="mute">{t(`reception.responsables.${s.responsable}`)}{s.delai ? ` · ${date(s.delai, langue)}` : ''}</div>
-              {s.preuve && <div className="mute">{t('reception.levee_le', { date: date(s.levee_le, langue) })} : {s.preuve}</div>}</td>
+              {s.preuve && <div className="mute">{t('reception.levee_le', { date: date(s.levee_le, langue) })} : {s.preuve}</div>}
+              {s.non_conformite_id && <div className="mute">{t('reception.nc_ouverte')}</div>}</td>
               <td><Statut statut={GRAVITE[s.gravite]} libelle={t(`reception.gravites.${s.gravite}`)} /></td>
               <td><Statut statut={s.statut === 'levee' ? 'ok' : 'att'} libelle={t(`reception.statuts_reserve.${s.statut}`)} /></td>
               <td className="num">{ecrit && x.statut === 'signee' && s.statut === 'ouverte' && <Bouton petit onClick={() => setLevee({ id: s.id, preuve: '', photos: [] })}>{t('reception.lever')}</Bouton>}</td></tr>))}</tbody></table>
@@ -183,7 +188,10 @@ function FicheReception({ id, onClose, onChange }: { id: string; onClose: () => 
             <select value={res.responsable} aria-label={t('reception.responsable')} onChange={(e) => setRes({ ...res, responsable: e.target.value })}>
               {['fournisseur', 'transitaire', 'gbs', 'client'].map((g) => <option key={g} value={g}>{t(`reception.responsables.${g}`)}</option>)}</select>
             <input type="date" aria-label={t('reception.delai')} min={x.date_reception} value={res.delai} onChange={(e) => setRes({ ...res, delai: e.target.value })} />
+            {res.responsable === 'fournisseur' && (cmds.data ?? []).length > 1 && <select value={res.commande_id} aria-label={t('reception.commande')} onChange={(e) => setRes({ ...res, commande_id: e.target.value })}>
+              <option value="">{t('reception.commande')}</option>{(cmds.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.reference}</option>)}</select>}
           </div>
+          {res.responsable === 'fournisseur' && res.gravite !== 'mineure' && <p className="mute">{t('reception.aide_nc')}</p>}
           <Depot dossierId={x.dossier_id} valeur={null} onChange={(c) => setResPhotos((p) => (p.length < 20 ? [...p, c] : p))} />
           {resPhotos.length > 0 && <span className="mute">{t('nc.photos_jointes', { n: resPhotos.length })}</span>}
           <Bouton petit onClick={() => void ajouterReserve()}>{t('reception.ajouter_reserve')}</Bouton>
