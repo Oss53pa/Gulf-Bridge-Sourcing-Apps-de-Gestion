@@ -1,11 +1,6 @@
--- (Aucune politique d'écriture n'est créée depuis l'isolation dans le schéma gbs ;
--- la suppression ci-dessous reste sans effet si elle n'existe pas.)
--- Les fichiers ne s'écrivent plus directement depuis le navigateur : la fonction
--- serveur « depot » vérifie le type réel sur les octets, la taille et les droits,
--- puis écrit avec la clé de service. Les utilisateurs gardent la lecture par URL signée.
-do $$
-begin
-  if exists (select 1 from information_schema.schemata where schema_name = 'storage') then
-    execute 'drop policy if exists gbs_docs_depot on storage.objects';
-  end if;
-end $$;
+-- Dépôt des fichiers : la fonction serveur « depot » vérifie le type réel sur les octets,
+-- la taille et les droits, puis écrit avec la clé de service. Aucune politique
+-- d'écriture n'existe sur le bucket « gbs-documents » : les utilisateurs n'ont que la
+-- lecture par URL signée (politique gbs_docs_lecture, migration de configuration).
+comment on function gbs_private.document_visible(text, text) is
+  'Lecture des documents GBS : bucket gbs-documents et dossier visible par l''utilisateur.';

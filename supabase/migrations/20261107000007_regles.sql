@@ -351,7 +351,13 @@ begin
   perform gbs_private.rpc(prev);
   return null;
 end $$;
-drop trigger if exists lignes_commande_nodel on gbs.lignes_commande;
+-- Les lignes d'une commande non signée peuvent être retirées : le déclencheur générique
+-- d'interdiction de suppression est remplacé (sans le supprimer) par une version qui
+-- laisse la règle « lignes figées après signature » trancher.
+create or replace function gbs_private.trg_ligne_supprimable() returns trigger
+language plpgsql as $$ begin return old; end $$;
+create or replace trigger lignes_commande_nodel before delete on gbs.lignes_commande
+  for each row execute function gbs_private.trg_ligne_supprimable();
 create trigger lignes_commande_regles before insert or update or delete on gbs.lignes_commande
   for each row execute function gbs_private.trg_ligne_commande();
 create trigger lignes_commande_calc after insert or update or delete on gbs.lignes_commande

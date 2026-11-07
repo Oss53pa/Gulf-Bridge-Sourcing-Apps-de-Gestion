@@ -87,10 +87,12 @@ insert into gbs.modeles_dossier (code, libelle, mode_financier, phases) values
   ('installation', 'Installation seule', 'service_seul', array['livraison','cloture']),
   ('accord_cadre', 'Dossier-cadre annuel (accord-cadre)', 'service_seul', array['devis_mandat','cloture']);
 
--- Pièces exigées par défaut (à valider et paramétrer par la fondatrice)
-create temporary table _p (phase text, code text, libelle text, obligatoire boolean, ordre int);
-insert into _p values
-  ('consultation','client_cdc_signe','Cahier des charges du client validé et signé',true,1),
+-- Pièces exigées par défaut (à valider et paramétrer par la fondatrice) ;
+-- les modèles complets reçoivent toutes les pièces de leurs phases.
+insert into gbs.pieces_modele (modele_code, phase, code, libelle, obligatoire, ordre)
+select m.code, p.phase, p.code, p.libelle, p.obligatoire, p.ordre
+from gbs.modeles_dossier m join (values
+('consultation','client_cdc_signe','Cahier des charges du client validé et signé',true,1),
   ('consultation','facture_forfait_reglee','Facture du forfait réglée',true,2),
   ('verification','fiche_verification_client','Fiche de vérification du client',false,1),
   ('verification','licence_fournisseur','Licence du fournisseur',true,2),
@@ -128,12 +130,8 @@ insert into _p values
   ('cloture','justificatif_solde','Justificatif du solde',true,1),
   ('cloture','facture_commission_reglee','Facture de commission réglée',true,2),
   ('cloture','client_accuse_reception','Accusé de réception du client',true,3),
-  ('cloture','dossier_qualite_remis','Dossier qualité remis au client',false,4);
-
--- Modèles complets : toutes les pièces de leurs phases
-insert into gbs.pieces_modele (modele_code, phase, code, libelle, obligatoire, ordre)
-select m.code, p.phase, p.code, p.libelle, p.obligatoire, p.ordre
-from gbs.modeles_dossier m join _p p on p.phase = any(m.phases)
+  ('cloture','dossier_qualite_remis','Dossier qualité remis au client',false,4)
+) as p (phase, code, libelle, obligatoire, ordre) on p.phase = any(m.phases)
 where m.code in ('achat_accompagne','equipement_site','negoce')
   and not (m.code = 'negoce' and p.code in ('client_domiciliation','facture_commission_reglee'))
   and not (m.code = 'equipement_site' and p.code = 'facture_forfait_reglee');
@@ -164,8 +162,6 @@ insert into gbs.pieces_modele (modele_code, phase, code, libelle, obligatoire, o
   ('accord_cadre','devis_mandat','client_accord_cadre_signe','Accord-cadre annuel signé',true,1),
   ('accord_cadre','cloture','bilan_annuel','Bilan annuel de l''accord-cadre',false,1);
 
-drop table _p;
-
 -- Création automatique d'un profil sans droits, uniquement pour les comptes invités
 -- dans GBS (métadonnée app = « gbs »). Le projet est partagé : la fonction ne doit
 -- jamais faire échouer l'inscription d'un utilisateur d'une autre application.
@@ -187,8 +183,7 @@ end $$;
 do $$
 begin
   if exists (select 1 from information_schema.tables where table_schema = 'auth' and table_name = 'users') then
-    execute 'drop trigger if exists gbs_nouvel_utilisateur on auth.users';
-    execute 'create trigger gbs_nouvel_utilisateur after insert on auth.users
+    execute 'create or replace trigger gbs_nouvel_utilisateur after insert on auth.users
              for each row execute function gbs_private.trg_nouvel_utilisateur()';
   end if;
 end $$;
@@ -213,7 +208,6 @@ begin
             array['application/pdf','image/jpeg','image/png','image/webp'])
     on conflict (id) do nothing;
     -- Lecture réservée aux rôles qui voient le dossier ; l'écriture passe par la fonction « depot ».
-    execute 'drop policy if exists gbs_docs_lecture on storage.objects';
     execute $p$create policy gbs_docs_lecture on storage.objects for select to authenticated
       using (bucket_id = 'gbs-documents' and gbs_private.document_visible(bucket_id, name))$p$;
   end if;
