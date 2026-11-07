@@ -535,6 +535,8 @@
   "GBS_AVENANT_OBJET": "A change of amount requires the \"price\" or \"quantity\" subject.",
   "GBS_AVENANT_PERIME": "The order changed since the amendment was drafted: draft a new one.",
   "GBS_AVOIR_POSITIF": "A credit note must have a negative amount.",
+  "GBS_BENEFICIAIRES_DEPASSENT_100": "Beneficial owners' shares exceed 100%.",
+  "GBS_BENEFICIAIRES_MANQUANTS": "Record at least one beneficial owner before approving.",
   "GBS_BORDEREAU_SUIVI": "The destination country cargo tracking note is required before shipping.",
   "GBS_CADRE_INCOMPLET": "Incomplete framework: dates and monthly fee required.",
   "GBS_CADRE_INVALIDE": "Invalid framework for this client.",
@@ -550,6 +552,8 @@
   "GBS_COMPTE_DEJA_VERIFIE": "Account already verified.",
   "GBS_COMPTE_NON_VERIFIE": "Payment refused: the account is not verified.",
   "GBS_CONTRAT_NON_SIGNE": "Commission is invoiced when the first supplier contract is signed.",
+  "GBS_CONTROLES_INVALIDES": "Invalid checks: result, source and (non-future) date required for each check entered.",
+  "GBS_CONTROLE_NON_CONFORME": "A check is not compliant: the verification cannot be approved.",
   "GBS_COUT_FIGE": "Approved cost: enter a correction.",
   "GBS_COUT_GLOBAL_INVALIDE": "Invalid life-cycle cost data: check the fields and their limits.",
   "GBS_COUT_NON_AFFECTE": "Allocate the expense to a file or overheads before approving it.",
@@ -648,6 +652,7 @@
   "GBS_UN38_3": "UN38.3 test report required for lithium batteries.",
   "GBS_VALIDATION_ADMIN": "Approval reserved to the administrator or her delegate.",
   "GBS_VALIDATION_RPC": "This step is validated through its dedicated action.",
+  "GBS_VERIFICATION_CLOSE": "This verification is closed: open a new one.",
   "GBS_VERIFICATION_NON_DEMANDEE": "Verification must first be requested by another person.",
   "GBS_VERIFICATION_RPC": "Account verification goes through four-eyes control.",
   "GBS_VERROU1": "Lock 1: no purchase or deposit without signed client mandate and supplier contract.",
@@ -1506,6 +1511,45 @@
   "m2": "m²",
   "m3": "m³",
   "piece": "piece"
+ },
+ "verif": {
+  "aide_beneficiaires": "Any shareholder entry or exit, or change of share, voids the client verification: it must be redone.",
+  "aide_saisie": "For each check: result, source consulted (register, sanctions list, credit report) and date. Approval requires all five checks compliant and at least one beneficial owner; it is done by the administrator, never by the author of the checks.",
+  "ajouter_beneficiaire": "Add a beneficial owner",
+  "aucun_beneficiaire": "No beneficial owner recorded.",
+  "beneficiaires": "Beneficial owners",
+  "completer": "Complete the verification",
+  "controle": {
+   "beneficiaires_effectifs": "Beneficial owners",
+   "identite": "Identity",
+   "immatriculation": "Registration",
+   "sanctions": "Sanctions lists",
+   "solvabilite": "Creditworthiness"
+  },
+  "fonction": "Position",
+  "nationalite": "Nationality (2-letter country code)",
+  "nom": "Name",
+  "nouvelle": "New verification",
+  "pourcentage": "Share held (%)",
+  "resultat": {
+   "a_verifier": "To check",
+   "conforme": "Compliant",
+   "non_conforme": "Non-compliant"
+  },
+  "resultat_label": "Result",
+  "saisie": "Verification checks",
+  "sortie": "Exit",
+  "source": "Source consulted",
+  "statut": {
+   "en_cours": "In progress",
+   "perimee": "Lapsed",
+   "refusee": "Rejected",
+   "validee": "Approved"
+  },
+  "valide_jusqu_au": "valid until {{date}}",
+  "valider": "Approve the verification",
+  "verification": "Client verification",
+  "verifie_le": "Checked on"
  },
  "verification": {
   "en_cours": "In progress",

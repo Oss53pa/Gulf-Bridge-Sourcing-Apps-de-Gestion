@@ -535,6 +535,8 @@
   "GBS_AVENANT_OBJET": "Un changement de montant exige l'objet « prix » ou « quantité ».",
   "GBS_AVENANT_PERIME": "La commande a changé depuis la rédaction de l'avenant : rédigez-en un nouveau.",
   "GBS_AVOIR_POSITIF": "Un avoir doit avoir un montant négatif.",
+  "GBS_BENEFICIAIRES_DEPASSENT_100": "Les parts des bénéficiaires dépassent 100 %.",
+  "GBS_BENEFICIAIRES_MANQUANTS": "Enregistrez au moins un bénéficiaire effectif avant de valider.",
   "GBS_BORDEREAU_SUIVI": "Le bordereau de suivi des cargaisons du pays de destination est exigé avant l'expédition.",
   "GBS_CADRE_INCOMPLET": "Accord-cadre incomplet : dates et forfait mensuel exigés.",
   "GBS_CADRE_INVALIDE": "Accord-cadre invalide pour ce client.",
@@ -550,6 +552,8 @@
   "GBS_COMPTE_DEJA_VERIFIE": "Compte déjà vérifié.",
   "GBS_COMPTE_NON_VERIFIE": "Paiement refusé : le compte n'est pas vérifié.",
   "GBS_CONTRAT_NON_SIGNE": "La commission se facture à la signature du premier contrat fournisseur.",
+  "GBS_CONTROLES_INVALIDES": "Contrôles invalides : résultat, source et date (non future) exigés pour chaque contrôle saisi.",
+  "GBS_CONTROLE_NON_CONFORME": "Un contrôle n'est pas conforme : la vérification ne peut pas être validée.",
   "GBS_COUT_FIGE": "Coût validé : saisissez une correction.",
   "GBS_COUT_GLOBAL_INVALIDE": "Données de coût global invalides : vérifiez les champs et leurs bornes.",
   "GBS_COUT_NON_AFFECTE": "Affectez la dépense à un dossier ou aux frais généraux avant de la valider.",
@@ -648,6 +652,7 @@
   "GBS_UN38_3": "Rapport de test UN38.3 exigé pour les batteries au lithium.",
   "GBS_VALIDATION_ADMIN": "Validation réservée à l'administratrice ou à la personne qu'elle délègue.",
   "GBS_VALIDATION_RPC": "Cette étape se valide par l'action dédiée.",
+  "GBS_VERIFICATION_CLOSE": "Cette vérification est close : ouvrez-en une nouvelle.",
   "GBS_VERIFICATION_NON_DEMANDEE": "La vérification doit d'abord être demandée par une autre personne.",
   "GBS_VERIFICATION_RPC": "La vérification d'un compte passe par le contrôle à quatre yeux.",
   "GBS_VERROU1": "Verrou 1 : aucun achat ni acompte sans mandat client et contrat fournisseur signés.",
@@ -1506,6 +1511,45 @@
   "m2": "m²",
   "m3": "m³",
   "piece": "pièce"
+ },
+ "verif": {
+  "aide_beneficiaires": "Toute entrée ou sortie d'associé, ou tout changement de part, rend la vérification du client caduque : elle est à refaire.",
+  "aide_saisie": "Pour chaque contrôle : résultat, source consultée (registre, liste de sanctions, rapport de solvabilité) et date. La validation exige les cinq contrôles conformes et au moins un bénéficiaire effectif ; elle est faite par l'administratrice, jamais par l'auteur des contrôles.",
+  "ajouter_beneficiaire": "Ajouter un bénéficiaire effectif",
+  "aucun_beneficiaire": "Aucun bénéficiaire effectif enregistré.",
+  "beneficiaires": "Bénéficiaires effectifs",
+  "completer": "Compléter la vérification",
+  "controle": {
+   "beneficiaires_effectifs": "Bénéficiaires effectifs",
+   "identite": "Identité",
+   "immatriculation": "Immatriculation",
+   "sanctions": "Listes de sanctions",
+   "solvabilite": "Solvabilité"
+  },
+  "fonction": "Fonction",
+  "nationalite": "Nationalité (code pays à 2 lettres)",
+  "nom": "Nom",
+  "nouvelle": "Nouvelle vérification",
+  "pourcentage": "Part détenue (%)",
+  "resultat": {
+   "a_verifier": "À vérifier",
+   "conforme": "Conforme",
+   "non_conforme": "Non conforme"
+  },
+  "resultat_label": "Résultat",
+  "saisie": "Contrôles de vérification",
+  "sortie": "Sortie",
+  "source": "Source consultée",
+  "statut": {
+   "en_cours": "En cours",
+   "perimee": "Caduque",
+   "refusee": "Refusée",
+   "validee": "Validée"
+  },
+  "valide_jusqu_au": "valable jusqu'au {{date}}",
+  "valider": "Valider la vérification",
+  "verification": "Vérification du client",
+  "verifie_le": "Vérifié le"
  },
  "verification": {
   "en_cours": "En cours",

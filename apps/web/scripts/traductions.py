@@ -1012,6 +1012,46 @@ E.update({
  'GBS_CHOIX_DEJA_ENREGISTRE': ('Le choix du client est déjà enregistré.', 'The client\'s choice is already recorded.', '客户选择已登记。'),
  'GBS_RAPPORT_REMPLACE': ('Ce rapport a été remplacé : le choix porte sur la dernière version.', 'This report was superseded: the choice applies to the latest version.', '该报告已被替代：请对最新版本做出选择。'),
 })
+T.update({
+ 'verif.beneficiaires': ('Bénéficiaires effectifs', 'Beneficial owners', '实际受益人'),
+ 'verif.aucun_beneficiaire': ('Aucun bénéficiaire effectif enregistré.', 'No beneficial owner recorded.', '尚未登记实际受益人。'),
+ 'verif.sortie': ('Sortie', 'Exit', '退出'),
+ 'verif.ajouter_beneficiaire': ('Ajouter un bénéficiaire effectif', 'Add a beneficial owner', '添加实际受益人'),
+ 'verif.aide_beneficiaires': ('Toute entrée ou sortie d\'associé, ou tout changement de part, rend la vérification du client caduque : elle est à refaire.', 'Any shareholder entry or exit, or change of share, voids the client verification: it must be redone.', '任何股东进出或持股变化都会使客户核验失效，须重新核验。'),
+ 'verif.verification': ('Vérification du client', 'Client verification', '客户核验'),
+ 'verif.statut.en_cours': ('En cours', 'In progress', '进行中'),
+ 'verif.statut.validee': ('Validée', 'Approved', '已通过'),
+ 'verif.statut.refusee': ('Refusée', 'Rejected', '已拒绝'),
+ 'verif.statut.perimee': ('Caduque', 'Lapsed', '已失效'),
+ 'verif.valide_jusqu_au': ('valable jusqu\'au {{date}}', 'valid until {{date}}', '有效期至 {{date}}'),
+ 'verif.controle.identite': ('Identité', 'Identity', '身份'),
+ 'verif.controle.immatriculation': ('Immatriculation', 'Registration', '注册登记'),
+ 'verif.controle.beneficiaires_effectifs': ('Bénéficiaires effectifs', 'Beneficial owners', '实际受益人'),
+ 'verif.controle.solvabilite': ('Solvabilité', 'Creditworthiness', '偿付能力'),
+ 'verif.controle.sanctions': ('Listes de sanctions', 'Sanctions lists', '制裁名单'),
+ 'verif.resultat.conforme': ('Conforme', 'Compliant', '符合'),
+ 'verif.resultat.non_conforme': ('Non conforme', 'Non-compliant', '不符合'),
+ 'verif.resultat.a_verifier': ('À vérifier', 'To check', '待核实'),
+ 'verif.resultat_label': ('Résultat', 'Result', '结果'),
+ 'verif.source': ('Source consultée', 'Source consulted', '查询来源'),
+ 'verif.verifie_le': ('Vérifié le', 'Checked on', '核验日期'),
+ 'verif.completer': ('Compléter la vérification', 'Complete the verification', '补充核验'),
+ 'verif.nouvelle': ('Nouvelle vérification', 'New verification', '新建核验'),
+ 'verif.valider': ('Valider la vérification', 'Approve the verification', '通过核验'),
+ 'verif.saisie': ('Contrôles de vérification', 'Verification checks', '核验检查项'),
+ 'verif.aide_saisie': ('Pour chaque contrôle : résultat, source consultée (registre, liste de sanctions, rapport de solvabilité) et date. La validation exige les cinq contrôles conformes et au moins un bénéficiaire effectif ; elle est faite par l\'administratrice, jamais par l\'auteur des contrôles.', 'For each check: result, source consulted (register, sanctions list, credit report) and date. Approval requires all five checks compliant and at least one beneficial owner; it is done by the administrator, never by the author of the checks.', '每项检查：结果、查询来源（登记册、制裁名单、资信报告）及日期。通过须五项全部符合且至少登记一名实际受益人；由管理员审批，检查人不得自审。'),
+ 'verif.nom': ('Nom', 'Name', '姓名'),
+ 'verif.nationalite': ('Nationalité (code pays à 2 lettres)', 'Nationality (2-letter country code)', '国籍（两位国家代码）'),
+ 'verif.pourcentage': ('Part détenue (%)', 'Share held (%)', '持股比例（%）'),
+ 'verif.fonction': ('Fonction', 'Position', '职务'),
+})
+E.update({
+ 'GBS_CONTROLES_INVALIDES': ('Contrôles invalides : résultat, source et date (non future) exigés pour chaque contrôle saisi.', 'Invalid checks: result, source and (non-future) date required for each check entered.', '检查项无效：每项须填写结果、来源及日期（不得晚于今天）。'),
+ 'GBS_CONTROLE_NON_CONFORME': ('Un contrôle n\'est pas conforme : la vérification ne peut pas être validée.', 'A check is not compliant: the verification cannot be approved.', '有检查项不符合：核验不能通过。'),
+ 'GBS_BENEFICIAIRES_MANQUANTS': ('Enregistrez au moins un bénéficiaire effectif avant de valider.', 'Record at least one beneficial owner before approving.', '通过前请至少登记一名实际受益人。'),
+ 'GBS_BENEFICIAIRES_DEPASSENT_100': ('Les parts des bénéficiaires dépassent 100 %.', 'Beneficial owners\' shares exceed 100%.', '受益人持股合计超过 100%。'),
+ 'GBS_VERIFICATION_CLOSE': ('Cette vérification est close : ouvrez-en une nouvelle.', 'This verification is closed: open a new one.', '该核验已结束：请新建核验。'),
+})
 for code, v in E.items():
     T['erreurs.' + code] = v
 

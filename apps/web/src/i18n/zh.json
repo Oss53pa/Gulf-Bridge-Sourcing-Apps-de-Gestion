@@ -535,6 +535,8 @@
   "GBS_AVENANT_OBJET": "金额变化须勾选“价格”或“数量”。",
   "GBS_AVENANT_PERIME": "起草后订单已变更：请重新起草补充协议。",
   "GBS_AVOIR_POSITIF": "红字发票金额须为负数。",
+  "GBS_BENEFICIAIRES_DEPASSENT_100": "受益人持股合计超过 100%。",
+  "GBS_BENEFICIAIRES_MANQUANTS": "通过前请至少登记一名实际受益人。",
   "GBS_BORDEREAU_SUIVI": "发运前必须提供目的国货物跟踪单。",
   "GBS_CADRE_INCOMPLET": "框架协议不完整：需填写日期和月费。",
   "GBS_CADRE_INVALIDE": "该客户的框架协议无效。",
@@ -550,6 +552,8 @@
   "GBS_COMPTE_DEJA_VERIFIE": "账户已核验。",
   "GBS_COMPTE_NON_VERIFIE": "付款被拒：账户未核验。",
   "GBS_CONTRAT_NON_SIGNE": "首个供应商合同签署后方可开具佣金发票。",
+  "GBS_CONTROLES_INVALIDES": "检查项无效：每项须填写结果、来源及日期（不得晚于今天）。",
+  "GBS_CONTROLE_NON_CONFORME": "有检查项不符合：核验不能通过。",
   "GBS_COUT_FIGE": "成本已批准：请录入更正。",
   "GBS_COUT_GLOBAL_INVALIDE": "全生命周期成本数据无效：请检查字段及取值范围。",
   "GBS_COUT_NON_AFFECTE": "批准前请将费用归属到项目或一般管理费用。",
@@ -648,6 +652,7 @@
   "GBS_UN38_3": "锂电池须提供 UN38.3 测试报告。",
   "GBS_VALIDATION_ADMIN": "仅管理员或其授权人可审批。",
   "GBS_VALIDATION_RPC": "此步骤需通过专用操作确认。",
+  "GBS_VERIFICATION_CLOSE": "该核验已结束：请新建核验。",
   "GBS_VERIFICATION_NON_DEMANDEE": "须先由另一人申请核验。",
   "GBS_VERIFICATION_RPC": "账户核验须经双人复核。",
   "GBS_VERROU1": "第一道锁：未签署客户委托和供应商合同，不得采购或付预付款。",
@@ -1506,6 +1511,45 @@
   "m2": "平方米",
   "m3": "立方米",
   "piece": "件"
+ },
+ "verif": {
+  "aide_beneficiaires": "任何股东进出或持股变化都会使客户核验失效，须重新核验。",
+  "aide_saisie": "每项检查：结果、查询来源（登记册、制裁名单、资信报告）及日期。通过须五项全部符合且至少登记一名实际受益人；由管理员审批，检查人不得自审。",
+  "ajouter_beneficiaire": "添加实际受益人",
+  "aucun_beneficiaire": "尚未登记实际受益人。",
+  "beneficiaires": "实际受益人",
+  "completer": "补充核验",
+  "controle": {
+   "beneficiaires_effectifs": "实际受益人",
+   "identite": "身份",
+   "immatriculation": "注册登记",
+   "sanctions": "制裁名单",
+   "solvabilite": "偿付能力"
+  },
+  "fonction": "职务",
+  "nationalite": "国籍（两位国家代码）",
+  "nom": "姓名",
+  "nouvelle": "新建核验",
+  "pourcentage": "持股比例（%）",
+  "resultat": {
+   "a_verifier": "待核实",
+   "conforme": "符合",
+   "non_conforme": "不符合"
+  },
+  "resultat_label": "结果",
+  "saisie": "核验检查项",
+  "sortie": "退出",
+  "source": "查询来源",
+  "statut": {
+   "en_cours": "进行中",
+   "perimee": "已失效",
+   "refusee": "已拒绝",
+   "validee": "已通过"
+  },
+  "valide_jusqu_au": "有效期至 {{date}}",
+  "valider": "通过核验",
+  "verification": "客户核验",
+  "verifie_le": "核验日期"
  },
  "verification": {
   "en_cours": "核查中",

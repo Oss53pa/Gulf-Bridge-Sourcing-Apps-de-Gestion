@@ -171,7 +171,10 @@ describe('Agrément des fournisseurs et vérification des clients', () => {
     await as(db, m.admin);
     await expectError(db, 'GBS_CLIENT_NON_VERIFIE', `insert into gbs.dossiers (intitule, societe_id, client_id, modele, lettre_credit)
       values ('LC GA', $1, $2, 'achat_accompagne', true)`, [m.cn, m.clientGA]);
+    // Préparation des données (le parcours de vérification lui-même est testé dans verification_clients.test.ts).
+    await asRoot(db);
     await db.query(`update gbs.clients set verification_statut = 'verifie', verification_date = current_date where id = $1`, [m.clientGA]);
+    await as(db, m.admin);
     await db.query(`insert into gbs.dossiers (intitule, societe_id, client_id, modele) values ('Négoce GA', $1, $2, 'negoce')`, [m.cn, m.clientGA]);
   }));
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
+import { VerificationClient } from './VerificationClient';
 import { useAuth } from '../lib/auth';
 import { date, nombre } from '../lib/format';
 import { normaliser } from '../lib/droits';
@@ -36,10 +37,6 @@ export function Clients() {
   const c = liste.find((x) => x.id === sel) ?? null;
   const a = useAction();
   const peutCreer = ['admin', 'hub_afrique', 'agent_pays'].includes(role);
-  const verifier = async (statut: 'verifie' | 'refuse') => {
-    if (!c) return;
-    if (await a.executer(async () => ok(await supabase.from('clients').update({ verification_statut: statut, verification_date: new Date().toISOString().slice(0, 10) }).eq('id', c.id)))) void l.recharger();
-  };
   return (
     <div className="screen">
       <Entete surtitre={`${t('modules.commercial')} · M2`} titre={t('clients.titre', { n: liste.length })}
@@ -72,10 +69,7 @@ export function Clients() {
               <dt>{t('champs.verification')}</dt><dd>{t(`verification.${c.verification_statut}`)} {c.verification_date ? `· ${date(c.verification_date, langue)}` : ''}</dd>
             </dl>
             <p className="mute">{t('clients.aide_verification')}</p>
-            {role === 'admin' && <div className="actions">
-              <Bouton onClick={() => void verifier('verifie')}>{t('clients.marquer_verifie')}</Bouton>
-              <Bouton variante="danger" onClick={() => void verifier('refuse')}>{t('clients.refuser')}</Bouton>
-            </div>}
+            {['admin', 'hub_afrique', 'agent_pays'].includes(role) && <VerificationClient clientId={c.id} onChange={() => void l.recharger()} />}
           </>)}
         </aside>
       </div>
