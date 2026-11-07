@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Commissions } from './screens/Commissions';
 import { NonConformites } from './screens/NonConformites';
+import { ReservesOuvertes } from './screens/Receptions';
 import type { ReactNode } from 'react';
 import { useAuth } from './lib/auth';
 import { configurationOk } from './lib/supabase';
@@ -65,6 +66,7 @@ export function App() {
             <Route path="/non-conformites" element={g('non_conformites', <NonConformites />)} />
             <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
             <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
+            <Route path="/reserves" element={g('reserves', <ReservesOuvertes />)} />
             <Route path="/expeditions/:id" element={g('expeditions', <FicheExpedition />)} />
             <Route path="/factures" element={g('factures', <Factures />)} />
             <Route path="/factures/:id" element={g('factures', <FicheFacture />)} />
