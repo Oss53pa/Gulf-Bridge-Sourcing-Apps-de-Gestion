@@ -25,6 +25,6 @@ verify_enabled = true
 [storage]
 file_size_limit = "25MiB"
 
-[functions.depot]
+[functions.gbs-depot]
 # Jeton de l'utilisateur exigé ; la fonction vérifie ensuite ses droits en base.
 verify_jwt = true
