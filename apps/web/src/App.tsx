@@ -4,6 +4,7 @@ import { Prospection } from './screens/Prospection';
 import { NonConformites } from './screens/NonConformites';
 import { ReservesOuvertes } from './screens/Receptions';
 import { Interventions } from './screens/Interventions';
+import { ImprimerCertificatLc } from './screens/LettresCredit';
 import type { ReactNode } from 'react';
 import { useAuth } from './lib/auth';
 import { configurationOk } from './lib/supabase';
@@ -45,6 +46,7 @@ export function App() {
       <Route path="/imprimer/facture/:id" element={g('factures', <ImprimerFacture />)} />
       <Route path="/imprimer/inspection/:id" element={g('inspections', <ImprimerInspection />)} />
       <Route path="/imprimer/due-diligence/:id" element={g('fournisseurs', <ImprimerDueDiligence />)} />
+      <Route path="/imprimer/certificat-lc/:id" element={g('portefeuille', <ImprimerCertificatLc />)} />
       <Route path="/imprimer/rapport-offres/:id" element={g('portefeuille', <ImprimerRapportOffres />)} />
       <Route path="*" element={
         <Coque>

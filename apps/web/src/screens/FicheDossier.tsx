@@ -17,10 +17,11 @@ import { AvenantsDossier, DemanderPiece } from './Avenants';
 import { LiensSuivi } from './Suivi';
 import { CoutsMarge } from './Couts';
 import { ReceptionsDossier } from './Receptions';
+import { LettresCreditDossier } from './LettresCredit';
 import { InterventionsDossier } from './Interventions';
 import { ListeRapports } from './RapportOffres';
 
-type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'devis' | 'commandes' | 'avenants' | 'receptions' | 'interventions' | 'suivi' | 'couts' | 'journal';
+type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'devis' | 'commandes' | 'avenants' | 'lc' | 'receptions' | 'interventions' | 'suivi' | 'couts' | 'journal';
 
 export function FicheDossier() {
   const { id = '' } = useParams();
@@ -50,6 +51,7 @@ export function FicheDossier() {
   if (['admin', 'hub_afrique', 'agent_pays', 'comptable'].includes(role ?? '')) onglets.push({ id: 'devis', lib: t('fiche.devis') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'commandes', lib: t('fiche.commandes') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'avenants', lib: t('fiche.avenants') });
+  if (d?.lettre_credit && ['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'lc', lib: t('fiche.lettre_credit') });
   if (['admin', 'achats_chine', 'hub_afrique'].includes(role ?? '')) onglets.push({ id: 'receptions', lib: t('fiche.receptions') });
   if (['admin', 'achats_chine', 'hub_afrique'].includes(role ?? '')) onglets.push({ id: 'interventions', lib: t('fiche.interventions') });
   if (['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role ?? '')) onglets.push({ id: 'suivi', lib: t('fiche.suivi_client') });
@@ -79,6 +81,7 @@ export function FicheDossier() {
         {onglet === 'devis' && <DevisDossier dossier={d} />}
         {onglet === 'commandes' && <CommandesDossier dossier={d} />}
         {onglet === 'avenants' && <AvenantsDossier dossier={d} />}
+        {onglet === 'lc' && <LettresCreditDossier dossierId={d.id} />}
         {onglet === 'receptions' && <ReceptionsDossier dossierId={d.id} />}
         {onglet === 'interventions' && <InterventionsDossier dossierId={d.id} />}
         {onglet === 'suivi' && <LiensSuivi dossier={d} />}
