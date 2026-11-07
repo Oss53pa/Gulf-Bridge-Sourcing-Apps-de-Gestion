@@ -25,6 +25,36 @@
   "titre": "{{n}} 个物料",
   "volume": "单件体积（m³）"
  },
+ "avenants": {
+  "aide": "补充协议用于修改已签订单（数量、规格、价格）或期限。须由起草人以外的人审批，再由管理员登记签署版本，订单价格和计划随即重新计算。",
+  "aucun": "该项目暂无补充协议。",
+  "commande": "订单",
+  "deposer_signe": "上传签署版本",
+  "description": "修改说明",
+  "impact_delai": "期限影响",
+  "impact_delai_saisie": "期限影响（工作日，负数表示提前）",
+  "impact_prix": "价格影响",
+  "jours": "{{n}} 个工作日",
+  "montant_actuel": "当前货值：{{montant}}",
+  "nouveau": "新建补充协议",
+  "objet": {
+   "delai": "期限",
+   "prix": "价格",
+   "quantite": "数量",
+   "specification": "规格"
+  },
+  "objets": "内容",
+  "prix_unitaire": "单价（{{devise}}）",
+  "reference": "编号",
+  "refuser": "拒绝补充协议 {{ref}}",
+  "sans_commande": "无（项目期限或规格）",
+  "statut": {
+   "brouillon": "待审批",
+   "refuse": "已拒绝",
+   "signe": "已签署并生效",
+   "valide": "已审批，待签署"
+  }
+ },
  "canaux": {
   "autre": "其他",
   "email": "邮件",
@@ -419,6 +449,12 @@
   "GBS_ACCES_REFUSE": "拒绝访问。",
   "GBS_ANNULATION_ADMIN": "仅管理员可以取消。",
   "GBS_ASSIGNE_INVALIDE": "任务须分配给在职团队成员。",
+  "GBS_AVENANT_FIGE": "仅待审批的补充协议可修改。",
+  "GBS_AVENANT_INUTILE": "订单未签署（可直接修改）或已完成：无需补充协议。",
+  "GBS_AVENANT_LIGNE_INVALIDE": "补充协议明细无效：请检查物料、数量和价格。",
+  "GBS_AVENANT_NON_VALIDE": "签署前须经内部审批。",
+  "GBS_AVENANT_OBJET": "金额变化须勾选“价格”或“数量”。",
+  "GBS_AVENANT_PERIME": "起草后订单已变更：请重新起草补充协议。",
   "GBS_AVOIR_POSITIF": "红字发票金额须为负数。",
   "GBS_BORDEREAU_SUIVI": "发运前必须提供目的国货物跟踪单。",
   "GBS_CADRE_INCOMPLET": "框架协议不完整：需填写日期和月费。",
@@ -496,6 +532,7 @@
   "GBS_PARAM_MANQUANT": "缺少参数：请联系管理员。",
   "GBS_PAYS_AGENT_REQUIS": "必须填写代理所在国家。",
   "GBS_PIECES_MANQUANTES": "缺少必需文件：",
+  "GBS_PIECE_DEJA_FOURNIE": "该文件已提交。",
   "GBS_PIECE_SANS_DOCUMENT": "请先上传文件再确认。",
   "GBS_PLAFOND_WALLET": "超过微信支付/支付宝限额须使用银行转账。",
   "GBS_PLI_FERME": "密封报价：截止后方可录入。",
@@ -637,6 +674,7 @@
   "annuler_dossier": "客户取消",
   "aucune_piece": "本阶段无需文件。",
   "avancer": "确认阶段完成",
+  "avenants": "补充协议",
   "avoirs_emis": "已开红字发票",
   "commandes": "订单",
   "completude": "必需文件完整度",
@@ -938,6 +976,19 @@
   "mise_en_concurrence": "比价",
   "production": "生产",
   "verification": "核查与尽调"
+ },
+ "pieces": {
+  "aide_demande": "索取会记录日期。文件缺失期间，每 3 个工作日为阶段负责人生成一项催办任务；超过 10 个工作日即转为阻碍事项（期限可配置）。",
+  "demandee": "已于 {{le}} 向{{a}}索取 · 催办 {{n}} 次",
+  "demander": "索取",
+  "demander_a": "向谁索取",
+  "demander_titre": "索取：{{piece}}",
+  "destinataire": {
+   "client": "客户",
+   "equipe": "团队",
+   "fournisseur": "供应商",
+   "transitaire": "货代"
+  }
  },
  "priorites": {
   "basse": "低",

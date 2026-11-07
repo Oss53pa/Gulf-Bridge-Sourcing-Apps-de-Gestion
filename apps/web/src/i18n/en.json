@@ -25,6 +25,36 @@
   "titre": "{{n}} items",
   "volume": "Unit volume (m³)"
  },
+ "avenants": {
+  "aide": "An amendment changes a signed order (quantity, specification, price) or a lead time. It is approved by someone other than its author, then the administrator records the signed version: the order price and schedule are then recalculated.",
+  "aucun": "No amendment on this file.",
+  "commande": "Order",
+  "deposer_signe": "Upload the signed version",
+  "description": "Description of the change",
+  "impact_delai": "Lead-time impact",
+  "impact_delai_saisie": "Lead-time impact (working days, negative to bring forward)",
+  "impact_prix": "Price impact",
+  "jours": "{{n}} working days",
+  "montant_actuel": "Current goods amount: {{montant}}",
+  "nouveau": "New amendment",
+  "objet": {
+   "delai": "Lead time",
+   "prix": "Price",
+   "quantite": "Quantity",
+   "specification": "Specification"
+  },
+  "objets": "Subject",
+  "prix_unitaire": "Unit price ({{devise}})",
+  "reference": "Reference",
+  "refuser": "Reject amendment {{ref}}",
+  "sans_commande": "None (file lead time or specification)",
+  "statut": {
+   "brouillon": "To approve",
+   "refuse": "Rejected",
+   "signe": "Signed and applied",
+   "valide": "Approved, to sign"
+  }
+ },
  "canaux": {
   "autre": "Other",
   "email": "E-mail",
@@ -419,6 +449,12 @@
   "GBS_ACCES_REFUSE": "Access denied.",
   "GBS_ANNULATION_ADMIN": "Only the administrator can cancel.",
   "GBS_ASSIGNE_INVALIDE": "The task must be assigned to an active team member.",
+  "GBS_AVENANT_FIGE": "Only an amendment awaiting approval can be edited.",
+  "GBS_AVENANT_INUTILE": "Order not signed (edit it directly) or completed: no amendment.",
+  "GBS_AVENANT_LIGNE_INVALIDE": "Invalid amendment line: check the item, quantity and price.",
+  "GBS_AVENANT_NON_VALIDE": "Internal approval required before signature.",
+  "GBS_AVENANT_OBJET": "A change of amount requires the \"price\" or \"quantity\" subject.",
+  "GBS_AVENANT_PERIME": "The order changed since the amendment was drafted: draft a new one.",
   "GBS_AVOIR_POSITIF": "A credit note must have a negative amount.",
   "GBS_BORDEREAU_SUIVI": "The destination country cargo tracking note is required before shipping.",
   "GBS_CADRE_INCOMPLET": "Incomplete framework: dates and monthly fee required.",
@@ -496,6 +532,7 @@
   "GBS_PARAM_MANQUANT": "Missing setting: tell the administrator.",
   "GBS_PAYS_AGENT_REQUIS": "The agent's country is mandatory.",
   "GBS_PIECES_MANQUANTES": "Mandatory documents missing:",
+  "GBS_PIECE_DEJA_FOURNIE": "This document has already been provided.",
   "GBS_PIECE_SANS_DOCUMENT": "Upload the document before validating it.",
   "GBS_PLAFOND_WALLET": "Above the WeChat Pay / Alipay ceiling, bank transfer is mandatory.",
   "GBS_PLI_FERME": "Sealed bids: the bid is recorded after the deadline.",
@@ -637,6 +674,7 @@
   "annuler_dossier": "Cancellation by the client",
   "aucune_piece": "No document required for this phase.",
   "avancer": "Validate phase",
+  "avenants": "Amendments",
   "avoirs_emis": "Credit notes issued",
   "commandes": "Orders",
   "completude": "Mandatory document completeness",
@@ -938,6 +976,19 @@
   "mise_en_concurrence": "Competitive bidding",
   "production": "Production",
   "verification": "Verification & due diligence"
+ },
+ "pieces": {
+  "aide_demande": "The request is dated. While the document is missing, a follow-up task is created for the phase owner every 3 working days; beyond 10 working days, it becomes a blocking issue (configurable lead times).",
+  "demandee": "Requested from {{a}} on {{le}} · {{n}} follow-up(s)",
+  "demander": "Request",
+  "demander_a": "Request from",
+  "demander_titre": "Request: {{piece}}",
+  "destinataire": {
+   "client": "Client",
+   "equipe": "Team",
+   "fournisseur": "Supplier",
+   "transitaire": "Freight forwarder"
+  }
  },
  "priorites": {
   "basse": "Low",

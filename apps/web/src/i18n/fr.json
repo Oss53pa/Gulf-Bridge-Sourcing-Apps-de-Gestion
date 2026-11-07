@@ -25,6 +25,36 @@
   "titre": "{{n}} articles",
   "volume": "Volume unitaire (m³)"
  },
+ "avenants": {
+  "aide": "Un avenant modifie une commande signée (quantité, spécification, prix) ou un délai. Il est validé par une autre personne que son auteur, puis l'administratrice enregistre la version signée : le prix de la commande et le planning sont alors recalculés.",
+  "aucun": "Aucun avenant sur ce dossier.",
+  "commande": "Commande",
+  "deposer_signe": "Déposer la version signée",
+  "description": "Description de la modification",
+  "impact_delai": "Impact sur le délai",
+  "impact_delai_saisie": "Impact sur le délai (jours ouvrés, négatif pour avancer)",
+  "impact_prix": "Impact sur le prix",
+  "jours": "{{n}} j. ouvrés",
+  "montant_actuel": "Montant actuel des marchandises : {{montant}}",
+  "nouveau": "Nouvel avenant",
+  "objet": {
+   "delai": "Délai",
+   "prix": "Prix",
+   "quantite": "Quantité",
+   "specification": "Spécification"
+  },
+  "objets": "Objet",
+  "prix_unitaire": "Prix unitaire ({{devise}})",
+  "reference": "Référence",
+  "refuser": "Refuser l'avenant {{ref}}",
+  "sans_commande": "Aucune (délai ou spécification du dossier)",
+  "statut": {
+   "brouillon": "À valider",
+   "refuse": "Refusé",
+   "signe": "Signé et appliqué",
+   "valide": "Validé, à signer"
+  }
+ },
  "canaux": {
   "autre": "Autre",
   "email": "E-mail",
@@ -419,6 +449,12 @@
   "GBS_ACCES_REFUSE": "Accès refusé.",
   "GBS_ANNULATION_ADMIN": "Seule l'administratrice peut annuler.",
   "GBS_ASSIGNE_INVALIDE": "La tâche doit être confiée à un membre actif de l'équipe.",
+  "GBS_AVENANT_FIGE": "Seul un avenant à valider se modifie.",
+  "GBS_AVENANT_INUTILE": "Commande non signée (modifiez-la directement) ou terminée : pas d'avenant.",
+  "GBS_AVENANT_LIGNE_INVALIDE": "Ligne d'avenant invalide : vérifiez l'article, la quantité et le prix.",
+  "GBS_AVENANT_NON_VALIDE": "Validation interne requise avant la signature.",
+  "GBS_AVENANT_OBJET": "Un changement de montant exige l'objet « prix » ou « quantité ».",
+  "GBS_AVENANT_PERIME": "La commande a changé depuis la rédaction de l'avenant : rédigez-en un nouveau.",
   "GBS_AVOIR_POSITIF": "Un avoir doit avoir un montant négatif.",
   "GBS_BORDEREAU_SUIVI": "Le bordereau de suivi des cargaisons du pays de destination est exigé avant l'expédition.",
   "GBS_CADRE_INCOMPLET": "Accord-cadre incomplet : dates et forfait mensuel exigés.",
@@ -496,6 +532,7 @@
   "GBS_PARAM_MANQUANT": "Paramètre manquant : prévenez l'administratrice.",
   "GBS_PAYS_AGENT_REQUIS": "Le pays de l'agent est obligatoire.",
   "GBS_PIECES_MANQUANTES": "Pièces obligatoires manquantes :",
+  "GBS_PIECE_DEJA_FOURNIE": "Cette pièce a déjà été fournie.",
   "GBS_PIECE_SANS_DOCUMENT": "Déposez le document avant de valider la pièce.",
   "GBS_PLAFOND_WALLET": "Au-delà du plafond WeChat Pay / Alipay, le virement bancaire est obligatoire.",
   "GBS_PLI_FERME": "Plis fermés : l'offre s'enregistre après la date limite.",
@@ -637,6 +674,7 @@
   "annuler_dossier": "Annulation par le client",
   "aucune_piece": "Aucune pièce exigée pour cette phase.",
   "avancer": "Valider la phase",
+  "avenants": "Avenants",
   "avoirs_emis": "Avoirs émis",
   "commandes": "Commandes",
   "completude": "Complétude des pièces obligatoires",
@@ -938,6 +976,19 @@
   "mise_en_concurrence": "Mise en concurrence",
   "production": "Production",
   "verification": "Vérification et due diligence"
+ },
+ "pieces": {
+  "aide_demande": "La demande est datée. Tant que la pièce manque, une tâche de relance est créée pour le responsable de la phase tous les 3 jours ouvrés ; au-delà de 10 jours ouvrés, la pièce devient un point bloquant (délais paramétrables).",
+  "demandee": "Demandée au {{a}} le {{le}} · {{n}} relance(s)",
+  "demander": "Demander",
+  "demander_a": "Demander à",
+  "demander_titre": "Demander : {{piece}}",
+  "destinataire": {
+   "client": "Client",
+   "equipe": "Équipe",
+   "fournisseur": "Fournisseur",
+   "transitaire": "Transitaire"
+  }
  },
  "priorites": {
   "basse": "Basse",

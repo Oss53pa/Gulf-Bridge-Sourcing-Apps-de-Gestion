@@ -227,6 +227,12 @@ Les taux USD et CNY sont importés chaque jour ouvré depuis les taux de référ
 Une publication refusée n'écrit rien, n'est pas redemandée le même jour et reste tracée dans `gbs.imports_taux` (lisible par l'administratrice et la comptabilité) : le taux se saisit alors à la main. Les erreurs réseau sont retentées, au plus 6 requêtes par jour (`taux.requetes_max_jour`).
 
 ```sql
+select cron.schedule('gbs-relances-pieces', '0 7 * * 1-5',
+  $c$do $$ begin perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform gbs.relancer_pieces(); end $$$c$);
+```
+
+```sql
 select cron.schedule('gbs-taux-bce', '*/15 15-17 * * 1-5',
   $c$do $$ begin perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
   perform gbs.importer_taux_bce(); end $$$c$);
@@ -259,7 +265,8 @@ Ces points sont à vérifier ou à trancher. Ils ne sont pas couverts par le cod
 | Messagerie, page de suivi client, guide d'expression du besoin, rapport des 3 offres automatique et coût global | Non commencé (l'offre porte déjà un champ « coût global » et l'alerte « coût global manquant ») | 1 |
 | Application inspecteur hors ligne, interface mandarin validée | Le chinois est traduit mais **non validé** par un locuteur natif | 1 |
 | Jours ouvrés et fériés, délais cibles avec voyants, attente d'un tiers, mes tâches, délégation en cas d'absence | **Fait** (migration 14). Délais cibles à saisir par la fondatrice ; calendrier chinois officiel et fêtes musulmanes à saisir chaque année ; jours fériés proposés « à confirmer » | 1 |
-| Avenants, rétroplanning, relance automatique des pièces manquantes devenant points bloquants | Non commencé | 1 |
+| Avenants (prix et planning recalculés à la signature), demande et relance des pièces manquantes, passage en point bloquant | **Fait** (migration 15). Relance sous forme de tâche interne tant que la page de suivi client, les formulaires fournisseurs et l'e-mail n'existent pas ; délais de relance (3 j) et de blocage (10 j) à confirmer | 1 |
+| Rétroplanning depuis la date d'ouverture du site, signature électronique des avenants | Non commencé | 1 |
 | Négoce complet, entrepôt, conformité à l'import, garanties, appels d'offres, trésorerie, SAV, portails avec compte, rentabilité | Non commencé | 2 |
 | WeChat, WeChat Pay et Alipay connectés, suivi automatique des conteneurs, IA | Non commencé | 3 |
 | Écrans de la maquette hors lot 0 (Prospection, Gantt, Productivité, etc.) | Affichés dans le Sommaire avec leur lot, non ouvrables | 1 à 3 |
