@@ -1,0 +1,23 @@
+{
+  "name": "gulf-bridge-sourcing",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Application de gestion Gulf Bridge Sourcing — lot 0",
+  "scripts": {
+    "db:reset": "bash supabase/tests/reset_db.sh",
+    "test:db": "bash supabase/tests/reset_db.sh && vitest run --config supabase/tests/vitest.config.ts",
+    "test:web": "pnpm --filter web test",
+    "build:web": "pnpm --filter web build",
+    "typecheck": "pnpm --filter web typecheck",
+    "dev": "pnpm --filter web dev"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.10",
+    "@types/pg": "8.11.10",
+    "pg": "8.13.1",
+    "typescript": "5.6.3",
+    "vitest": "2.1.8"
+  },
+  "packageManager": "pnpm@10.9.0",
+  "engines": { "node": ">=20" }
+}
