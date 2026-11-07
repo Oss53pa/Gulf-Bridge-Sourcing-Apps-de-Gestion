@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { Commissions } from './screens/Commissions';
 import type { ReactNode } from 'react';
 import { useAuth } from './lib/auth';
 import { configurationOk } from './lib/supabase';
@@ -65,6 +66,7 @@ export function App() {
             <Route path="/expeditions/:id" element={g('expeditions', <FicheExpedition />)} />
             <Route path="/factures" element={g('factures', <Factures />)} />
             <Route path="/factures/:id" element={g('factures', <FicheFacture />)} />
+            <Route path="/commissions" element={g('commissions', <Commissions />)} />
             <Route path="/paiements" element={g('paiements', <Paiements />)} />
             <Route path="/journal" element={g('journal', <Journal />)} />
             <Route path="/parametrage" element={g('parametrage', <Parametrage />)} />
