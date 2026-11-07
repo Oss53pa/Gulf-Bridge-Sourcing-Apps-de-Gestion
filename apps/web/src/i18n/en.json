@@ -708,6 +708,7 @@
   "GBS_FACTURE_VIDE": "Add at least one line before issuing.",
   "GBS_FICHIER_TAILLE": "File empty or too large (25 MB max).",
   "GBS_FICHIER_TYPE": "File type refused: PDF, PNG, JPEG or WebP only.",
+  "GBS_FOURNISSEUR_HORS_DOSSIER": "This supplier has neither offer nor order in this file.",
   "GBS_FOURNISSEUR_NON_AGREE": "Supplier not approved or due diligence expired.",
   "GBS_FOURNISSEUR_NON_INVITE": "This supplier was not invited.",
   "GBS_FRET_ASSURANCE_REQUIS": "A CIF or CIP bid must state freight and insurance.",
@@ -757,6 +758,7 @@
   "GBS_PHOTOS_INVALIDES": "Invalid photos: only files uploaded to this file, at most 20.",
   "GBS_PIECES_MANQUANTES": "Mandatory documents missing:",
   "GBS_PIECE_DEJA_FOURNIE": "This document has already been provided.",
+  "GBS_PIECE_FIGEE": "The part stays attached to its file.",
   "GBS_PIECE_SANS_DOCUMENT": "Upload the document before validating it.",
   "GBS_PLAFOND_WALLET": "Above the WeChat Pay / Alipay ceiling, bank transfer is mandatory.",
   "GBS_PLI_FERME": "Sealed bids: the bid is recorded after the deadline.",
@@ -1549,17 +1551,42 @@
   "verification": "Verification & due diligence"
  },
  "pieces": {
+  "aide_catalogue": "Taken from the supplier's response (parts prices and availability period); parts selected by the client become contract commitments.",
   "aide_demande": "The request is dated. While the document is missing, a follow-up task is created for the phase owner every 3 working days; beyond 10 working days, it becomes a blocking issue (configurable lead times).",
+  "aide_devis": "Client price calculated by the database: supplier price in accompanied purchase (the client pays the supplier), plus the trading margin otherwise. Signed quote: the list no longer changes.",
+  "ans": "{{n}} years",
+  "aucune_catalogue": "No part recorded for this supplier.",
+  "aucune_devis": "No part proposed.",
+  "criticite": "Criticality",
+  "criticites": {
+   "rechange": "Spare",
+   "strategique": "Critical",
+   "usure": "Wear"
+  },
+  "delai_jours": "Lead time (days)",
   "demandee": "Requested from {{a}} on {{le}} · {{n}} follow-up(s)",
   "demander": "Request",
   "demander_a": "Request from",
   "demander_titre": "Request: {{piece}}",
+  "designation": "Description",
   "destinataire": {
    "client": "Client",
    "equipe": "Team",
    "fournisseur": "Supplier",
    "transitaire": "Freight forwarder"
-  }
+  },
+  "disponibilite": "Availability · lead time",
+  "disponibilite_ans": "Avail. (years)",
+  "jours": "{{n}} d",
+  "prix": "Unit price",
+  "prix_fournisseur": "Supplier price",
+  "proposer": "Propose from catalogue",
+  "quantite_recommandee": "Recommended qty",
+  "reference": "Manufacturer reference",
+  "retenue": "Selected by client",
+  "titre_catalogue": "Supplier spare parts",
+  "titre_devis": "Proposed spare parts",
+  "total_retenu": "Total of selected parts"
  },
  "priorites": {
   "basse": "Low",

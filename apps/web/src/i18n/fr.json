@@ -708,6 +708,7 @@
   "GBS_FACTURE_VIDE": "Ajoutez au moins une ligne avant d'émettre.",
   "GBS_FICHIER_TAILLE": "Fichier vide ou trop lourd (25 Mo au plus).",
   "GBS_FICHIER_TYPE": "Type de fichier refusé : PDF, PNG, JPEG ou WebP uniquement.",
+  "GBS_FOURNISSEUR_HORS_DOSSIER": "Ce fournisseur n'a ni offre ni commande dans ce dossier.",
   "GBS_FOURNISSEUR_NON_AGREE": "Fournisseur non agréé ou due diligence expirée.",
   "GBS_FOURNISSEUR_NON_INVITE": "Ce fournisseur n'a pas été consulté.",
   "GBS_FRET_ASSURANCE_REQUIS": "Une offre CIF ou CIP doit indiquer le fret et l'assurance.",
@@ -757,6 +758,7 @@
   "GBS_PHOTOS_INVALIDES": "Photos invalides : uniquement des fichiers déposés dans ce dossier, 20 au plus.",
   "GBS_PIECES_MANQUANTES": "Pièces obligatoires manquantes :",
   "GBS_PIECE_DEJA_FOURNIE": "Cette pièce a déjà été fournie.",
+  "GBS_PIECE_FIGEE": "La pièce reste rattachée à son dossier.",
   "GBS_PIECE_SANS_DOCUMENT": "Déposez le document avant de valider la pièce.",
   "GBS_PLAFOND_WALLET": "Au-delà du plafond WeChat Pay / Alipay, le virement bancaire est obligatoire.",
   "GBS_PLI_FERME": "Plis fermés : l'offre s'enregistre après la date limite.",
@@ -1549,17 +1551,42 @@
   "verification": "Vérification et due diligence"
  },
  "pieces": {
+  "aide_catalogue": "Repris de la réponse du fournisseur (prix et durée de disponibilité des pièces) ; les pièces retenues par le client deviennent des engagements du contrat.",
   "aide_demande": "La demande est datée. Tant que la pièce manque, une tâche de relance est créée pour le responsable de la phase tous les 3 jours ouvrés ; au-delà de 10 jours ouvrés, la pièce devient un point bloquant (délais paramétrables).",
+  "aide_devis": "Prix client calculé par la base : prix du fournisseur en achat accompagné (le client paie le fournisseur), majoré de la marge du négoce sinon. Devis signé : la liste ne change plus.",
+  "ans": "{{n}} ans",
+  "aucune_catalogue": "Aucune pièce enregistrée pour ce fournisseur.",
+  "aucune_devis": "Aucune pièce proposée.",
+  "criticite": "Criticité",
+  "criticites": {
+   "rechange": "Rechange",
+   "strategique": "Stratégique",
+   "usure": "Usure"
+  },
+  "delai_jours": "Délai (jours)",
   "demandee": "Demandée au {{a}} le {{le}} · {{n}} relance(s)",
   "demander": "Demander",
   "demander_a": "Demander à",
   "demander_titre": "Demander : {{piece}}",
+  "designation": "Désignation",
   "destinataire": {
    "client": "Client",
    "equipe": "Équipe",
    "fournisseur": "Fournisseur",
    "transitaire": "Transitaire"
-  }
+  },
+  "disponibilite": "Disponibilité · délai",
+  "disponibilite_ans": "Dispo. (ans)",
+  "jours": "{{n}} j",
+  "prix": "Prix unitaire",
+  "prix_fournisseur": "Prix fournisseur",
+  "proposer": "Proposer depuis le catalogue",
+  "quantite_recommandee": "Qté recommandée",
+  "reference": "Référence fabricant",
+  "retenue": "Retenue par le client",
+  "titre_catalogue": "Pièces de rechange du fournisseur",
+  "titre_devis": "Pièces de rechange proposées",
+  "total_retenu": "Total des pièces retenues"
  },
  "priorites": {
   "basse": "Basse",

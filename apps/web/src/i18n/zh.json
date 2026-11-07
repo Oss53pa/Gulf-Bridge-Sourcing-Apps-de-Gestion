@@ -708,6 +708,7 @@
   "GBS_FACTURE_VIDE": "开具前请至少添加一行。",
   "GBS_FICHIER_TAILLE": "文件为空或过大（最大 25 MB）。",
   "GBS_FICHIER_TYPE": "文件类型不支持：仅限 PDF、PNG、JPEG 或 WebP。",
+  "GBS_FOURNISSEUR_HORS_DOSSIER": "该供应商在本项目中无报价也无订单。",
   "GBS_FOURNISSEUR_NON_AGREE": "供应商未准入或尽职调查已过期。",
   "GBS_FOURNISSEUR_NON_INVITE": "未向该供应商询价。",
   "GBS_FRET_ASSURANCE_REQUIS": "CIF 或 CIP 报价须注明运费和保险费。",
@@ -757,6 +758,7 @@
   "GBS_PHOTOS_INVALIDES": "照片无效：仅限本项目已上传文件，最多20张。",
   "GBS_PIECES_MANQUANTES": "缺少必需文件：",
   "GBS_PIECE_DEJA_FOURNIE": "该文件已提交。",
+  "GBS_PIECE_FIGEE": "备件须保留在原项目中。",
   "GBS_PIECE_SANS_DOCUMENT": "请先上传文件再确认。",
   "GBS_PLAFOND_WALLET": "超过微信支付/支付宝限额须使用银行转账。",
   "GBS_PLI_FERME": "密封报价：截止后方可录入。",
@@ -1549,17 +1551,42 @@
   "verification": "核查与尽调"
  },
  "pieces": {
+  "aide_catalogue": "取自供应商报价（备件价格及供应年限）；客户选定的备件成为合同承诺。",
   "aide_demande": "索取会记录日期。文件缺失期间，每 3 个工作日为阶段负责人生成一项催办任务；超过 10 个工作日即转为阻碍事项（期限可配置）。",
+  "aide_devis": "客户价由系统计算：陪同采购为供应商价（客户直接付款给供应商），贸易模式另加毛利。报价签署后清单不再变更。",
+  "ans": "{{n}} 年",
+  "aucune_catalogue": "该供应商暂无备件记录。",
+  "aucune_devis": "暂无推荐备件。",
+  "criticite": "重要性",
+  "criticites": {
+   "rechange": "备用",
+   "strategique": "关键",
+   "usure": "易损"
+  },
+  "delai_jours": "交期（天）",
   "demandee": "已于 {{le}} 向{{a}}索取 · 催办 {{n}} 次",
   "demander": "索取",
   "demander_a": "向谁索取",
   "demander_titre": "索取：{{piece}}",
+  "designation": "名称",
   "destinataire": {
    "client": "客户",
    "equipe": "团队",
    "fournisseur": "供应商",
    "transitaire": "货代"
-  }
+  },
+  "disponibilite": "供应年限 · 交期",
+  "disponibilite_ans": "供应（年）",
+  "jours": "{{n}} 天",
+  "prix": "单价",
+  "prix_fournisseur": "供应商价",
+  "proposer": "从目录推荐",
+  "quantite_recommandee": "建议数量",
+  "reference": "厂家编号",
+  "retenue": "客户选定",
+  "titre_catalogue": "供应商备件",
+  "titre_devis": "建议备件",
+  "total_retenu": "选定备件合计"
  },
  "priorites": {
   "basse": "低",

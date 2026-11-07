@@ -928,9 +928,28 @@ T = {
  'qualite.intitule': ('Intitulé du référentiel', 'Standard title', '标准名称'), 'qualite.reference': ('Référence du client', 'Client reference', '客户编号'),
  'qualite.obligatoire': ('Obligatoire', 'Mandatory', '必需'), 'qualite.libelle_client': ('Intitulé chez le client', 'Client\'s title', '客户标题'),
  'qualite.aide_referentiel': ('Cochez les sections exigées par le client, dans son ordre, avec ses intitulés.', 'Tick the sections required by the client, in their order, with their titles.', '勾选客户要求的章节，按其顺序及标题。'),
+ # ------------------------------------------------------------------ pièces de rechange (M6, lot 1)
+ 'pieces.titre_devis': ('Pièces de rechange proposées', 'Proposed spare parts', '建议备件'),
+ 'pieces.titre_catalogue': ('Pièces de rechange du fournisseur', 'Supplier spare parts', '供应商备件'),
+ 'pieces.proposer': ('Proposer depuis le catalogue', 'Propose from catalogue', '从目录推荐'),
+ 'pieces.aucune_devis': ('Aucune pièce proposée.', 'No part proposed.', '暂无推荐备件。'),
+ 'pieces.aucune_catalogue': ('Aucune pièce enregistrée pour ce fournisseur.', 'No part recorded for this supplier.', '该供应商暂无备件记录。'),
+ 'pieces.designation': ('Désignation', 'Description', '名称'), 'pieces.reference': ('Référence fabricant', 'Manufacturer reference', '厂家编号'),
+ 'pieces.criticite': ('Criticité', 'Criticality', '重要性'),
+ 'pieces.criticites.strategique': ('Stratégique', 'Critical', '关键'), 'pieces.criticites.rechange': ('Rechange', 'Spare', '备用'), 'pieces.criticites.usure': ('Usure', 'Wear', '易损'),
+ 'pieces.disponibilite': ('Disponibilité · délai', 'Availability · lead time', '供应年限 · 交期'),
+ 'pieces.ans': ('{{n}} ans', '{{n}} years', '{{n}} 年'), 'pieces.jours': ('{{n}} j', '{{n}} d', '{{n}} 天'),
+ 'pieces.prix': ('Prix unitaire', 'Unit price', '单价'), 'pieces.retenue': ('Retenue par le client', 'Selected by client', '客户选定'),
+ 'pieces.total_retenu': ('Total des pièces retenues', 'Total of selected parts', '选定备件合计'),
+ 'pieces.aide_devis': ('Prix client calculé par la base : prix du fournisseur en achat accompagné (le client paie le fournisseur), majoré de la marge du négoce sinon. Devis signé : la liste ne change plus.', 'Client price calculated by the database: supplier price in accompanied purchase (the client pays the supplier), plus the trading margin otherwise. Signed quote: the list no longer changes.', '客户价由系统计算：陪同采购为供应商价（客户直接付款给供应商），贸易模式另加毛利。报价签署后清单不再变更。'),
+ 'pieces.prix_fournisseur': ('Prix fournisseur', 'Supplier price', '供应商价'), 'pieces.quantite_recommandee': ('Qté recommandée', 'Recommended qty', '建议数量'),
+ 'pieces.disponibilite_ans': ('Dispo. (ans)', 'Avail. (years)', '供应（年）'), 'pieces.delai_jours': ('Délai (jours)', 'Lead time (days)', '交期（天）'),
+ 'pieces.aide_catalogue': ('Repris de la réponse du fournisseur (prix et durée de disponibilité des pièces) ; les pièces retenues par le client deviennent des engagements du contrat.', 'Taken from the supplier\'s response (parts prices and availability period); parts selected by the client become contract commitments.', '取自供应商报价（备件价格及供应年限）；客户选定的备件成为合同承诺。'),
 }
 
 E = {
+ 'GBS_FOURNISSEUR_HORS_DOSSIER': ('Ce fournisseur n\'a ni offre ni commande dans ce dossier.', 'This supplier has neither offer nor order in this file.', '该供应商在本项目中无报价也无订单。'),
+ 'GBS_PIECE_FIGEE': ('La pièce reste rattachée à son dossier.', 'The part stays attached to its file.', '备件须保留在原项目中。'),
  'GBS_SECTIONS_INVALIDES': ('Référentiel invalide : sections connues, sans doublon, 20 au plus.', 'Invalid standard: known sections, no duplicates, 20 at most.', '标准无效：须为已知章节，不重复，最多20项。'),
  'GBS_INSPECTION_INCONNUE': ('Inspection inconnue pour cette commande.', 'Unknown inspection for this order.', '该订单无此检验。'),
  'GBS_NUMEROS_EN_TROP': ('Plus de numéros de série que d\'unités commandées.', 'More serial numbers than ordered units.', '序列号多于订购件数。'),

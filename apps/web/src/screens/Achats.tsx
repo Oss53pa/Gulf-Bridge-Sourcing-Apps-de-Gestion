@@ -9,6 +9,7 @@ import { date, dateHeure, montant } from '../lib/format';
 import type { Article, Commande, Compte, Dossier, Fournisseur, Inspection, LigneCommande, Paiement } from '../lib/types';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
 import { ApprobationEssais } from './ApprobationEssais';
+import { CataloguePieces } from './PiecesRechange';
 import { Depot } from '../components/Depot';
 import { useNoms } from '../lib/referentiels';
 import { DonneesCoutGlobal, ListeRapports } from './RapportOffres';
@@ -361,6 +362,7 @@ export function FicheCommande() {
         </section>
         {ecrit && <ApprobationEssais commandeId={cmd.id} dossierId={cmd.dossier_id} statutCommande={cmd.statut} onChange={recharger} />}
         {cmd.date_livraison_promise && <PenaliteCommande commande={cmd} peutDater={ecrit} onChange={recharger} />}
+        {ecrit && <CataloguePieces dossierId={cmd.dossier_id} fournisseurId={cmd.fournisseur_id} />}
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="section-titre">{t('commandes.paiements')}</span>

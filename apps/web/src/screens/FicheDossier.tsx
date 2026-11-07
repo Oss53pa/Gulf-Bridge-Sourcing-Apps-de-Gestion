@@ -19,6 +19,7 @@ import { CoutsMarge } from './Couts';
 import { ReceptionsDossier } from './Receptions';
 import { LettresCreditDossier } from './LettresCredit';
 import { DossierQualite } from './DossierQualite';
+import { PiecesDevis } from './PiecesRechange';
 import { InterventionsDossier } from './Interventions';
 import { ListeRapports } from './RapportOffres';
 
@@ -357,6 +358,7 @@ function DevisDossier({ dossier }: { dossier: Dossier }) {
           </tbody>
         </table>
       )}
+      {dernier && <PiecesDevis devisId={dernier.id} modifiable={!dernier.mandat_valide_le && ['brouillon', 'envoye'].includes(dernier.statut)} />}
       {dossier.modele === 'equipement_site' && (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="section-titre">{t('devis.echeancier')} · {montant(dossier.forfait_projet_ht, 'XOF', langue)}</div>
