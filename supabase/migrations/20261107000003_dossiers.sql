@@ -4,7 +4,7 @@
 -- Cahier des charges : sections 4 bis, 5 (forfait au projet, accord-cadre), 5 bis.
 -- =============================================================================
 
-create table public.modeles_dossier (
+create table gbs.modeles_dossier (
   code            text primary key check (code ~ '^[a-z_]{3,40}$'),
   libelle         text not null check (length(libelle) <= 120),
   mode_financier  text not null check (mode_financier in ('accompagne','negoce','service_seul')),
@@ -12,8 +12,8 @@ create table public.modeles_dossier (
   actif           boolean not null default true
 );
 
-create table public.pieces_modele (
-  modele_code text not null references public.modeles_dossier(code),
+create table gbs.pieces_modele (
+  modele_code text not null references gbs.modeles_dossier(code),
   phase       text not null,
   code        text not null check (code ~ '^[a-z0-9_]{2,40}$'),
   libelle     text not null check (length(libelle) <= 200),
@@ -22,20 +22,20 @@ create table public.pieces_modele (
   primary key (modele_code, phase, code)
 );
 
-create table public.dossiers (
+create table gbs.dossiers (
   id                  uuid primary key default gen_random_uuid(),
   reference           text unique check (reference ~ '^GBS-[0-9]{4}-[0-9]{3,5}$'),
   intitule            text not null check (length(intitule) between 2 and 200),
-  societe_id          uuid not null references public.societes(id),   -- société qui contracte
-  client_id           uuid not null references public.clients(id),
-  modele              text not null references public.modeles_dossier(code),
+  societe_id          uuid not null references gbs.societes(id),   -- société qui contracte
+  client_id           uuid not null references gbs.clients(id),
+  modele              text not null references gbs.modeles_dossier(code),
   mode_financier      text not null check (mode_financier in ('accompagne','negoce','service_seul')),
   specialite          text check (specialite in ('equipement_site','approvisionnement_industriel','autre')),
   segment             text check (length(segment) <= 80),
   pays                char(2) not null check (pays ~ '^[A-Z]{2}$'),
   origine             text not null default 'direct' check (origine in ('direct','agent_pays')),
-  agent_id            uuid references public.profils(id),
-  chef_id             uuid references public.profils(id),
+  agent_id            uuid references gbs.profils(id),
+  chef_id             uuid references gbs.profils(id),
   priorite            text not null default 'normale' check (priorite in ('basse','normale','haute','critique')),
   ouvert_le           date not null default current_date,  -- date des règles datées appliquées
   date_ouverture_site date,           -- base du planning à rebours (M33)
@@ -44,7 +44,7 @@ create table public.dossiers (
   forfait_consultation_ht numeric(14,0) check (forfait_consultation_ht between 0 and 100000000),
   forfait_projet_ht   numeric(14,0) check (forfait_projet_ht >= 0),
   taux_commission_projet numeric(6,4) check (taux_commission_projet between 0 and 0.3),
-  cadre_id            uuid references public.dossiers(id),  -- dossier de commande rattaché à un accord-cadre
+  cadre_id            uuid references gbs.dossiers(id),  -- dossier de commande rattaché à un accord-cadre
   engagement_annuel_xof numeric(16,0) check (engagement_annuel_xof >= 0),  -- sur le dossier-cadre
   forfait_mensuel_ht  numeric(14,0) check (forfait_mensuel_ht >= 0),      -- sur le dossier-cadre
   cadre_debut         date,
@@ -61,32 +61,32 @@ create table public.dossiers (
   modifie_le timestamptz not null default now(), modifie_par uuid,
   check (cadre_fin is null or cadre_debut is null or cadre_fin > cadre_debut)
 );
-create index on public.dossiers (societe_id);
-create index on public.dossiers (client_id);
+create index on gbs.dossiers (societe_id);
+create index on gbs.dossiers (client_id);
 
-alter table public.due_diligences
-  add constraint due_diligences_dossier_fk foreign key (dossier_id) references public.dossiers(id);
-alter table public.registre_presentations
-  add constraint registre_dossier_fk foreign key (dossier_id) references public.dossiers(id);
+alter table gbs.due_diligences
+  add constraint due_diligences_dossier_fk foreign key (dossier_id) references gbs.dossiers(id);
+alter table gbs.registre_presentations
+  add constraint registre_dossier_fk foreign key (dossier_id) references gbs.dossiers(id);
 
-create table public.dossier_phases (
+create table gbs.dossier_phases (
   id          uuid primary key default gen_random_uuid(),
-  dossier_id  uuid not null references public.dossiers(id),
+  dossier_id  uuid not null references gbs.dossiers(id),
   phase       text not null check (phase in ('consultation','verification','mise_en_concurrence','devis_mandat',
                 'contrat','approbation_technique','production','inspection','expedition','livraison','cloture')),
   ordre       int not null,
   statut      text not null default 'non_commencee'
               check (statut in ('non_commencee','en_cours','attente_tiers','bloquee','complete','validee')),
   prevue_debut date, prevue_fin date, reelle_debut date, reelle_fin date,
-  responsable_id uuid references public.profils(id),
+  responsable_id uuid references gbs.profils(id),
   cree_le timestamptz not null default now(), cree_par uuid,
   modifie_le timestamptz not null default now(), modifie_par uuid,
   unique (dossier_id, phase)
 );
 
-create table public.pieces (
+create table gbs.pieces (
   id          uuid primary key default gen_random_uuid(),
-  dossier_id  uuid not null references public.dossiers(id),
+  dossier_id  uuid not null references gbs.dossiers(id),
   phase       text not null,
   code        text not null check (code ~ '^[a-z0-9_]{2,40}$'),
   libelle     text not null check (length(libelle) <= 200),
@@ -98,31 +98,31 @@ create table public.pieces (
   document_empreinte text check (document_empreinte ~ '^[0-9a-f]{64}$'),
   expire_le   date,
   commentaire text check (length(commentaire) <= 1000),
-  statut_par  uuid references public.profils(id),
+  statut_par  uuid references gbs.profils(id),
   statut_le   timestamptz,
   commande_id uuid,      -- pièce propre à une commande (contrat, acompte...)
   expedition_id uuid,    -- pièce propre à une expédition
   cree_le timestamptz not null default now(), cree_par uuid,
   modifie_le timestamptz not null default now(), modifie_par uuid
 );
-create unique index pieces_unicite on public.pieces
+create unique index pieces_unicite on gbs.pieces
   (dossier_id, phase, code, coalesce(commande_id, '00000000-0000-0000-0000-000000000000'::uuid),
    coalesce(expedition_id, '00000000-0000-0000-0000-000000000000'::uuid));
 
-create table public.points_bloquants (
+create table gbs.points_bloquants (
   id          uuid primary key default gen_random_uuid(),
-  dossier_id  uuid not null references public.dossiers(id),
+  dossier_id  uuid not null references gbs.dossiers(id),
   description text not null check (length(description) between 3 and 2000),
   categorie   text not null check (categorie in ('client','fournisseur','qualite','paiement','logistique','documents','interne')),
   impact_jours int check (impact_jours between 0 and 365),
-  responsable_id uuid references public.profils(id),
+  responsable_id uuid references gbs.profils(id),
   echeance    date not null,
   actions     text check (length(actions) <= 4000),
   resolution  text check (length(resolution) <= 4000),
   resolu_le   timestamptz,
   escalade_le timestamptz,
   visible_client boolean not null default false,
-  piece_id    uuid references public.pieces(id),
+  piece_id    uuid references gbs.pieces(id),
   cree_le timestamptz not null default now(), cree_par uuid,
   modifie_le timestamptz not null default now(), modifie_par uuid
 );
@@ -131,25 +131,25 @@ do $$
 declare t text;
 begin
   foreach t in array array['dossiers','dossier_phases','pieces','points_bloquants'] loop
-    execute format('create trigger %1$s_touch before update on public.%1$s for each row execute function private.trg_touch()', t);
-    execute format('create trigger %1$s_cree before insert on public.%1$s for each row execute function private.trg_cree_par()', t);
-    execute format('create trigger %1$s_audit after insert or update or delete on public.%1$s for each row execute function private.trg_audit()', t);
-    execute format('create trigger %1$s_nodel before delete on public.%1$s for each row execute function private.trg_no_delete()', t);
+    execute format('create trigger %1$s_touch before update on gbs.%1$s for each row execute function gbs_private.trg_touch()', t);
+    execute format('create trigger %1$s_cree before insert on gbs.%1$s for each row execute function gbs_private.trg_cree_par()', t);
+    execute format('create trigger %1$s_audit after insert or update or delete on gbs.%1$s for each row execute function gbs_private.trg_audit()', t);
+    execute format('create trigger %1$s_nodel before delete on gbs.%1$s for each row execute function gbs_private.trg_no_delete()', t);
   end loop;
 end $$;
-create trigger modeles_audit after insert or update on public.modeles_dossier for each row execute function private.trg_audit();
-create trigger pieces_modele_audit after insert or update or delete on public.pieces_modele for each row execute function private.trg_audit();
+create trigger modeles_audit after insert or update on gbs.modeles_dossier for each row execute function gbs_private.trg_audit();
+create trigger pieces_modele_audit after insert or update or delete on gbs.pieces_modele for each row execute function gbs_private.trg_audit();
 
 -- -----------------------------------------------------------------------------
 -- Règles d'ouverture d'un dossier
 -- -----------------------------------------------------------------------------
-create or replace function private.trg_dossier_regles() returns trigger
+create or replace function gbs_private.trg_dossier_regles() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare m public.modeles_dossier; c public.clients; s public.societes; n int; an int;
+declare m gbs.modeles_dossier; c gbs.clients; s gbs.societes; n int; an int;
 begin
-  select * into m from public.modeles_dossier where code = new.modele;
-  select * into c from public.clients where id = new.client_id;
-  select * into s from public.societes where id = new.societe_id;
+  select * into m from gbs.modeles_dossier where code = new.modele;
+  select * into c from gbs.clients where id = new.client_id;
+  select * into s from gbs.societes where id = new.societe_id;
 
   if tg_op = 'INSERT' then
     if not m.actif then raise exception 'GBS_MODELE_INACTIF' using errcode = 'P0001'; end if;
@@ -165,7 +165,7 @@ begin
     an := extract(year from new.ouvert_le)::int;
     perform pg_advisory_xact_lock(7312, an);
     select coalesce(max(substring(reference from '^GBS-[0-9]{4}-([0-9]+)$')::int), 0) + 1 into n
-      from public.dossiers where reference like 'GBS-' || an || '-%';
+      from gbs.dossiers where reference like 'GBS-' || an || '-%';
     new.reference := 'GBS-' || an || '-' || lpad(n::text, 3, '0');
     new.phase_courante := m.phases[1];
   else
@@ -180,8 +180,8 @@ begin
       raise exception 'GBS_DOSSIER_FIGE: la date d''ouverture fixe les règles datées appliquées' using errcode = 'P0001';
     end if;
     if (new.statut, new.clos_le, new.annule_le) is distinct from (old.statut, old.clos_le, old.annule_le)
-       and coalesce(current_setting('gbs.rpc', true), '') <> 'avancer_phase' and not private.is_admin()
-       and private.role() is not null then
+       and coalesce(current_setting('gbs.rpc', true), '') <> 'avancer_phase' and not gbs_private.is_admin()
+       and gbs_private.role() is not null then
       raise exception 'GBS_VALIDATION_ADMIN: le statut du dossier est réservé à l''administratrice' using errcode = '42501';
     end if;
     if new.phase_courante is distinct from old.phase_courante
@@ -211,31 +211,31 @@ begin
     raise exception 'GBS_CADRE_INCOMPLET: dates et forfait mensuel exigés' using errcode = 'P0001';
   end if;
   if new.cadre_id is not null then
-    if not exists (select 1 from public.dossiers k where k.id = new.cadre_id and k.modele = 'accord_cadre'
+    if not exists (select 1 from gbs.dossiers k where k.id = new.cadre_id and k.modele = 'accord_cadre'
                    and k.client_id = new.client_id) then
       raise exception 'GBS_CADRE_INVALIDE' using errcode = 'P0001';
     end if;
   end if;
   return new;
 end $$;
-create trigger dossiers_regles before insert or update on public.dossiers
-  for each row execute function private.trg_dossier_regles();
+create trigger dossiers_regles before insert or update on gbs.dossiers
+  for each row execute function gbs_private.trg_dossier_regles();
 
 -- Instanciation du modèle : phases et pièces exigées.
-create or replace function private.trg_dossier_instancier() returns trigger
+create or replace function gbs_private.trg_dossier_instancier() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare m public.modeles_dossier; i int;
+declare m gbs.modeles_dossier; i int;
         bord text;
 begin
-  select * into m from public.modeles_dossier where code = new.modele;
+  select * into m from gbs.modeles_dossier where code = new.modele;
   for i in 1 .. array_length(m.phases, 1) loop
-    insert into public.dossier_phases (dossier_id, phase, ordre, statut)
+    insert into gbs.dossier_phases (dossier_id, phase, ordre, statut)
     values (new.id, m.phases[i], i, case when i = 1 then 'en_cours' else 'non_commencee' end);
   end loop;
-  insert into public.pieces (dossier_id, phase, code, libelle, obligatoire, fournie_par)
+  insert into gbs.pieces (dossier_id, phase, code, libelle, obligatoire, fournie_par)
   select new.id, pm.phase, pm.code, pm.libelle, pm.obligatoire,
          case when pm.code like 'client_%' then 'client' else 'equipe' end
-  from public.pieces_modele pm where pm.modele_code = new.modele;
+  from gbs.pieces_modele pm where pm.modele_code = new.modele;
   -- Bordereau électronique de suivi des cargaisons du pays de destination
   if 'expedition' = any(m.phases) then
     bord := case new.pays when 'CI' then 'Bordereau de suivi des cargaisons (BSC)'
@@ -243,7 +243,7 @@ begin
                           when 'GA' then 'Bordereau électronique de suivi des cargaisons (BIETC)'
             end;
     if bord is not null then
-      insert into public.pieces (dossier_id, phase, code, libelle, obligatoire, fournie_par)
+      insert into gbs.pieces (dossier_id, phase, code, libelle, obligatoire, fournie_par)
       values (new.id, 'expedition', 'bordereau_suivi', bord, true, 'transitaire')
       on conflict do nothing;
     end if;
@@ -253,11 +253,11 @@ begin
   end if;
   return new;
 end $$;
-create trigger dossiers_instancier after insert on public.dossiers
-  for each row execute function private.trg_dossier_instancier();
+create trigger dossiers_instancier after insert on gbs.dossiers
+  for each row execute function gbs_private.trg_dossier_instancier();
 
 -- Changement de statut d'une pièce : auteur et date conservés, via RPC uniquement.
-create or replace function private.trg_piece_statut() returns trigger
+create or replace function gbs_private.trg_piece_statut() returns trigger
 language plpgsql as $$
 begin
   if new.statut is distinct from old.statut then
@@ -269,16 +269,16 @@ begin
   end if;
   return new;
 end $$;
-create trigger pieces_statut before update on public.pieces
-  for each row execute function private.trg_piece_statut();
+create trigger pieces_statut before update on gbs.pieces
+  for each row execute function gbs_private.trg_piece_statut();
 
 -- Complétude par phase et par dossier
-create or replace view public.v_completude with (security_invoker = true) as
+create or replace view gbs.v_completude with (security_invoker = true) as
 select p.dossier_id, p.phase,
        count(*) filter (where p.obligatoire) as obligatoires,
        count(*) filter (where p.obligatoire and p.statut = 'validee') as obligatoires_validees,
        count(*) filter (where not p.obligatoire) as facultatives,
        count(*) filter (where not p.obligatoire and p.statut = 'validee') as facultatives_validees,
        round(100.0 * count(*) filter (where p.statut = 'validee') / nullif(count(*), 0), 0) as taux
-from public.pieces p
+from gbs.pieces p
 group by p.dossier_id, p.phase;

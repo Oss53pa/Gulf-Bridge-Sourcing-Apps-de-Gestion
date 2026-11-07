@@ -8,17 +8,17 @@
 
 -- Sociétés. Dates de création à ajuster aux dates réelles d'immatriculation
 -- (GBS Côte d'Ivoire : mois 1 ; GBS Chine, WFOE de Guangzhou : mois 4).
-insert into public.societes (code, raison_sociale, pays, devise, forme, date_creation, fne) values
+insert into gbs.societes (code, raison_sociale, pays, devise, forme, date_creation, fne) values
   ('GBS_CI', 'Gulf Bridge Sourcing Côte d''Ivoire', 'CI', 'XOF', 'SARL — Abidjan', date '2026-01-01', true),
   ('GBS_CN', 'Gulf Bridge Sourcing (Guangzhou)', 'CN', 'CNY', 'WFOE — Guangzhou', date '2026-04-01', false);
 
 -- Parités fixes avec l'euro (XOF et XAF : 655,957 pour 1 EUR). USD et CNY : cours du jour.
-insert into public.taux_change (devise, date_taux, taux_xof, source) values
+insert into gbs.taux_change (devise, date_taux, taux_xof, source) values
   ('EUR', date '2000-01-01', 655.957, 'Parité fixe BCEAO / BEAC'),
   ('XAF', date '2000-01-01', 1, 'Même parité fixe avec l''euro que le XOF');
 
 -- Paramètres (date d'effet commune : ouverture de l'activité)
-insert into public.parametres (cle, valeur, date_effet, commentaire) values
+insert into gbs.parametres (cle, valeur, date_effet, commentaire) values
   ('commission.bareme', '[{"jusqu_a":10000000,"taux":0.12},{"jusqu_a":50000000,"taux":0.10},
      {"jusqu_a":150000000,"taux":0.08},{"jusqu_a":500000000,"taux":0.06},{"jusqu_a":null,"taux":0.045}]',
      date '2026-01-01', 'Commission par tranche de valeur FOB (XOF), tranche lue sur la valeur totale du dossier'),
@@ -71,7 +71,7 @@ insert into public.parametres (cle, valeur, date_effet, commentaire) values
   ('archivage.duree_annees', '10', date '2026-01-01', 'À confirmer par le comptable');
 
 -- Modèles de dossier (section 4 bis)
-insert into public.modeles_dossier (code, libelle, mode_financier, phases) values
+insert into gbs.modeles_dossier (code, libelle, mode_financier, phases) values
   ('achat_accompagne', 'Achat accompagné', 'accompagne', array['consultation','verification','mise_en_concurrence','devis_mandat',
      'contrat','approbation_technique','production','inspection','expedition','livraison','cloture']),
   ('equipement_site', 'Équipement d''un site avant ouverture (forfait au projet)', 'accompagne',
@@ -131,15 +131,15 @@ insert into _p values
   ('cloture','dossier_qualite_remis','Dossier qualité remis au client',false,4);
 
 -- Modèles complets : toutes les pièces de leurs phases
-insert into public.pieces_modele (modele_code, phase, code, libelle, obligatoire, ordre)
+insert into gbs.pieces_modele (modele_code, phase, code, libelle, obligatoire, ordre)
 select m.code, p.phase, p.code, p.libelle, p.obligatoire, p.ordre
-from public.modeles_dossier m join _p p on p.phase = any(m.phases)
+from gbs.modeles_dossier m join _p p on p.phase = any(m.phases)
 where m.code in ('achat_accompagne','equipement_site','negoce')
   and not (m.code = 'negoce' and p.code in ('client_domiciliation','facture_commission_reglee'))
   and not (m.code = 'equipement_site' and p.code = 'facture_forfait_reglee');
 
 -- Modèles de service seul : pièces propres à leur livrable
-insert into public.pieces_modele (modele_code, phase, code, libelle, obligatoire, ordre) values
+insert into gbs.pieces_modele (modele_code, phase, code, libelle, obligatoire, ordre) values
   ('due_diligence','verification','licence_fournisseur','Licence du fournisseur',true,1),
   ('due_diligence','verification','rapport_dd','Rapport de due diligence',true,2),
   ('due_diligence','cloture','facture_reglee','Facture de la mission réglée',true,1),
@@ -166,40 +166,55 @@ insert into public.pieces_modele (modele_code, phase, code, libelle, obligatoire
 
 drop table _p;
 
--- Création automatique d'un profil sans droits à l'inscription (Supabase Auth).
--- L'administratrice attribue ensuite le rôle par admin_definir_profil().
-create or replace function private.trg_nouvel_utilisateur() returns trigger
+-- Création automatique d'un profil sans droits, uniquement pour les comptes invités
+-- dans GBS (métadonnée app = « gbs »). Le projet est partagé : la fonction ne doit
+-- jamais faire échouer l'inscription d'un utilisateur d'une autre application.
+create or replace function gbs_private.trg_nouvel_utilisateur() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  insert into public.profils (id, nom, email)
-  values (new.id, coalesce(left(new.raw_user_meta_data ->> 'nom', 120), split_part(new.email, '@', 1)), new.email)
-  on conflict (id) do nothing;
+  if coalesce(new.raw_user_meta_data ->> 'app', '') = 'gbs' then
+    begin
+      insert into gbs.profils (id, nom, email)
+      values (new.id, coalesce(left(new.raw_user_meta_data ->> 'nom', 120), split_part(new.email, '@', 1)), new.email)
+      on conflict (id) do nothing;
+    exception when others then
+      raise warning 'gbs: profil non créé pour un nouvel utilisateur';
+    end;
+  end if;
   return new;
 end $$;
 
 do $$
 begin
   if exists (select 1 from information_schema.tables where table_schema = 'auth' and table_name = 'users') then
+    execute 'drop trigger if exists gbs_nouvel_utilisateur on auth.users';
     execute 'create trigger gbs_nouvel_utilisateur after insert on auth.users
-             for each row execute function private.trg_nouvel_utilisateur()';
+             for each row execute function gbs_private.trg_nouvel_utilisateur()';
   end if;
 end $$;
+
+-- Un objet du bucket GBS est lisible si son premier dossier est un dossier GBS visible.
+-- Le nom est contrôlé avant toute conversion : les objets des autres applications
+-- (autres buckets) ne sont jamais évalués comme des identifiants GBS.
+create or replace function gbs_private.document_visible(p_bucket text, p_nom text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select p_bucket = 'gbs-documents'
+     and p_nom ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/'
+     and gbs_private.dossier_visible(substring(p_nom from 1 for 36)::uuid)
+$$;
+grant execute on function gbs_private.document_visible(text, text) to authenticated;
 
 -- Stockage privé (Supabase Storage) : aucun fichier public, URL signées uniquement.
 do $$
 begin
   if exists (select 1 from information_schema.schemata where schema_name = 'storage') then
     insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-    values ('documents', 'documents', false, 26214400,
+    values ('gbs-documents', 'gbs-documents', false, 26214400,
             array['application/pdf','image/jpeg','image/png','image/webp'])
     on conflict (id) do nothing;
-    -- Chemin : <dossier_id>/<uuid>.<ext> ; lecture et dépôt réservés aux rôles qui voient le dossier.
+    -- Lecture réservée aux rôles qui voient le dossier ; l'écriture passe par la fonction « depot ».
+    execute 'drop policy if exists gbs_docs_lecture on storage.objects';
     execute $p$create policy gbs_docs_lecture on storage.objects for select to authenticated
-      using (bucket_id = 'documents' and private.dossier_visible((storage.foldername(name))[1]::uuid))$p$;
-    execute $p$create policy gbs_docs_depot on storage.objects for insert to authenticated
-      with check (bucket_id = 'documents'
-                  and private.has_role('admin','achats_chine','hub_afrique','agent_pays')
-                  and private.dossier_visible((storage.foldername(name))[1]::uuid)
-                  and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.(pdf|jpg|jpeg|png|webp)$')$p$;
+      using (bucket_id = 'gbs-documents' and gbs_private.document_visible(bucket_id, name))$p$;
   end if;
 end $$;

@@ -8,7 +8,7 @@
 -- -----------------------------------------------------------------------------
 -- Ramenée à la base FOB (section 5, « Incoterms »)
 -- -----------------------------------------------------------------------------
-create or replace function private.base_fob(
+create or replace function gbs_private.base_fob(
   p_incoterm text, p_montant numeric, p_fret numeric, p_assurance numeric,
   p_frais_bord numeric, p_date date)
 returns numeric language plpgsql stable security definer set search_path = '' as $$
@@ -21,7 +21,7 @@ begin
     when 'EXW', 'FCA' then
       -- Majorée des frais jusqu'à bord : montant déclaré, à défaut barème paramétré.
       return p_montant + coalesce(p_frais_bord,
-        round(p_montant * private.param_num('fob.majoration_exw_fca', p_date), 2));
+        round(p_montant * gbs_private.param_num('fob.majoration_exw_fca', p_date), 2));
     when 'CFR', 'CPT' then
       if p_fret is null then
         raise exception 'GBS_FRET_REQUIS: une offre % doit indiquer le fret', p_incoterm using errcode = 'P0001';
@@ -41,7 +41,7 @@ end $$;
 -- -----------------------------------------------------------------------------
 -- ISO 2859-1 : échantillonnage simple, contrôle normal (tableaux 1 et 2-A)
 -- -----------------------------------------------------------------------------
-create or replace function private.iso2859_lettre(p_lot int, p_niveau text)
+create or replace function gbs_private.iso2859_lettre(p_lot int, p_niveau text)
 returns text language plpgsql immutable as $$
 declare
   bornes int[] := array[8,15,25,50,90,150,280,500,1200,3200,10000,35000,150000,500000];
@@ -60,7 +60,7 @@ end $$;
 
 -- Plan pour un niveau de qualité acceptable (NQA). NQA = 0 : tolérance zéro
 -- (Ac 0, Re 1) sur l'échantillon de la lettre-code.
-create or replace function private.iso2859_plan(p_lot int, p_niveau text, p_nqa numeric)
+create or replace function gbs_private.iso2859_plan(p_lot int, p_niveau text, p_nqa numeric)
 returns jsonb language plpgsql immutable as $$
 declare
   lettres text[] := array['A','B','C','D','E','F','G','H','J','K','L','M','N','P','Q','R'];
@@ -70,7 +70,7 @@ declare
   ac int[] := array[0,1,2,3,5,7,10,14,21];   -- d = 14, 17, 18, ..., 24
   l text; s int; a int; d int; n int; k int;
 begin
-  l := private.iso2859_lettre(p_lot, p_niveau);
+  l := gbs_private.iso2859_lettre(p_lot, p_niveau);
   if l is null then raise exception 'GBS_NIVEAU_INVALIDE: %', p_niveau using errcode = '22023'; end if;
   s := array_position(lettres, l) - 1;
   if p_nqa = 0 then
@@ -100,21 +100,21 @@ begin
 end $$;
 
 -- Exposé aux écrans : calcul pur, sans données.
-create or replace function public.plan_echantillonnage(p_lot int, p_niveau text default 'II',
+create or replace function gbs.plan_echantillonnage(p_lot int, p_niveau text default 'II',
   p_nqa_critique numeric default 0, p_nqa_majeur numeric default 2.5, p_nqa_mineur numeric default 4.0)
 returns jsonb language sql immutable as $$
   select jsonb_build_object(
-    'critique', private.iso2859_plan(p_lot, p_niveau, p_nqa_critique),
-    'majeur',   private.iso2859_plan(p_lot, p_niveau, p_nqa_majeur),
-    'mineur',   private.iso2859_plan(p_lot, p_niveau, p_nqa_mineur))
+    'critique', gbs_private.iso2859_plan(p_lot, p_niveau, p_nqa_critique),
+    'majeur',   gbs_private.iso2859_plan(p_lot, p_niveau, p_nqa_majeur),
+    'mineur',   gbs_private.iso2859_plan(p_lot, p_niveau, p_nqa_mineur))
 $$;
 
 -- -----------------------------------------------------------------------------
 -- Consultation des fournisseurs et offres
 -- -----------------------------------------------------------------------------
-create table public.consultations_fournisseurs (
+create table gbs.consultations_fournisseurs (
   id              uuid primary key default gen_random_uuid(),
-  dossier_id      uuid not null references public.dossiers(id),
+  dossier_id      uuid not null references gbs.dossiers(id),
   reference       text unique check (reference ~ '^RFQ-[0-9]{4}-[0-9]{3,5}$'),
   objet           text not null check (length(objet) between 2 and 300),
   specifications  text check (length(specifications) <= 20000),
@@ -128,19 +128,19 @@ create table public.consultations_fournisseurs (
   modifie_le timestamptz not null default now(), modifie_par uuid
 );
 
-create table public.consultation_invites (
-  consultation_id uuid not null references public.consultations_fournisseurs(id),
-  fournisseur_id  uuid not null references public.fournisseurs(id),
+create table gbs.consultation_invites (
+  consultation_id uuid not null references gbs.consultations_fournisseurs(id),
+  fournisseur_id  uuid not null references gbs.fournisseurs(id),
   invite_le       timestamptz not null default now(),
   invite_par      uuid,
   primary key (consultation_id, fournisseur_id)
 );
 
-create table public.offres (
+create table gbs.offres (
   id              uuid primary key default gen_random_uuid(),
-  consultation_id uuid not null references public.consultations_fournisseurs(id),
-  fournisseur_id  uuid not null references public.fournisseurs(id),
-  dossier_id      uuid not null references public.dossiers(id),
+  consultation_id uuid not null references gbs.consultations_fournisseurs(id),
+  fournisseur_id  uuid not null references gbs.fournisseurs(id),
+  dossier_id      uuid not null references gbs.dossiers(id),
   recu_le         timestamptz not null,
   canal           text not null check (canal in ('wechat','email','formulaire','autre')),
   incoterm        text not null check (incoterm in ('EXW','FCA','FAS','FOB','CFR','CPT','CIF','CIP')),
@@ -167,29 +167,29 @@ create table public.offres (
   unique (consultation_id, fournisseur_id)
 );
 
-create or replace function private.trg_invite() returns trigger
+create or replace function gbs_private.trg_invite() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  if not private.fournisseur_consultable(new.fournisseur_id) then
+  if not gbs_private.fournisseur_consultable(new.fournisseur_id) then
     raise exception 'GBS_FOURNISSEUR_NON_AGREE: une demande de cotation ne part qu''à un fournisseur agréé'
       using errcode = 'P0001';
   end if;
   new.invite_par := auth.uid();
   return new;
 end $$;
-create trigger invites_regles before insert on public.consultation_invites
-  for each row execute function private.trg_invite();
-create trigger invites_audit after insert or update or delete on public.consultation_invites
-  for each row execute function private.trg_audit();
+create trigger invites_regles before insert on gbs.consultation_invites
+  for each row execute function gbs_private.trg_invite();
+create trigger invites_audit after insert or update or delete on gbs.consultation_invites
+  for each row execute function gbs_private.trg_audit();
 
-create or replace function private.trg_offre() returns trigger
+create or replace function gbs_private.trg_offre() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare c public.consultations_fournisseurs;
+declare c gbs.consultations_fournisseurs;
 begin
-  select * into c from public.consultations_fournisseurs where id = new.consultation_id;
+  select * into c from gbs.consultations_fournisseurs where id = new.consultation_id;
   new.dossier_id := c.dossier_id;
   if tg_op = 'INSERT' then
-    if not exists (select 1 from public.consultation_invites i
+    if not exists (select 1 from gbs.consultation_invites i
                    where i.consultation_id = new.consultation_id and i.fournisseur_id = new.fournisseur_id) then
       raise exception 'GBS_FOURNISSEUR_NON_INVITE' using errcode = 'P0001';
     end if;
@@ -202,26 +202,26 @@ begin
   if new.recu_le > now() then
     raise exception 'GBS_DATE_RECEPTION_FUTURE' using errcode = '22023';
   end if;
-  new.fob_montant := private.base_fob(new.incoterm, new.montant, new.fret, new.assurance,
+  new.fob_montant := gbs_private.base_fob(new.incoterm, new.montant, new.fret, new.assurance,
                                       new.frais_jusqu_a_bord, new.recu_le::date);
-  new.fob_xof := round(private.to_xof(new.fob_montant, new.devise, new.recu_le::date));
+  new.fob_xof := round(gbs_private.to_xof(new.fob_montant, new.devise, new.recu_le::date));
   return new;
 end $$;
-create trigger offres_regles before insert or update on public.offres
-  for each row execute function private.trg_offre();
+create trigger offres_regles before insert or update on gbs.offres
+  for each row execute function gbs_private.trg_offre();
 
 -- Comparatif simple : offres ramenées à la base FOB en XOF, rang et alertes.
-create or replace view public.v_comparatif_offres with (security_invoker = true) as
+create or replace view gbs.v_comparatif_offres with (security_invoker = true) as
 with med as (
   select consultation_id, percentile_cont(0.5) within group (order by fob_xof) as mediane
-  from public.offres group by consultation_id
+  from gbs.offres group by consultation_id
 ), o as (
-  select o.*, med.mediane from public.offres o join med using (consultation_id)
+  select o.*, med.mediane from gbs.offres o join med using (consultation_id)
 )
 select o.id, o.consultation_id, o.dossier_id, o.fournisseur_id, o.incoterm, o.devise, o.montant,
        o.fob_montant, o.fob_xof, o.delai_jours, o.garantie_mois, o.note_technique, o.retenue,
        rank() over (partition by o.consultation_id order by o.fob_xof) as rang_prix,
-       o.fob_xof < o.mediane * coalesce((select (valeur #>> '{}')::numeric from public.parametres
+       o.fob_xof < o.mediane * coalesce((select (valeur #>> '{}')::numeric from gbs.parametres
                                           where cle = 'offre.seuil_anormalement_basse'
                                           order by date_effet desc limit 1), 0.7)
          as anormalement_basse,
@@ -231,9 +231,9 @@ from o;
 -- -----------------------------------------------------------------------------
 -- Devis client et mandat (M6)
 -- -----------------------------------------------------------------------------
-create table public.devis (
+create table gbs.devis (
   id              uuid primary key default gen_random_uuid(),
-  dossier_id      uuid not null references public.dossiers(id),
+  dossier_id      uuid not null references gbs.dossiers(id),
   version         int not null default 1 check (version between 1 and 99),
   reference       text unique check (reference ~ '^DEV-[0-9]{4}-[0-9]{3,5}-V[0-9]{1,2}$'),
   incoterm        text not null default 'FOB' check (incoterm in ('FOB','FCA','CFR','CIF','EXW','DDP')),
@@ -248,7 +248,7 @@ create table public.devis (
   commission_ht   numeric(16,0),
   accepte_le      date,
   mandat_document text check (length(mandat_document) <= 400),
-  mandat_valide_par uuid references public.profils(id),
+  mandat_valide_par uuid references gbs.profils(id),
   mandat_valide_le timestamptz,
   derogation_incoterm text check (length(derogation_incoterm) <= 1000),
   cree_le timestamptz not null default now(), cree_par uuid,
@@ -258,11 +258,11 @@ create table public.devis (
 );
 
 -- EXW et DDP bloqués sauf dérogation motivée de l'administratrice.
-create or replace function private.trg_devis() returns trigger
+create or replace function gbs_private.trg_devis() returns trigger
 language plpgsql security definer set search_path = '' as $$
-declare d public.dossiers;
+declare d gbs.dossiers;
 begin
-  select * into d from public.dossiers where id = new.dossier_id;
+  select * into d from gbs.dossiers where id = new.dossier_id;
   if tg_op = 'INSERT' then
     new.reference := 'DEV-' || substring(d.reference from 5) || '-V' || new.version;
   end if;
@@ -271,7 +271,7 @@ begin
       using errcode = 'P0001';
   end if;
   if new.derogation_incoterm is not null and (tg_op = 'INSERT' or old.derogation_incoterm is null)
-     and not private.is_admin() then
+     and not gbs_private.is_admin() then
     raise exception 'GBS_DEROGATION_ADMIN' using errcode = '42501';
   end if;
   if new.statut in ('accepte','remplace') and (tg_op = 'INSERT' or new.statut <> old.statut)
@@ -300,18 +300,18 @@ begin
   end if;
   return new;
 end $$;
-create trigger devis_regles before insert or update on public.devis
-  for each row execute function private.trg_devis();
+create trigger devis_regles before insert or update on gbs.devis
+  for each row execute function gbs_private.trg_devis();
 
 -- -----------------------------------------------------------------------------
 -- Commandes fournisseurs (M7) : entité centrale où s'appliquent les verrous
 -- -----------------------------------------------------------------------------
-create table public.commandes (
+create table gbs.commandes (
   id              uuid primary key default gen_random_uuid(),
   reference       text unique check (reference ~ '^CMD-[0-9]{4}-[0-9]{3,5}-[0-9]{2}$'),
-  dossier_id      uuid not null references public.dossiers(id),
-  fournisseur_id  uuid not null references public.fournisseurs(id),
-  offre_id        uuid references public.offres(id),
+  dossier_id      uuid not null references gbs.dossiers(id),
+  fournisseur_id  uuid not null references gbs.fournisseurs(id),
+  offre_id        uuid references gbs.offres(id),
   incoterm        text not null check (incoterm in ('EXW','FCA','FAS','FOB','CFR','CPT','CIF','CIP','DDP')),
   incoterms_version text not null default '2020' check (incoterms_version in ('2010','2020')),
   lieu            text not null check (length(lieu) between 2 and 120),
@@ -331,23 +331,23 @@ create table public.commandes (
   contrat_document text check (length(contrat_document) <= 400),
   contrat_mode    text check (contrat_mode in ('electronique','cachet')),
   contrat_signe_le date,
-  contrat_valide_par uuid references public.profils(id),
+  contrat_valide_par uuid references gbs.profils(id),
   contrat_valide_le timestamptz,
   approbation_document text check (length(approbation_document) <= 400),
-  approbation_valide_par uuid references public.profils(id),
+  approbation_valide_par uuid references gbs.profils(id),
   approbation_valide_le timestamptz,
   derogation_incoterm text check (length(derogation_incoterm) <= 1000),
   annule_le       timestamptz,
   cree_le timestamptz not null default now(), cree_par uuid,
   modifie_le timestamptz not null default now(), modifie_par uuid
 );
-create index on public.commandes (dossier_id);
+create index on gbs.commandes (dossier_id);
 
-create table public.lignes_commande (
+create table gbs.lignes_commande (
   id            uuid primary key default gen_random_uuid(),
-  commande_id   uuid not null references public.commandes(id),
-  dossier_id    uuid not null references public.dossiers(id),
-  article_id    uuid not null references public.articles(id),
+  commande_id   uuid not null references gbs.commandes(id),
+  dossier_id    uuid not null references gbs.dossiers(id),
+  article_id    uuid not null references gbs.articles(id),
   quantite      numeric(14,3) not null check (quantite > 0),
   prix_unitaire numeric(16,4) not null check (prix_unitaire >= 0),
   montant       numeric(16,2) generated always as (round(quantite * prix_unitaire, 2)) stored,
@@ -358,30 +358,30 @@ create table public.lignes_commande (
 );
 
 -- Dérogations aux verrous : réservées à l'administratrice, motif obligatoire.
-create table public.derogations (
+create table gbs.derogations (
   id          uuid primary key default gen_random_uuid(),
-  dossier_id  uuid not null references public.dossiers(id),
-  commande_id uuid references public.commandes(id),
+  dossier_id  uuid not null references gbs.dossiers(id),
+  commande_id uuid references gbs.commandes(id),
   expedition_id uuid,
   objet       text not null check (objet in ('verrou_inspection','commission_impayee','piece_obligatoire',
                                              'incoterm','bordereau_suivi','marchandise_dangereuse','marge_sous_seuil')),
   motif       text not null check (length(motif) between 5 and 1000),
-  accordee_par uuid not null references public.profils(id),
+  accordee_par uuid not null references gbs.profils(id),
   accordee_le timestamptz not null default now()
 );
-create trigger derogations_audit after insert on public.derogations for each row execute function private.trg_audit();
-create trigger derogations_immuable before update or delete on public.derogations for each row execute function private.trg_immuable();
+create trigger derogations_audit after insert on gbs.derogations for each row execute function gbs_private.trg_audit();
+create trigger derogations_immuable before update or delete on gbs.derogations for each row execute function gbs_private.trg_immuable();
 
 -- -----------------------------------------------------------------------------
 -- Inspections (M8) et non-conformités (M27)
 -- -----------------------------------------------------------------------------
-create table public.inspections (
+create table gbs.inspections (
   id              uuid primary key default gen_random_uuid(),
   reference       text unique check (reference ~ '^INS-[0-9]{4}-[0-9]{3,5}$'),
-  dossier_id      uuid not null references public.dossiers(id),
-  commande_id     uuid references public.commandes(id),
+  dossier_id      uuid not null references gbs.dossiers(id),
+  commande_id     uuid references gbs.commandes(id),
   type            text not null check (type in ('en_production','avant_expedition','contre_inspection','inspection_seule')),
-  inspecteur_id   uuid references public.profils(id),
+  inspecteur_id   uuid references gbs.profils(id),
   date_prevue     date,
   date_realisee   date,
   lieu            text check (length(lieu) <= 200),
@@ -398,7 +398,7 @@ create table public.inspections (
   decision_proposee text check (decision_proposee in ('acceptee','refusee')),
   decision        text check (decision in ('liberation','refus')),
   statut          text not null default 'planifiee' check (statut in ('planifiee','realisee','validee','refusee')),
-  validee_par     uuid references public.profils(id),
+  validee_par     uuid references gbs.profils(id),
   validee_le      timestamptz,
   conclusion      text check (length(conclusion) <= 4000),
   cree_le timestamptz not null default now(), cree_par uuid,
@@ -406,10 +406,10 @@ create table public.inspections (
   check (commande_id is not null or type = 'inspection_seule')
 );
 
-create table public.constats (
+create table gbs.constats (
   id            uuid primary key default gen_random_uuid(),
-  inspection_id uuid not null references public.inspections(id),
-  dossier_id    uuid not null references public.dossiers(id),
+  inspection_id uuid not null references gbs.inspections(id),
+  dossier_id    uuid not null references gbs.dossiers(id),
   ordre         int not null default 0,
   point         text not null check (length(point) between 2 and 300),
   exigence      text check (length(exigence) <= 500),
@@ -425,38 +425,38 @@ create table public.constats (
   check (cardinality(photos) <= 500)
 );
 
-create table public.non_conformites (
+create table gbs.non_conformites (
   id            uuid primary key default gen_random_uuid(),
   reference     text unique check (reference ~ '^NC-[0-9]{4}-[0-9]{3,5}$'),
-  dossier_id    uuid not null references public.dossiers(id),
-  inspection_id uuid references public.inspections(id),
-  commande_id   uuid references public.commandes(id),
+  dossier_id    uuid not null references gbs.dossiers(id),
+  inspection_id uuid references gbs.inspections(id),
+  commande_id   uuid references gbs.commandes(id),
   gravite       text not null check (gravite in ('critique','majeur','mineur')),
   description   text not null check (length(description) between 3 and 4000),
   correction    text check (length(correction) <= 4000),
   delai         date,
   statut        text not null default 'ouverte' check (statut in ('ouverte','corrigee','close')),
   close_le      timestamptz,
-  close_par     uuid references public.profils(id),
+  close_par     uuid references gbs.profils(id),
   cree_le timestamptz not null default now(), cree_par uuid,
   modifie_le timestamptz not null default now(), modifie_par uuid
 );
 
 -- Plan et décision proposée recalculés à chaque saisie.
-create or replace function private.trg_inspection() returns trigger
+create or replace function gbs_private.trg_inspection() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare p jsonb; n int;
 begin
   if tg_op = 'INSERT' then
     perform pg_advisory_xact_lock(7313);
     select coalesce(max(substring(reference from '-([0-9]+)$')::int), 0) + 1 into n
-      from public.inspections where reference like 'INS-' || extract(year from now())::int || '-%';
+      from gbs.inspections where reference like 'INS-' || extract(year from now())::int || '-%';
     new.reference := 'INS-' || extract(year from now())::int || '-' || lpad(n::text, 3, '0');
     if new.commande_id is not null then
-      select c.dossier_id into new.dossier_id from public.commandes c where c.id = new.commande_id;
+      select c.dossier_id into new.dossier_id from gbs.commandes c where c.id = new.commande_id;
     end if;
   end if;
-  p := public.plan_echantillonnage(new.taille_lot, new.niveau, new.nqa_critique, new.nqa_majeur, new.nqa_mineur);
+  p := gbs.plan_echantillonnage(new.taille_lot, new.niveau, new.nqa_critique, new.nqa_majeur, new.nqa_mineur);
   new.plan := p;
   new.decision_proposee := case
     when new.defauts_critiques <= (p #>> '{critique,ac}')::int
@@ -478,33 +478,33 @@ begin
   end if;
   return new;
 end $$;
-create trigger inspections_regles before insert or update on public.inspections
-  for each row execute function private.trg_inspection();
+create trigger inspections_regles before insert or update on gbs.inspections
+  for each row execute function gbs_private.trg_inspection();
 
-create or replace function private.trg_constat() returns trigger
+create or replace function gbs_private.trg_constat() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
-  select i.dossier_id into new.dossier_id from public.inspections i where i.id = new.inspection_id;
-  if exists (select 1 from public.inspections i where i.id = new.inspection_id and i.statut in ('validee','refusee')) then
+  select i.dossier_id into new.dossier_id from gbs.inspections i where i.id = new.inspection_id;
+  if exists (select 1 from gbs.inspections i where i.id = new.inspection_id and i.statut in ('validee','refusee')) then
     raise exception 'GBS_DOCUMENT_VALIDE: inspection close' using errcode = 'P0001';
   end if;
   return new;
 end $$;
-create trigger constats_regles before insert or update on public.constats
-  for each row execute function private.trg_constat();
+create trigger constats_regles before insert or update on gbs.constats
+  for each row execute function gbs_private.trg_constat();
 
-create or replace function private.trg_nc() returns trigger
+create or replace function gbs_private.trg_nc() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare n int;
 begin
   if tg_op = 'INSERT' then
     perform pg_advisory_xact_lock(7314);
     select coalesce(max(substring(reference from '-([0-9]+)$')::int), 0) + 1 into n
-      from public.non_conformites where reference like 'NC-' || extract(year from now())::int || '-%';
+      from gbs.non_conformites where reference like 'NC-' || extract(year from now())::int || '-%';
     new.reference := 'NC-' || extract(year from now())::int || '-' || lpad(n::text, 3, '0');
     if new.inspection_id is not null then
       select i.dossier_id, i.commande_id into new.dossier_id, new.commande_id
-        from public.inspections i where i.id = new.inspection_id;
+        from gbs.inspections i where i.id = new.inspection_id;
     end if;
   end if;
   if new.statut = 'close' and (tg_op = 'INSERT' or old.statut <> 'close') then
@@ -512,30 +512,30 @@ begin
   end if;
   return new;
 end $$;
-create trigger nc_regles before insert or update on public.non_conformites
-  for each row execute function private.trg_nc();
+create trigger nc_regles before insert or update on gbs.non_conformites
+  for each row execute function gbs_private.trg_nc();
 
 do $$
 declare t text;
 begin
   foreach t in array array['consultations_fournisseurs','offres','devis','commandes','lignes_commande',
                            'inspections','constats','non_conformites'] loop
-    execute format('create trigger %1$s_touch before update on public.%1$s for each row execute function private.trg_touch()', t);
-    execute format('create trigger %1$s_cree before insert on public.%1$s for each row execute function private.trg_cree_par()', t);
-    execute format('create trigger %1$s_audit after insert or update or delete on public.%1$s for each row execute function private.trg_audit()', t);
-    execute format('create trigger %1$s_nodel before delete on public.%1$s for each row execute function private.trg_no_delete()', t);
+    execute format('create trigger %1$s_touch before update on gbs.%1$s for each row execute function gbs_private.trg_touch()', t);
+    execute format('create trigger %1$s_cree before insert on gbs.%1$s for each row execute function gbs_private.trg_cree_par()', t);
+    execute format('create trigger %1$s_audit after insert or update or delete on gbs.%1$s for each row execute function gbs_private.trg_audit()', t);
+    execute format('create trigger %1$s_nodel before delete on gbs.%1$s for each row execute function gbs_private.trg_no_delete()', t);
   end loop;
 end $$;
 
-create or replace function private.trg_consultation_ref() returns trigger
+create or replace function gbs_private.trg_consultation_ref() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare n int; an int := extract(year from now())::int;
 begin
   perform pg_advisory_xact_lock(7315);
   select coalesce(max(substring(reference from '-([0-9]+)$')::int), 0) + 1 into n
-    from public.consultations_fournisseurs where reference like 'RFQ-' || an || '-%';
+    from gbs.consultations_fournisseurs where reference like 'RFQ-' || an || '-%';
   new.reference := 'RFQ-' || an || '-' || lpad(n::text, 3, '0');
   return new;
 end $$;
-create trigger consultations_ref before insert on public.consultations_fournisseurs
-  for each row execute function private.trg_consultation_ref();
+create trigger consultations_ref before insert on gbs.consultations_fournisseurs
+  for each row execute function gbs_private.trg_consultation_ref();

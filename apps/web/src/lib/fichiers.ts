@@ -52,6 +52,6 @@ export async function deposer(dossierId: string, f: File): Promise<{ chemin: str
 
 /** URL signée de courte durée (aucun fichier public). */
 export async function urlSignee(chemin: string): Promise<string | null> {
-  const r = await supabase.storage.from('documents').createSignedUrl(chemin, 300);
+  const r = await supabase.storage.from('gbs-documents').createSignedUrl(chemin, 300);
   return r.data?.signedUrl ?? null;
 }

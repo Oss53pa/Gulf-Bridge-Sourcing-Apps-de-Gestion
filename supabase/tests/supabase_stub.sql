@@ -18,3 +18,10 @@ create or replace function auth.role() returns text language sql stable as $$
   select coalesce(auth.jwt() ->> 'role', current_user) $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on all functions in schema auth to anon, authenticated, service_role;
+
+-- Objets d'une autre application du même projet, avec des noms identiques à ceux de
+-- GBS : les migrations GBS ne doivent ni les modifier ni changer leurs droits.
+create table if not exists public.dossiers (id int primary key, libelle text);
+create table if not exists public.societes (id int primary key, nom text);
+grant select, insert on public.dossiers, public.societes to authenticated, anon;
+insert into public.dossiers values (1, 'autre application') on conflict do nothing;

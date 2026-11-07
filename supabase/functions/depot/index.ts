@@ -1,4 +1,4 @@
-// Fonction serveur « depot » : seul point d'écriture dans le bucket privé « documents ».
+// Fonction serveur « depot » : seul point d'écriture dans le bucket privé « gbs-documents ».
 // Vérifie l'utilisateur (session AAL2 via les droits en base), le dossier, la taille
 // et le type réel du fichier sur ses octets, régénère le nom, calcule l'empreinte SHA-256.
 // Variables : SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (fournies par
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
 
   const url = Deno.env.get('SUPABASE_URL')!;
   const utilisateur = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, {
-    global: { headers: { Authorization: auth } }, auth: { persistSession: false },
+    global: { headers: { Authorization: auth } }, auth: { persistSession: false }, db: { schema: 'gbs' },
   });
   const { data: u } = await utilisateur.auth.getUser();
   if (!u?.user) return refus(401, 'GBS_ACCES_REFUSE');
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
 
   const chemin = `${dossierId}/${crypto.randomUUID()}.${type.ext}`;
   const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
-  const { error } = await service.storage.from('documents').upload(chemin, octets, { contentType: type.mime, upsert: false });
+  const { error } = await service.storage.from('gbs-documents').upload(chemin, octets, { contentType: type.mime, upsert: false });
   if (error) { console.error('depot: echec de stockage'); return refus(500, 'GBS_DEPOT_ECHEC'); }
   const empreinte = hex(await crypto.subtle.digest('SHA-256', octets));
   return new Response(JSON.stringify({ chemin, empreinte }), { status: 201, headers: entetes({ 'Content-Type': 'application/json' }) });

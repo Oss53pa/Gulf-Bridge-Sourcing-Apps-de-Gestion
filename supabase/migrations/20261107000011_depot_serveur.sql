@@ -1,3 +1,5 @@
+-- (Aucune politique d'écriture n'est créée depuis l'isolation dans le schéma gbs ;
+-- la suppression ci-dessous reste sans effet si elle n'existe pas.)
 -- Les fichiers ne s'écrivent plus directement depuis le navigateur : la fonction
 -- serveur « depot » vérifie le type réel sur les octets, la taille et les droits,
 -- puis écrit avec la clé de service. Les utilisateurs gardent la lecture par URL signée.
