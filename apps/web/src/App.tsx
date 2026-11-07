@@ -1,0 +1,67 @@
+import { Navigate, Route, Routes } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { useAuth } from './lib/auth';
+import { configurationOk } from './lib/supabase';
+import { accueil, ecranAutorise, ROLES_INTERNES } from './lib/droits';
+import { Coque } from './components/Coque';
+import { AccesReserve, Chargement } from './components/ui';
+import { ConfigurationManquante, Connexion, SansRole } from './screens/Connexion';
+import { TableauDeBord } from './screens/TableauDeBord';
+import { NouveauDossier, Portefeuille } from './screens/Dossiers';
+import { FicheDossier } from './screens/FicheDossier';
+import { Articles, Clients, Fournisseurs } from './screens/Tiers';
+import { Commandes, FicheCommande, MiseEnConcurrence } from './screens/Achats';
+import { Expeditions, FicheExpedition, Inspections, RapportInspection } from './screens/Operations';
+import { Factures, FicheFacture, Flux, Paiements } from './screens/Finance';
+import { Journal, Parametrage } from './screens/Administration';
+import { ImprimerDueDiligence, ImprimerFacture, ImprimerInspection } from './screens/Imprimes';
+
+function Garde({ ecran, children }: { ecran: string; children: ReactNode }) {
+  const { profil } = useAuth();
+  return ecranAutorise(ecran, profil?.role) ? <>{children}</> : <AccesReserve />;
+}
+
+export function App() {
+  const { pret, session, aal, profil } = useAuth();
+  if (!configurationOk) return <ConfigurationManquante />;
+  if (!pret) return <div className="screen"><Chargement /></div>;
+  // Double facteur obligatoire pour tous les comptes internes.
+  if (!session || aal !== 'aal2') return <Connexion />;
+  if (!profil?.role || !ROLES_INTERNES.includes(profil.role) || !profil.actif) return <SansRole />;
+  const g = (ecran: string, el: ReactNode) => <Garde ecran={ecran}>{el}</Garde>;
+  return (
+    <Routes>
+      <Route path="/imprimer/facture/:id" element={g('factures', <ImprimerFacture />)} />
+      <Route path="/imprimer/inspection/:id" element={g('inspections', <ImprimerInspection />)} />
+      <Route path="/imprimer/due-diligence/:id" element={g('fournisseurs', <ImprimerDueDiligence />)} />
+      <Route path="*" element={
+        <Coque>
+          <Routes>
+            <Route path="/" element={<Navigate to={accueil(profil.role)} replace />} />
+            <Route path="/tableau-de-bord" element={g('tableau', <TableauDeBord />)} />
+            <Route path="/flux" element={g('flux', <Flux />)} />
+            <Route path="/dossiers" element={g('portefeuille', <Portefeuille />)} />
+            <Route path="/dossiers/nouveau" element={g('nouveau_dossier', <NouveauDossier />)} />
+            <Route path="/dossiers/:id" element={g('portefeuille', <FicheDossier />)} />
+            <Route path="/clients" element={g('clients', <Clients />)} />
+            <Route path="/fournisseurs" element={g('fournisseurs', <Fournisseurs />)} />
+            <Route path="/articles" element={g('articles', <Articles />)} />
+            <Route path="/mise-en-concurrence" element={g('consultations', <MiseEnConcurrence />)} />
+            <Route path="/commandes" element={g('commandes', <Commandes />)} />
+            <Route path="/commandes/:id" element={g('commandes', <FicheCommande />)} />
+            <Route path="/inspections" element={g('inspections', <Inspections />)} />
+            <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
+            <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
+            <Route path="/expeditions/:id" element={g('expeditions', <FicheExpedition />)} />
+            <Route path="/factures" element={g('factures', <Factures />)} />
+            <Route path="/factures/:id" element={g('factures', <FicheFacture />)} />
+            <Route path="/paiements" element={g('paiements', <Paiements />)} />
+            <Route path="/journal" element={g('journal', <Journal />)} />
+            <Route path="/parametrage" element={g('parametrage', <Parametrage />)} />
+            <Route path="*" element={<AccesReserve />} />
+          </Routes>
+        </Coque>
+      } />
+    </Routes>
+  );
+}

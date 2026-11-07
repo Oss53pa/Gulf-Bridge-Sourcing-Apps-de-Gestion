@@ -1,0 +1,9 @@
+{
+  "name": "Gulf Bridge Sourcing",
+  "short_name": "GBS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F2EC",
+  "theme_color": "#0F2B3D",
+  "icons": [{ "src": "/gbs-logo.png", "sizes": "512x512", "type": "image/png" }]
+}

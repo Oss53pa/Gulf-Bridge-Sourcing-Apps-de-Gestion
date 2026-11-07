@@ -1,0 +1,26 @@
+# Configuration du projet Supabase (CLI). Les secrets ne figurent jamais ici.
+project_id = "gulf-bridge-sourcing"
+
+[db]
+major_version = 16
+
+[db.seed]
+# Données fictives : environnements de développement et de recette uniquement.
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+site_url = "http://localhost:5173"
+# Pas d'inscription libre : l'administratrice invite chaque utilisateur.
+enable_signup = false
+minimum_password_length = 12
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[storage]
+file_size_limit = "25MiB"

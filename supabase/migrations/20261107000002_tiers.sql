@@ -162,6 +162,14 @@ begin
     end if;
   end loop;
   new.note := private.note_grille(new.grille);
+  if tg_op = 'INSERT' then
+    perform pg_advisory_xact_lock(7319);
+    new.reference := 'DD-' || extract(year from now())::int || '-' || lpad((
+      select coalesce(max(substring(reference from '-([0-9]+)$')::int), 0) + 1 from public.due_diligences
+       where reference like 'DD-' || extract(year from now())::int || '-%')::text, 3, '0');
+  elsif new.reference is distinct from old.reference then
+    raise exception 'GBS_DD_FIGEE' using errcode = 'P0001';
+  end if;
   if new.statut = 'validee' and (tg_op = 'INSERT' or old.statut <> 'validee')
      and coalesce(current_setting('gbs.rpc', true), '') <> 'valider_due_diligence' then
     raise exception 'GBS_VALIDATION_RPC: passez par valider_due_diligence()' using errcode = 'P0001';
