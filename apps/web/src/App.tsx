@@ -11,6 +11,7 @@ import { NouveauDossier, Portefeuille } from './screens/Dossiers';
 import { FicheDossier } from './screens/FicheDossier';
 import { MesTaches } from './screens/Delais';
 import { PageSuivi } from './screens/Suivi';
+import { NotesFrais, Rentabilite } from './screens/Couts';
 import { Articles, Clients, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, MiseEnConcurrence } from './screens/Achats';
 import { Expeditions, FicheExpedition, Inspections, RapportInspection } from './screens/Operations';
@@ -48,6 +49,8 @@ export function App() {
             <Route path="/dossiers/nouveau" element={g('nouveau_dossier', <NouveauDossier />)} />
             <Route path="/dossiers/:id" element={g('portefeuille', <FicheDossier />)} />
             <Route path="/mes-taches" element={g('mes_taches', <MesTaches />)} />
+            <Route path="/notes-frais" element={g('notes_frais', <NotesFrais />)} />
+            <Route path="/rentabilite" element={g('rentabilite', <Rentabilite />)} />
             <Route path="/clients" element={g('clients', <Clients />)} />
             <Route path="/fournisseurs" element={g('fournisseurs', <Fournisseurs />)} />
             <Route path="/articles" element={g('articles', <Articles />)} />

@@ -8,6 +8,8 @@ import { detecter, hex, TAILLE_MAX, UUID } from '../_shared/fichiers.ts';
 
 const ORIGINE = Deno.env.get('GBS_ORIGINE') ?? '';
 const ROLES = ['admin', 'achats_chine', 'hub_afrique', 'agent_pays'];
+// Justificatifs de notes de frais : toute l'équipe interne, dans son propre dossier frais/<utilisateur>/.
+const ROLES_FRAIS = ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'inspecteur', 'comptable'];
 const LIMITE_PAR_MINUTE = Number(Deno.env.get('GBS_DEPOT_LIMITE_MINUTE') ?? '30');
 const compteurs = new Map<string, { debut: number; n: number }>();
 
@@ -49,23 +51,29 @@ Deno.serve(async (req) => {
 
   let form: FormData;
   try { form = await req.formData(); } catch { return refus(400, 'GBS_PARAMETRES_INVALIDES'); }
+  const frais = form.get('cible') === 'frais';
   const dossierId = String(form.get('dossier_id') ?? '');
   const fichier = form.get('fichier');
-  if (!UUID.test(dossierId) || !(fichier instanceof File)) return refus(400, 'GBS_PARAMETRES_INVALIDES');
+  if ((!frais && !UUID.test(dossierId)) || !(fichier instanceof File)) return refus(400, 'GBS_PARAMETRES_INVALIDES');
   if (fichier.size === 0 || fichier.size > TAILLE_MAX) return refus(413, 'GBS_FICHIER_TAILLE');
 
   // Droits : la base applique la RLS (rôle, société, double facteur) avec le jeton de l'utilisateur.
   const [{ data: profil }, { data: dossier }] = await Promise.all([
     utilisateur.from('profils').select('role, actif').eq('id', u.user.id).maybeSingle(),
-    utilisateur.from('dossiers').select('id').eq('id', dossierId).maybeSingle(),
+    // Pour un justificatif, la lecture du calendrier (réservée en base aux membres internes
+    // ayant validé le double facteur) tient lieu de contrôle de dossier.
+    frais ? utilisateur.from('calendrier').select('pays').limit(1).maybeSingle()
+          : utilisateur.from('dossiers').select('id').eq('id', dossierId).maybeSingle(),
   ]);
-  if (!profil?.actif || !ROLES.includes(profil.role) || !dossier) return refus(403, 'GBS_ACCES_REFUSE');
+  if (!profil?.actif || !(frais ? ROLES_FRAIS : ROLES).includes(profil.role) || !dossier) {
+    return refus(403, 'GBS_ACCES_REFUSE');
+  }
 
   const octets = new Uint8Array(await fichier.arrayBuffer());
   const type = detecter(octets.subarray(0, 12));
   if (!type) return refus(415, 'GBS_FICHIER_TYPE');
 
-  const chemin = `${dossierId}/${crypto.randomUUID()}.${type.ext}`;
+  const chemin = frais ? `frais/${u.user.id}/${crypto.randomUUID()}.${type.ext}` : `${dossierId}/${crypto.randomUUID()}.${type.ext}`;
   const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   const { error } = await service.storage.from('gbs-documents').upload(chemin, octets, { contentType: type.mime, upsert: false });
   if (error) { console.error('depot: echec de stockage'); return refus(500, 'GBS_DEPOT_ECHEC'); }

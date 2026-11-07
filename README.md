@@ -275,6 +275,7 @@ Ces points sont à vérifier ou à trancher. Ils ne sont pas couverts par le cod
 | Relances automatiques des factures, import des relevés bancaires | Non commencé | 1 |
 | Signature électronique intégrée, formulaires fournisseurs et transitaires par lien | Non commencé (lot 0 : document signé déposé et validé par l'administratrice) | 1 |
 | Page de suivi client en lecture seule par lien sécurisé (M14 niveau 1) | **Fait** (migration 17, fonction `gbs-suivi`). Fil de messagerie : à venir avec la messagerie | 1 |
+| Notes de frais (M22), coûts par dossier, coûts partagés au prorata du temps, marge directe facturée et encaissée, missions à perte avec cause (M15) | **Fait** (migration 18). Marge complète, vue par société et consolidée, clôture analytique et budget au devis : lot 2 | 1 |
 | Messagerie, guide d'expression du besoin, rapport des 3 offres automatique et coût global | Non commencé (l'offre porte déjà un champ « coût global » et l'alerte « coût global manquant ») | 1 |
 | Application inspecteur hors ligne, interface mandarin validée | Le chinois est traduit mais **non validé** par un locuteur natif | 1 |
 | Jours ouvrés et fériés, délais cibles avec voyants, attente d'un tiers, mes tâches, délégation en cas d'absence | **Fait** (migration 14). Délais cibles à saisir par la fondatrice ; calendrier chinois officiel et fêtes musulmanes à saisir chaque année ; jours fériés proposés « à confirmer » | 1 |
