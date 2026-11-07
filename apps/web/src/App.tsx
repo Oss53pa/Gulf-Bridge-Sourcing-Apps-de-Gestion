@@ -10,6 +10,7 @@ import { TableauDeBord } from './screens/TableauDeBord';
 import { NouveauDossier, Portefeuille } from './screens/Dossiers';
 import { FicheDossier } from './screens/FicheDossier';
 import { MesTaches } from './screens/Delais';
+import { PageSuivi } from './screens/Suivi';
 import { Articles, Clients, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, MiseEnConcurrence } from './screens/Achats';
 import { Expeditions, FicheExpedition, Inspections, RapportInspection } from './screens/Operations';
@@ -25,6 +26,8 @@ function Garde({ ecran, children }: { ecran: string; children: ReactNode }) {
 export function App() {
   const { pret, session, aal, profil } = useAuth();
   if (!configurationOk) return <ConfigurationManquante />;
+  // Page de suivi du client : publique, sans compte ; le jeton du lien est vérifié côté serveur.
+  if (window.location.pathname === '/suivi') return <PageSuivi />;
   if (!pret) return <div className="screen"><Chargement /></div>;
   // Double facteur obligatoire pour tous les comptes internes.
   if (!session || aal !== 'aal2') return <Connexion />;
