@@ -109,6 +109,8 @@ T = {
  'tableau.dd_expirant': ('Due diligences expirant sous 60 j', 'Due diligences expiring within 60 days', '60 天内到期的尽职调查'),
  'tableau.dd_sous': ('revue annuelle à planifier', 'annual review to schedule', '需安排年度复审'),
  'tableau.points_ouverts': ('Points bloquants à traiter', 'Blocking issues to handle', '待处理阻塞问题'),
+ 'tableau.cadres_echeance': ('Accords-cadres arrivant à échéance : {{liste}}', 'Framework agreements nearing expiry: {{liste}}', '即将到期的框架协议：{{liste}}'),
+ 'tableau.jours': ('{{n}} j', '{{n}} d', '{{n}} 天'),
  'tableau.aucun_point': ('Aucun point bloquant ouvert.', 'No open blocking issue.', '没有未解决的阻塞问题。'),
  # ------------------------------------------------------------------ champs
  'champs.action': ('Action', 'Action', '操作'), 'champs.agrement': ('Agrément', 'Approval', '准入'),
@@ -174,6 +176,15 @@ T = {
  'fiche.derogation_titre': ('Dérogation de l\'administratrice', 'Administrator waiver', '管理员例外放行'),
  'fiche.derogation_texte': ('Passer à la phase suivante malgré une pièce obligatoire manquante. Le motif est inscrit au journal d\'audit.', 'Move to the next phase despite a missing mandatory document. The reason is written to the audit log.', '在缺少必需文件的情况下进入下一阶段。理由将记入审计日志。'),
  'fiche.confirmer_derogation': ('Confirmer la dérogation', 'Confirm waiver', '确认例外放行'),
+ 'fiche.annuler_dossier': ('Annulation par le client', 'Cancellation by the client', '客户取消'),
+ 'fiche.aide_annulation': ('Avant la signature du contrat fournisseur : aucune commission due. Après la signature et avant la production : la première moitié reste acquise. Après le début de la production : la commission totale est due. Les avoirs et factures sont émis automatiquement ; les commandes non expédiées sont annulées.', 'Before the supplier contract is signed: no commission due. After signing and before production: the first half is kept. After production starts: the full commission is due. Credit notes and invoices are issued automatically; unshipped orders are cancelled.', '供应商合同签署前：无需支付佣金。签署后、生产前：保留首期佣金。生产开始后：须支付全部佣金。系统自动开具红字发票和发票，未发运订单将被取消。'),
+ 'fiche.confirmer_annulation': ('Confirmer l\'annulation du dossier', 'Confirm file cancellation', '确认取消项目'),
+ 'fiche.annulation_avant_contrat': ('Dossier annulé avant la signature du contrat fournisseur : aucune commission n\'est due.', 'File cancelled before the supplier contract: no commission is due.', '项目在供应商合同签署前取消：无需支付佣金。'),
+ 'fiche.annulation_avant_production': ('Dossier annulé avant la production : la première moitié de la commission reste acquise.', 'File cancelled before production: the first half of the commission is kept.', '项目在生产前取消：保留首期佣金。'),
+ 'fiche.annulation_apres_production': ('Dossier annulé après le début de la production : la commission totale est due.', 'File cancelled after production started: the full commission is due.', '项目在生产开始后取消：须支付全部佣金。'),
+ 'fiche.avoirs_emis': ('Avoirs émis', 'Credit notes issued', '已开红字发票'),
+ 'fiche.factures_emises': ('Factures émises', 'Invoices issued', '已开发票'),
+ 'fiche.frais_engages': ('Les frais engagés (jours d\'inspection, déplacements, échantillons) sont à refacturer au coût par une facture séparée.', 'Costs incurred (inspection days, travel, samples) must be re-invoiced at cost on a separate invoice.', '已发生费用（验货天数、差旅、样品）须另开发票按成本收取。'),
  'fiche.nouveau_point': ('Nouveau point bloquant', 'New blocking issue', '新增阻塞问题'),
  'fiche.resolution': ('Décrivez la résolution', 'Describe the resolution', '请描述解决方式'),
  'fiche.resolu': ('Résolu', 'Resolved', '已解决'), 'fiche.resoudre': ('Résoudre', 'Resolve', '解决'),
@@ -384,6 +395,8 @@ T = {
  'connaissements.non_negociable': ('Non négociable', 'Sea waybill', '海运单'), 'connaissements.lta': ('Lettre de transport aérien', 'Air waybill', '空运单'),
  # ------------------------------------------------------------------ factures
  'factures.titre': ('{{n}} factures ; {{r}} en retard, {{f}} en attente de certification FNE', '{{n}} invoices; {{r}} overdue, {{f}} awaiting FNE certification', '{{n}} 张发票；{{r}} 张逾期，{{f}} 张待 FNE 认证'),
+ 'factures.facturer_mensualites': ('Facturer les forfaits d\'accord-cadre du mois', 'Invoice this month\'s framework fees', '开具本月框架协议月费'),
+ 'factures.mensualites_faites': ('{{n}} forfait(s) mensuel(s) facturé(s). Un mois déjà facturé ne l\'est jamais deux fois.', '{{n}} monthly fee(s) invoiced. A month already invoiced is never invoiced twice.', '已开具 {{n}} 笔月费。已开票月份不会重复开票。'),
  'factures.nouvelle': ('Nouvelle facture', 'New invoice', '新建发票'),
  'factures.bandeau_fne': ('{{n}} facture(s) de GBS Côte d\'Ivoire attendent leur numéro et leur QR code FNE : elles ne partent pas au client avant certification.', '{{n}} GBS Côte d\'Ivoire invoice(s) await their FNE number and QR code: they are not sent to the client before certification.', '{{n}} 张 GBS 科特迪瓦发票等待 FNE 编号和二维码：认证前不会发送给客户。'),
  'factures.a_encaisser': ('À encaisser', 'Receivable', '待收款'), 'factures.en_retard': ('En retard', 'Overdue', '逾期'), 'factures.relance': ('relance à J+3', 'reminder at D+3', 'D+3 催款'),
@@ -545,6 +558,9 @@ T = {
 
 E = {
  'GBS_ACCES_REFUSE': ('Accès refusé.', 'Access denied.', '拒绝访问。'),
+ 'GBS_AVOIR_POSITIF': ('Un avoir doit avoir un montant négatif.', 'A credit note must have a negative amount.', '红字发票金额须为负数。'),
+ 'GBS_DEPOT_ECHEC': ('Le dépôt du fichier a échoué. Réessayez.', 'File upload failed. Try again.', '文件上传失败，请重试。'),
+ 'GBS_TROP_DE_DEPOTS': ('Trop de dépôts en une minute. Patientez un instant.', 'Too many uploads in one minute. Please wait.', '一分钟内上传过多，请稍候。'),
  'GBS_ANNULATION_ADMIN': ('Seule l\'administratrice peut annuler.', 'Only the administrator can cancel.', '仅管理员可以取消。'),
  'GBS_BORDEREAU_SUIVI': ('Le bordereau de suivi des cargaisons du pays de destination est exigé avant l\'expédition.', 'The destination country cargo tracking note is required before shipping.', '发运前必须提供目的国货物跟踪单。'),
  'GBS_CADRE_INCOMPLET': ('Accord-cadre incomplet : dates et forfait mensuel exigés.', 'Incomplete framework: dates and monthly fee required.', '框架协议不完整：需填写日期和月费。'),

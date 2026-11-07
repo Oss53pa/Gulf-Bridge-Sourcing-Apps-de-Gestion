@@ -32,15 +32,22 @@ export async function empreinte(f: Blob): Promise<string> {
 
 export class FichierRefuse extends Error {}
 
-/** Dépose le fichier dans le dossier et renvoie son chemin et son empreinte SHA-256. */
+/** Dépose le fichier via la fonction serveur « depot » (contrôle des octets, de la taille
+ *  et des droits côté serveur). Le contrôle local évite seulement un envoi inutile. */
 export async function deposer(dossierId: string, f: File): Promise<{ chemin: string; empreinte: string }> {
   if (f.size === 0 || f.size > TAILLE_MAX) throw new FichierRefuse('taille');
-  const type = await detecterType(f);
-  if (!type) throw new FichierRefuse('type');
-  const chemin = `${dossierId}/${crypto.randomUUID()}.${type.ext}`;
-  const r = await supabase.storage.from('documents').upload(chemin, f, { contentType: type.mime, upsert: false });
-  if (r.error) throw r.error;
-  return { chemin, empreinte: await empreinte(f) };
+  if (!(await detecterType(f))) throw new FichierRefuse('type');
+  const corps = new FormData();
+  corps.append('dossier_id', dossierId);
+  corps.append('fichier', f);
+  const r = await supabase.functions.invoke('depot', { body: corps });
+  if (r.error) {
+    const code = await (r.error as { context?: Response }).context?.json?.().then((x: { erreur?: string }) => x.erreur).catch(() => undefined);
+    if (code === 'GBS_FICHIER_TYPE') throw new FichierRefuse('type');
+    if (code === 'GBS_FICHIER_TAILLE') throw new FichierRefuse('taille');
+    throw new Error(code ?? 'GBS_DEPOT_ECHEC');
+  }
+  return r.data as { chemin: string; empreinte: string };
 }
 
 /** URL signée de courte durée (aucun fichier public). */

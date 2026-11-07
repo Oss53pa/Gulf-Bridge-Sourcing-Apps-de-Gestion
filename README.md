@@ -12,7 +12,7 @@ Ce dépôt livre le **lot 0** du cahier des charges (`docs/cahier-des-charges.md
 | Authentification | Supabase Auth + TOTP | Double facteur obligatoire : sans session AAL2, un compte interne n'a **aucun** droit, même via l'API |
 | Fichiers | Supabase Storage, bucket privé `documents` | URL signées de 5 minutes, types et taille bornés |
 | Interface | React 18 + TypeScript + Vite, `apps/web` | Écrans du lot 0, polices servies par l'application (aucune ressource Google, section 10) |
-| Tests | Vitest + PostgreSQL | 74 tests de recette en base, 8 tests d'interface |
+| Tests | Vitest + PostgreSQL | 83 tests de recette en base, 8 tests d'interface |
 
 Principe : l'interface masque ce qui est interdit, mais c'est la base qui refuse. Chaque action sensible passe par une fonction `public.*` qui contrôle les droits. Ces actions sont : agrément, vérification de compte, validation de paiement, mandat, contrat, inspection, dérogation, facture et FNE. Les tables refusent les écritures directes sur les champs protégés.
 
@@ -61,6 +61,8 @@ Principe : l'interface masque ce qui est interdit, mais c'est la base qui refuse
   - Mode financier figé, négoce porté par GBS Chine, vérification du client exigée en négoce ou avec lettre de crédit.
   - Équipement d'un site : date d'ouverture obligatoire, échéancier du forfait au projet avec le reste dû sur chaque facture.
 - **Journal d'audit.** Ajout seul, chaque ligne porte l'empreinte SHA-256 de la précédente, et `audit_verifier()` détecte toute altération faite directement en base. Aucune suppression physique des données métier.
+- **Accord-cadre.** Forfait mensuel facturé automatiquement par la société qui contracte, sans doublon ; alerte 60 jours avant l'échéance.
+- **Annulation par le client.** Montants dus selon la phase atteinte : rien avant le contrat, la première moitié avant la production, la totalité après ; avoirs et factures émis automatiquement.
 - **Paramètres datés.** Barème, taux, parts, retenues, TVA, plafonds : rien n'est écrit en dur. Une nouvelle valeur ne touche pas les dossiers déjà ouverts.
 
 ## Démarrer en local
@@ -77,7 +79,7 @@ pnpm install
 pnpm test:db
 ```
 
-Le script recrée la base `gbs_test`. Il applique `supabase/tests/supabase_stub.sql`, qui simule les rôles et `auth.uid()` de Supabase, puis toutes les migrations, et lance les 74 tests de recette. Variables reconnues : `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`.
+Le script recrée la base `gbs_test`. Il applique `supabase/tests/supabase_stub.sql`, qui simule les rôles et `auth.uid()` de Supabase, puis toutes les migrations, et lance les 83 tests de recette. Variables reconnues : `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`.
 
 ### Application web
 
@@ -130,12 +132,28 @@ update public.profils
 
 Ensuite, l'administratrice attribue les rôles depuis **Paramétrage → Utilisateurs et rôles**.
 
-### Tâche quotidienne
+### Fonction serveur de dépôt des fichiers
 
-L'escalade des points bloquants échus se planifie avec `pg_cron` :
+Tous les fichiers passent par la fonction `depot`. Elle vérifie les droits de l'utilisateur en base, la taille, puis le type réel du fichier sur ses octets ; elle régénère le nom et calcule l'empreinte SHA-256. Aucun utilisateur n'écrit directement dans le stockage.
+
+```bash
+supabase functions deploy depot
+```
+
+```bash
+supabase secrets set GBS_ORIGINE=https://adresse-de-l-application
+```
+
+### Tâches planifiées
+
+L'escalade des points bloquants échus et la facturation mensuelle des accords-cadres (idempotente : un mois déjà facturé ne l'est jamais deux fois) se planifient avec `pg_cron` :
 
 ```sql
 select cron.schedule('escalade', '0 6 * * *', $$select public.escalader_points_bloquants()$$);
+```
+
+```sql
+select cron.schedule('mensualites-cadre', '0 7 1 * *', $$select public.facturer_mensualites_cadre(current_date)$$);
 ```
 
 ## Avant la mise en production
@@ -157,9 +175,7 @@ Ces points sont à vérifier ou à trancher. Ils ne sont pas couverts par le cod
 | Sujet | État | Lot |
 | --- | --- | --- |
 | Génération PDF **côté serveur** avec polices chinoises intégrées | Les documents sont des pages A4 imprimables (facture, rapport d'inspection, rapport de due diligence), générées dans le navigateur | 0 (à compléter) |
-| Vérification du type de fichier **côté serveur** | Contrôle des octets côté client, types MIME et taille bornés par le bucket ; une fonction serveur doit encore vérifier les octets | 0 (à compléter) |
-| Accord-cadre : facturation mensuelle automatique, alerte 60 jours avant l'échéance | Le dossier-cadre et la remise sont gérés ; la facturation récurrente n'est pas planifiée | 0/1 |
-| Annulation d'un dossier : montants dus selon la phase, avoir FNE, recalcul des partages | Annulation de commande par l'administratrice, avec motif ; calcul des montants dus absent | 1 |
+| Annulation d'un dossier : refacturation des frais engagés au coût, recalcul des partages déjà versés | Montants dus selon la phase, avoirs et factures émis automatiquement ; les frais engagés relèvent des coûts par dossier | 1 |
 | Relances automatiques des factures, import des relevés bancaires | Non commencé | 1 |
 | Signature électronique intégrée, formulaires fournisseurs et transitaires par lien | Non commencé (lot 0 : document signé déposé et validé par l'administratrice) | 1 |
 | Messagerie, page de suivi client, guide d'expression du besoin, rapport des 3 offres automatique et coût global | Non commencé (l'offre porte déjà un champ « coût global » et l'alerte « coût global manquant ») | 1 |
@@ -173,9 +189,10 @@ Ces points sont à vérifier ou à trancher. Ils ne sont pas couverts par le cod
 
 ```
 supabase/
-  migrations/   9 migrations : socle, tiers, dossiers, achats et qualité, logistique,
-                finance, règles, droits, configuration par défaut
-  tests/        recette.test.ts (74 tests), helpers.ts, supabase_stub.sql, reset_db.sh
+  migrations/   11 migrations : socle, tiers, dossiers, achats et qualité, logistique,
+                finance, règles, droits, configuration, accords-cadres et annulation, dépôt serveur
+  functions/    depot (seul point d'écriture des fichiers)
+  tests/        recette.test.ts, complements.test.ts, fichiers.test.ts (83 tests), helpers.ts, supabase_stub.sql, reset_db.sh
   seed.sql      données fictives de recette
 apps/web/
   src/lib/      client Supabase, droits d'affichage, formats trilingues, erreurs, fichiers

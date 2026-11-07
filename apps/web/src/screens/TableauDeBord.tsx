@@ -18,6 +18,9 @@ export function TableauDeBord() {
   const { data, erreur } = useAsync(async () => ok(await supabase.rpc('tableau_de_bord', { p_societe: societeActive })) as TDB, [societeActive]);
   const points = useAsync(async () => ok(await supabase.from('points_bloquants').select('*').is('resolu_le', null)
     .order('echeance').limit(50)) as PointBloquant[], []);
+  const cadres = useAsync(async () => (['admin', 'hub_afrique', 'agent_pays', 'comptable'].includes(profil?.role ?? '')
+    ? ok(await supabase.rpc('cadres_a_echeance')) as { dossier_id: string; reference: string; client: string; cadre_fin: string; jours_restants: number }[]
+    : []), [profil?.role]);
   const societe = societes.find((s) => s.id === societeActive);
   const masque = data && !data.montants_visibles;
   const m = (v: number | null | undefined) => (masque || v === null || v === undefined ? '•••' : compact(v, langue));
@@ -49,6 +52,9 @@ export function TableauDeBord() {
               { lib: t('tableau.dd_expirant'), val: data.dd_expirant_60j ?? '—', sous: t('tableau.dd_sous') },
             ]} />
           ) : null}
+          {(cadres.data ?? []).length > 0 && (
+            <Bandeau>{t('tableau.cadres_echeance', { liste: (cadres.data ?? []).map((c) => `${c.reference} · ${c.client} (${t('tableau.jours', { n: c.jours_restants })})`).join(' ; ') })}</Bandeau>
+          )}
           <CadreTableau titre={t('tableau.points_ouverts')}>
             {points.chargement ? <Chargement /> : (points.data ?? []).length === 0 ? <Vide>{t('tableau.aucun_point')}</Vide> : (
               <table className="t">

@@ -21,6 +21,8 @@ export function Factures() {
   const clients = useNoms('clients');
   const [filtre, setFiltre] = useState<Filtre>('toutes');
   const [creer, setCreer] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
+  const mens = useAction();
   const l = useAsync(async () => {
     let r = supabase.from('factures').select('*').order('cree_le', { ascending: false }).limit(1000);
     if (societeActive) r = r.eq('societe_id', societeActive);
@@ -45,7 +47,15 @@ export function Factures() {
   return (
     <div className="screen">
       <Entete surtitre={`${t('modules.finance')} · M11`} titre={t('factures.titre', { n: (l.data ?? []).length, r: retard, f: fne })}
-        actions={peut && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('factures.nouvelle')}</Bouton>} />
+        actions={<>
+          {profil?.role === 'admin' && <Bouton onClick={() => void mens.executer(async () => {
+            const n = ok(await supabase.rpc('facturer_mensualites_cadre', { p_mois: new Date().toISOString().slice(0, 10) })) as number;
+            setInfo(t('factures.mensualites_faites', { n })); void l.recharger();
+          })}>{t('factures.facturer_mensualites')}</Bouton>}
+          {peut && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('factures.nouvelle')}</Bouton>}
+        </>} />
+      <Bandeau type="err">{mens.erreur}</Bandeau>
+      <Bandeau>{info}</Bandeau>
       {fne > 0 && <Bandeau>{t('factures.bandeau_fne', { n: fne })}</Bandeau>}
       <Kpis items={[
         { lib: `${t('factures.a_encaisser')} · XOF`, val: montant(parDevise.XOF ?? 0, 'XOF', langue).replace(' XOF', '').replace('XOF ', ''), sous: 'GBS CI' },

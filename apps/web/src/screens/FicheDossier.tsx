@@ -21,6 +21,10 @@ export function FicheDossier() {
   const { profil, langue } = useAuth();
   const role = profil?.role ?? null;
   const [onglet, setOnglet] = useState<Onglet>('phases');
+  const [annulation, setAnnulation] = useState(false);
+  const [motifAnnulation, setMotifAnnulation] = useState('');
+  const [bilan, setBilan] = useState<{ phase_atteinte: string; avoirs: string[]; factures_emises: string[] } | null>(null);
+  const ann = useAction();
   const clients = useNoms('clients');
   const dossier = useAsync(async () => ok(await supabase.from('dossiers').select('*').eq('id', id).maybeSingle()) as Dossier | null, [id]);
   const phases = useAsync(async () => ok(await supabase.from('dossier_phases').select('*').eq('dossier_id', id).order('ordre')) as Phase[], [id]);
@@ -42,7 +46,10 @@ export function FicheDossier() {
     <div className="screen">
       <Entete surtitre={`${d.reference} · ${t(`modeles.${d.modele}`)} · ${t(`modes.${d.mode_financier}`)}`}
         titre={`${clients[d.client_id] ?? ''} — ${d.intitule}`}
-        actions={<Statut statut={d.statut === 'ouvert' ? 'en_cours' : d.statut} libelle={t(`statuts_dossier.${d.statut}`)} />} />
+        actions={<>
+          <Statut statut={d.statut === 'ouvert' ? 'en_cours' : d.statut} libelle={t(`statuts_dossier.${d.statut}`)} />
+          {role === 'admin' && d.statut === 'ouvert' && <Bouton variante="danger" onClick={() => setAnnulation(true)}>{t('fiche.annuler_dossier')}</Bouton>}
+        </>} />
       <Kpis items={[
         { lib: t('fiche.phase_courante'), texte: true, val: t(`phases.${d.phase_courante}`), sous: t('fiche.phases_validees', { n: (phases.data ?? []).filter((p) => p.statut === 'validee').length, total: (phases.data ?? []).length }) },
         { lib: t('fiche.completude'), val: `${completude} %`, sous: <Jauge valeur={completude} /> },
@@ -57,6 +64,26 @@ export function FicheDossier() {
         {onglet === 'commandes' && <CommandesDossier dossier={d} />}
         {onglet === 'journal' && <JournalDossier dossierId={d.id} />}
       </div>
+      {annulation && (
+        <Tiroir titre={t('fiche.annuler_dossier')} onClose={() => { setAnnulation(false); setBilan(null); }}>
+          {bilan ? (<>
+            <Bandeau type="ok">{t(`fiche.annulation_${bilan.phase_atteinte}`)}</Bandeau>
+            <dl className="dl">
+              <dt>{t('fiche.avoirs_emis')}</dt><dd>{bilan.avoirs.join(', ') || '—'}</dd>
+              <dt>{t('fiche.factures_emises')}</dt><dd>{bilan.factures_emises.join(', ') || '—'}</dd>
+            </dl>
+            <p className="mute">{t('fiche.frais_engages')}</p>
+          </>) : (<>
+            <p className="sec">{t('fiche.aide_annulation')}</p>
+            <Champ label={t('champs.motif')}><textarea value={motifAnnulation} maxLength={1000} onChange={(e) => setMotifAnnulation(e.target.value)} /></Champ>
+            <Bandeau type="err">{ann.erreur}</Bandeau>
+            <Bouton variante="danger" disabled={motifAnnulation.trim().length < 5 || ann.enCours} onClick={() => void ann.executer(async () => {
+              setBilan(ok(await supabase.rpc('annuler_dossier', { p_dossier: d.id, p_motif: motifAnnulation.trim() })) as typeof bilan);
+              recharger();
+            })}>{t('fiche.confirmer_annulation')}</Bouton>
+          </>)}
+        </Tiroir>
+      )}
     </div>
   );
 }
