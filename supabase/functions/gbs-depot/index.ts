@@ -1,4 +1,4 @@
-// Fonction serveur « depot » : seul point d'écriture dans le bucket privé « gbs-documents ».
+// Fonction serveur « gbs-depot » : seul point d'écriture dans le bucket privé « gbs-documents ».
 // Vérifie l'utilisateur (session AAL2 via les droits en base), le dossier, la taille
 // et le type réel du fichier sur ses octets, régénère le nom, calcule l'empreinte SHA-256.
 // Variables : SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (fournies par

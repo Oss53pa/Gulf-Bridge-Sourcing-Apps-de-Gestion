@@ -32,7 +32,7 @@ export async function empreinte(f: Blob): Promise<string> {
 
 export class FichierRefuse extends Error {}
 
-/** Dépose le fichier via la fonction serveur « depot » (contrôle des octets, de la taille
+/** Dépose le fichier via la fonction serveur « gbs-depot » (contrôle des octets, de la taille
  *  et des droits côté serveur). Le contrôle local évite seulement un envoi inutile. */
 export async function deposer(dossierId: string, f: File): Promise<{ chemin: string; empreinte: string }> {
   if (f.size === 0 || f.size > TAILLE_MAX) throw new FichierRefuse('taille');
@@ -40,7 +40,7 @@ export async function deposer(dossierId: string, f: File): Promise<{ chemin: str
   const corps = new FormData();
   corps.append('dossier_id', dossierId);
   corps.append('fichier', f);
-  const r = await supabase.functions.invoke('depot', { body: corps });
+  const r = await supabase.functions.invoke('gbs-depot', { body: corps });
   if (r.error) {
     const code = await (r.error as { context?: Response }).context?.json?.().then((x: { erreur?: string }) => x.erreur).catch(() => undefined);
     if (code === 'GBS_FICHIER_TYPE') throw new FichierRefuse('type');

@@ -150,10 +150,10 @@ Ensuite, l'administratrice attribue les rôles depuis **Paramétrage → Utilisa
 
 ### Fonction serveur de dépôt des fichiers
 
-Tous les fichiers passent par la fonction `depot`. Elle vérifie les droits de l'utilisateur en base, la taille, puis le type réel du fichier sur ses octets ; elle régénère le nom et calcule l'empreinte SHA-256. Aucun utilisateur n'écrit directement dans le stockage.
+Tous les fichiers passent par la fonction `gbs-depot` (préfixée pour ne pas entrer en collision avec les fonctions des autres applications du projet partagé). Elle vérifie les droits de l'utilisateur en base, la taille, puis le type réel du fichier sur ses octets ; elle régénère le nom et calcule l'empreinte SHA-256. Aucun utilisateur n'écrit directement dans le stockage.
 
 ```bash
-supabase functions deploy depot
+supabase functions deploy gbs-depot
 ```
 
 ```bash
