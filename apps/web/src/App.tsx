@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Commissions } from './screens/Commissions';
+import { Prospection } from './screens/Prospection';
 import { NonConformites } from './screens/NonConformites';
 import { ReservesOuvertes } from './screens/Receptions';
 import type { ReactNode } from 'react';
@@ -56,6 +57,7 @@ export function App() {
             <Route path="/mes-taches" element={g('mes_taches', <MesTaches />)} />
             <Route path="/notes-frais" element={g('notes_frais', <NotesFrais />)} />
             <Route path="/rentabilite" element={g('rentabilite', <Rentabilite />)} />
+            <Route path="/prospection" element={g('prospection', <Prospection />)} />
             <Route path="/clients" element={g('clients', <Clients />)} />
             <Route path="/fournisseurs" element={g('fournisseurs', <Fournisseurs />)} />
             <Route path="/articles" element={g('articles', <Articles />)} />

@@ -32,3 +32,7 @@ verify_jwt = true
 [functions.gbs-suivi]
 # Page de suivi client : point d'entrée public, le jeton du lien est vérifié en base.
 verify_jwt = false
+
+[functions.gbs-demande]
+# Appelée par le serveur du site web, authentifiée par signature HMAC (GBS_SITE_SECRET).
+verify_jwt = false
