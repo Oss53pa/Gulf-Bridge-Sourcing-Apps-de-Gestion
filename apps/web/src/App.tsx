@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { Commissions } from './screens/Commissions';
+import { NonConformites } from './screens/NonConformites';
 import type { ReactNode } from 'react';
 import { useAuth } from './lib/auth';
 import { configurationOk } from './lib/supabase';
@@ -9,6 +11,10 @@ import { ConfigurationManquante, Connexion, SansRole } from './screens/Connexion
 import { TableauDeBord } from './screens/TableauDeBord';
 import { NouveauDossier, Portefeuille } from './screens/Dossiers';
 import { FicheDossier } from './screens/FicheDossier';
+import { MesTaches } from './screens/Delais';
+import { PageSuivi } from './screens/Suivi';
+import { NotesFrais, Rentabilite } from './screens/Couts';
+import { ImprimerRapportOffres } from './screens/RapportOffres';
 import { Articles, Clients, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, MiseEnConcurrence } from './screens/Achats';
 import { Expeditions, FicheExpedition, Inspections, RapportInspection } from './screens/Operations';
@@ -24,6 +30,8 @@ function Garde({ ecran, children }: { ecran: string; children: ReactNode }) {
 export function App() {
   const { pret, session, aal, profil } = useAuth();
   if (!configurationOk) return <ConfigurationManquante />;
+  // Page de suivi du client : publique, sans compte ; le jeton du lien est vérifié côté serveur.
+  if (window.location.pathname === '/suivi') return <PageSuivi />;
   if (!pret) return <div className="screen"><Chargement /></div>;
   // Double facteur obligatoire pour tous les comptes internes.
   if (!session || aal !== 'aal2') return <Connexion />;
@@ -34,6 +42,7 @@ export function App() {
       <Route path="/imprimer/facture/:id" element={g('factures', <ImprimerFacture />)} />
       <Route path="/imprimer/inspection/:id" element={g('inspections', <ImprimerInspection />)} />
       <Route path="/imprimer/due-diligence/:id" element={g('fournisseurs', <ImprimerDueDiligence />)} />
+      <Route path="/imprimer/rapport-offres/:id" element={g('portefeuille', <ImprimerRapportOffres />)} />
       <Route path="*" element={
         <Coque>
           <Routes>
@@ -43,6 +52,9 @@ export function App() {
             <Route path="/dossiers" element={g('portefeuille', <Portefeuille />)} />
             <Route path="/dossiers/nouveau" element={g('nouveau_dossier', <NouveauDossier />)} />
             <Route path="/dossiers/:id" element={g('portefeuille', <FicheDossier />)} />
+            <Route path="/mes-taches" element={g('mes_taches', <MesTaches />)} />
+            <Route path="/notes-frais" element={g('notes_frais', <NotesFrais />)} />
+            <Route path="/rentabilite" element={g('rentabilite', <Rentabilite />)} />
             <Route path="/clients" element={g('clients', <Clients />)} />
             <Route path="/fournisseurs" element={g('fournisseurs', <Fournisseurs />)} />
             <Route path="/articles" element={g('articles', <Articles />)} />
@@ -50,11 +62,13 @@ export function App() {
             <Route path="/commandes" element={g('commandes', <Commandes />)} />
             <Route path="/commandes/:id" element={g('commandes', <FicheCommande />)} />
             <Route path="/inspections" element={g('inspections', <Inspections />)} />
+            <Route path="/non-conformites" element={g('non_conformites', <NonConformites />)} />
             <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
             <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
             <Route path="/expeditions/:id" element={g('expeditions', <FicheExpedition />)} />
             <Route path="/factures" element={g('factures', <Factures />)} />
             <Route path="/factures/:id" element={g('factures', <FicheFacture />)} />
+            <Route path="/commissions" element={g('commissions', <Commissions />)} />
             <Route path="/paiements" element={g('paiements', <Paiements />)} />
             <Route path="/journal" element={g('journal', <Journal />)} />
             <Route path="/parametrage" element={g('parametrage', <Parametrage />)} />

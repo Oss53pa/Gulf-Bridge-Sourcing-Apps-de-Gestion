@@ -28,3 +28,7 @@ file_size_limit = "25MiB"
 [functions.gbs-depot]
 # Jeton de l'utilisateur exigé ; la fonction vérifie ensuite ses droits en base.
 verify_jwt = true
+
+[functions.gbs-suivi]
+# Page de suivi client : point d'entrée public, le jeton du lien est vérifié en base.
+verify_jwt = false

@@ -12,8 +12,13 @@ import { Bandeau, Bouton, Champ, Chargement, Entete, Jauge, Kpis, Onglets, Statu
 import { useNoms } from '../lib/referentiels';
 import { useCompletude } from './Dossiers';
 import { Depot } from '../components/Depot';
+import { DelaisDossier } from './Delais';
+import { AvenantsDossier, DemanderPiece } from './Avenants';
+import { LiensSuivi } from './Suivi';
+import { CoutsMarge } from './Couts';
+import { ListeRapports } from './RapportOffres';
 
-type Onglet = 'phases' | 'blocages' | 'devis' | 'commandes' | 'journal';
+type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'devis' | 'commandes' | 'avenants' | 'suivi' | 'couts' | 'journal';
 
 export function FicheDossier() {
   const { id = '' } = useParams();
@@ -36,10 +41,15 @@ export function FicheDossier() {
   const recharger = () => { void dossier.recharger(); void phases.recharger(); void pieces.recharger(); };
   const onglets: { id: Onglet; lib: string }[] = [
     { id: 'phases', lib: t('fiche.phases_pieces') },
+    { id: 'delais', lib: t('fiche.delais_taches') },
     { id: 'blocages', lib: t('fiche.points_bloquants') },
   ];
+  if (['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role ?? '')) onglets.push({ id: 'rapports', lib: t('fiche.rapports_offres') });
   if (['admin', 'hub_afrique', 'agent_pays', 'comptable'].includes(role ?? '')) onglets.push({ id: 'devis', lib: t('fiche.devis') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'commandes', lib: t('fiche.commandes') });
+  if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'avenants', lib: t('fiche.avenants') });
+  if (['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role ?? '')) onglets.push({ id: 'suivi', lib: t('fiche.suivi_client') });
+  if (['admin', 'comptable'].includes(role ?? '')) onglets.push({ id: 'couts', lib: t('fiche.couts_marge') });
   if (['admin', 'comptable'].includes(role ?? '')) onglets.push({ id: 'journal', lib: t('fiche.journal') });
 
   return (
@@ -59,9 +69,14 @@ export function FicheDossier() {
       <Onglets actif={onglet} onChange={setOnglet} items={onglets} />
       <div className="cadre">
         {onglet === 'phases' && <PhasesPieces dossier={d} phases={phases.data ?? []} pieces={pieces.data ?? []} onChange={recharger} />}
+        {onglet === 'delais' && <DelaisDossier dossier={d} phases={phases.data ?? []} onChange={recharger} />}
         {onglet === 'blocages' && <Blocages dossierId={d.id} />}
+        {onglet === 'rapports' && <ListeRapports dossierId={d.id} />}
         {onglet === 'devis' && <DevisDossier dossier={d} />}
         {onglet === 'commandes' && <CommandesDossier dossier={d} />}
+        {onglet === 'avenants' && <AvenantsDossier dossier={d} />}
+        {onglet === 'suivi' && <LiensSuivi dossier={d} />}
+        {onglet === 'couts' && <CoutsMarge dossier={d} />}
         {onglet === 'journal' && <JournalDossier dossierId={d.id} />}
       </div>
       {annulation && (
@@ -98,6 +113,7 @@ function PhasesPieces({ dossier, phases, pieces, onChange }: { dossier: Dossier;
   const [info, setInfo] = useState<string | null>(null);
   const fichier = useRef<HTMLInputElement>(null);
   const [cible, setCible] = useState<string | null>(null);
+  const [demande, setDemande] = useState<Piece | null>(null);
   const peutEcrire = ['admin', 'achats_chine', 'hub_afrique'].includes(role);
   const courante = dossier.phase_courante;
 
@@ -158,11 +174,15 @@ function PhasesPieces({ dossier, phases, pieces, onChange }: { dossier: Dossier;
                       <td>{p.libelle}</td>
                       <td className="sec">{p.obligatoire ? t('commun.oui') : t('fiche.facultative')}</td>
                       <td className="sec">{p.fournie_par ? t(`fournisseurs_piece.${p.fournie_par}`) : '—'}</td>
-                      <td><Statut statut={p.statut} libelle={t(`statuts_piece.${p.statut}`)} /></td>
+                      <td><Statut statut={p.statut} libelle={t(`statuts_piece.${p.statut}`)} />
+                        {p.demandee_le && ['manquante', 'refusee', 'expiree'].includes(p.statut) &&
+                          <div className="mute" style={{ fontSize: 12 }}>{t('pieces.demandee', { a: t(`pieces.destinataire.${p.demandee_a}`), le: date(p.demandee_le, langue), n: p.relances ?? 0 })}</div>}</td>
                       <td className="ref">{p.statut_le ? dateHeure(p.statut_le, langue, profil?.fuseau ?? 'UTC') : '—'}</td>
                       <td className="num">
                         <span className="actions" style={{ justifyContent: 'flex-end' }}>
                           {p.document_chemin && <Bouton petit onClick={() => void voir(p)}>{t('commun.voir')}</Bouton>}
+                          {peutEcrire && dossier.statut === 'ouvert' && ['manquante', 'refusee', 'expiree'].includes(p.statut) &&
+                            <Bouton petit onClick={() => setDemande(p)}>{t('pieces.demander')}</Bouton>}
                           {['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role) && p.statut !== 'validee' &&
                             <Bouton petit onClick={() => choisirFichier(p.id)}>{t('fiche.deposer')}</Bouton>}
                           {peutEcrire && p.document_chemin && p.statut !== 'validee' && <>
@@ -179,6 +199,7 @@ function PhasesPieces({ dossier, phases, pieces, onChange }: { dossier: Dossier;
           </section>
         );
       })}
+      {demande && <DemanderPiece piece={demande} onClose={() => setDemande(null)} onDone={() => { setDemande(null); onChange(); }} />}
       {derog && (
         <Tiroir titre={t('fiche.derogation_titre')} onClose={() => setDerog(false)}>
           <p className="sec">{t('fiche.derogation_texte')}</p>

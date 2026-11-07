@@ -8,8 +8,10 @@ import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant } from '../lib/format';
 import type { Article, Commande, Compte, Dossier, Fournisseur, Inspection, LigneCommande, Paiement } from '../lib/types';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
+import { ApprobationEssais } from './ApprobationEssais';
 import { Depot } from '../components/Depot';
 import { useNoms } from '../lib/referentiels';
+import { DonneesCoutGlobal, ListeRapports } from './RapportOffres';
 
 const INCOTERMS = ['FOB', 'FCA', 'FAS', 'EXW', 'CFR', 'CPT', 'CIF', 'CIP'] as const;
 
@@ -19,6 +21,7 @@ interface Ligne { id: string; fournisseur_id: string; incoterm: string; devise: 
   delai_jours: number | null; garantie_mois: number | null; note_technique: number | null; retenue: boolean; rang_prix: number; anormalement_basse: boolean; cout_global_manquant: boolean; }
 
 export function MiseEnConcurrence() {
+  const [donnees, setDonnees] = useState<string | null>(null);
   const { t } = useTranslation();
   const { langue, fuseau } = useAuth();
   const dossiers = useNoms('dossiers');
@@ -84,12 +87,17 @@ export function MiseEnConcurrence() {
                     <td className="num">{montant(o.montant, o.devise, langue)}</td><td className="num">{montant(o.fob_xof, 'XOF', langue)}</td>
                     <td className="num">{o.delai_jours ?? '—'}</td>
                     <td className="sec">{[o.anormalement_basse && t('rfq.anormalement_basse'), o.cout_global_manquant && t('rfq.cout_global_manquant')].filter(Boolean).join(' · ') || '—'}</td>
-                    <td className="num"><Bouton petit variante={o.retenue ? 'primaire' : undefined} onClick={() => void retenir(o)}>{o.retenue ? t('rfq.retenue') : t('rfq.retenir')}</Bouton></td></tr>))}</tbody></table>
+                    <td className="num"><span className="actions" style={{ justifyContent: 'flex-end' }}>
+                      <Bouton petit onClick={() => setDonnees(o.id)}>{t('rapport.cout_global_court')}</Bouton>
+                      <Bouton petit variante={o.retenue ? 'primaire' : undefined} onClick={() => void retenir(o)}>{o.retenue ? t('rfq.retenue') : t('rfq.retenir')}</Bouton></span></td></tr>))}</tbody></table>
             )}
+            <div className="filet" />
+            <ListeRapports consultationId={r.id} peutGenerer={!ferme && (comparatif.data ?? []).length > 0} />
           </>)}
         </aside>
       </div>
       {creer && <NouvelleRfq onClose={() => setCreer(false)} onOk={() => { setCreer(false); void l.recharger(); }} />}
+      {donnees && <DonneesCoutGlobal offreId={donnees} onClose={() => setDonnees(null)} onSaved={() => { setDonnees(null); void comparatif.recharger(); }} />}
       {saisie && r && <SaisieOffre rfq={r} invites={(invites.data ?? []).map((i) => i.fournisseur_id)} onClose={() => setSaisie(false)} onOk={() => { setSaisie(false); void comparatif.recharger(); }} />}
     </div>
   );
@@ -283,7 +291,6 @@ export function FicheCommande() {
   const a = useAction();
   const [ligne, setLigne] = useState({ article_id: '', quantite: '', prix_unitaire: '', sur_mesure: false, reassort: false });
   const [contrat, setContrat] = useState<{ doc: string; mode: string; date: string } | null>(null);
-  const [approb, setApprob] = useState<string | null>(null);
   const [pay, setPay] = useState(false);
   const [exec, setExec] = useState<Paiement | null>(null);
   const [motif, setMotif] = useState('');
@@ -304,7 +311,6 @@ export function FicheCommande() {
     if (!contrat?.doc || !/^\d{4}-\d{2}-\d{2}$/.test(contrat.date)) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.rpc('valider_contrat', { p_commande: cmd.id, p_document: contrat.doc, p_mode: contrat.mode, p_signe_le: contrat.date })))) { setContrat(null); recharger(); }
   };
-  const validerApprob = async () => { if (approb && await a.executer(async () => ok(await supabase.rpc('valider_approbation', { p_commande: cmd.id, p_document: approb })))) { setApprob(null); recharger(); } };
   const validerPaiement = async (p: Paiement) => { if (await a.executer(async () => ok(await supabase.rpc('valider_paiement', { p_paiement: p.id })))) recharger(); };
   const refuserPaiement = async (p: Paiement) => { const m = window.prompt(t('paiements.motif_refus'))?.trim(); if (m && await a.executer(async () => ok(await supabase.rpc('refuser_paiement', { p_paiement: p.id, p_motif: m.slice(0, 1000) })))) recharger(); };
   const fob = Number(cmd.fob_montant);
@@ -350,9 +356,11 @@ export function FicheCommande() {
         </section>
         <section style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {role === 'admin' && !cmd.contrat_valide_le && <Bouton variante="primaire" onClick={() => setContrat({ doc: '', mode: 'electronique', date: '' })}>{t('commandes.valider_contrat')}</Bouton>}
-          {ecrit && cmd.sur_mesure && !cmd.approbation_valide_le && <Bouton onClick={() => setApprob('')}>{t('commandes.approbation')}</Bouton>}
           {cmd.approbation_valide_le && <Statut statut="validee" libelle={t('commandes.approbation_ok')} />}
+          {cmd.sur_mesure && !cmd.approbation_valide_le && <Statut statut="att" libelle={t('approbation.requise')} />}
         </section>
+        {ecrit && <ApprobationEssais commandeId={cmd.id} dossierId={cmd.dossier_id} statutCommande={cmd.statut} onChange={recharger} />}
+        {cmd.date_livraison_promise && <PenaliteCommande commande={cmd} peutDater={ecrit} onChange={recharger} />}
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="section-titre">{t('commandes.paiements')}</span>
@@ -396,14 +404,6 @@ export function FicheCommande() {
           <Bouton variante="primaire" disabled={a.enCours} onClick={() => void validerContrat()}>{t('commun.valider')}</Bouton>
         </Tiroir>
       )}
-      {approb !== null && (
-        <Tiroir titre={t('commandes.approbation')} onClose={() => setApprob(null)}>
-          <p className="sec">{t('commandes.aide_approbation')}</p>
-          <Depot dossierId={cmd.dossier_id} valeur={approb || null} onChange={setApprob} />
-          <Bandeau type="err">{a.erreur}</Bandeau>
-          <Bouton variante="primaire" disabled={!approb || a.enCours} onClick={() => void validerApprob()}>{t('commun.valider')}</Bouton>
-        </Tiroir>
-      )}
       {annuler && (
         <Tiroir titre={t('commandes.annuler')} onClose={() => setAnnuler(false)}>
           <p className="sec">{t('commandes.aide_annulation')}</p>
@@ -418,19 +418,62 @@ export function FicheCommande() {
   );
 }
 
+interface Penalite { applicable: boolean; devise: string; date_promise: string; date_reference: string; provisoire: boolean; jours_retard: number;
+  taux_jour: number; plafond: number | null; montant_brut: number; montant: number; plafonnee: boolean }
+
+/** Pénalité de retard calculée selon le contrat ; les achats datent la livraison effective. */
+function PenaliteCommande({ commande, peutDater, onChange }: { commande: Commande; peutDater: boolean; onChange: () => void }) {
+  const { t } = useTranslation();
+  const { langue } = useAuth();
+  const p = useAsync(async () => ok(await supabase.rpc('penalite_commande', { p_commande: commande.id })) as Penalite, [commande.id, commande.livraison_reelle_le]);
+  const a = useAction();
+  const [dateLiv, setDateLiv] = useState('');
+  const dater = async () => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateLiv)) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.from('commandes').update({ livraison_reelle_le: dateLiv }).eq('id', commande.id)))) onChange();
+  };
+  const x = p.data;
+  return (
+    <section>
+      <span className="section-titre">{t('penalites.titre')}</span>
+      <Bandeau type="err">{p.erreur ?? a.erreur}</Bandeau>
+      {x && !x.applicable ? <p className="mute">{t('penalites.sans_clause')}</p> : x && (
+        <dl className="dl">
+          <dt>{t('penalites.date_promise')}</dt><dd>{date(x.date_promise, langue)}</dd>
+          <dt>{t('penalites.date_livraison')}</dt><dd>{commande.livraison_reelle_le ? date(commande.livraison_reelle_le, langue) : t('penalites.non_datee')}</dd>
+          <dt>{t('penalites.retard')}</dt><dd>{t('penalites.jours', { n: x.jours_retard })}</dd>
+          <dt>{t('penalites.montant')}</dt><dd>{montant(x.montant, x.devise, langue)}
+            {x.plafonnee ? ` · ${t('penalites.plafonnee')}` : ''}{x.provisoire ? ` · ${t('penalites.provisoire')}` : ''}</dd>
+        </dl>
+      )}
+      {peutDater && !commande.livraison_reelle_le && (
+        <div className="actions" style={{ alignItems: 'flex-end' }}>
+          <Champ label={t('penalites.dater_livraison')}><input type="date" value={dateLiv} onChange={(e) => setDateLiv(e.target.value)} /></Champ>
+          <Bouton disabled={a.enCours} onClick={() => void dater()}>{t('commun.enregistrer')}</Bouton>
+        </div>
+      )}
+      <p className="mute">{t('penalites.aide')}</p>
+    </section>
+  );
+}
+
 function PreparerPaiement({ commande, dossier, onClose, onOk }: { commande: Commande; dossier: Dossier; onClose: () => void; onOk: () => void }) {
   const { t } = useTranslation();
+  const { langue } = useAuth();
   const comptes = useAsync(async () => ok(await supabase.from('comptes_paiement').select('*').eq('fournisseur_id', commande.fournisseur_id).eq('verifie', true).is('archive_le', null)) as Compte[], []);
   const flux = dossier.mode_financier === 'accompagne' ? 'instruction_client' : 'gbs';
-  const [f, setF] = useState({ nature: 'acompte', compte_id: '', montant: '' });
+  const [f, setF] = useState({ nature: 'acompte', compte_id: '', montant: '', retenue: '', motif: '' });
   const a = useAction();
   const compte = (comptes.data ?? []).find((c) => c.id === f.compte_id);
+  const penalite = useAsync(async () => (f.nature === 'solde' ? ok(await supabase.rpc('penalite_commande', { p_commande: commande.id })) as Penalite : null), [f.nature, commande.id]);
   const envoyer = async () => {
     if (!compte) { a.setErreur(t('formulaire.invalide')); return; }
     const canal = compte.type === 'banque' ? (flux === 'instruction_client' ? 'virement' : 'virement') : compte.type;
     const v = z.object({ commande_id: z.string().uuid(), nature: z.enum(['acompte', 'solde', 'echantillon', 'frais']), flux: z.enum(['gbs', 'instruction_client']),
-      canal: z.enum(['virement', 'wechat_pay', 'alipay', 'lettre_credit']), compte_id: z.string().uuid(), montant: z.number().positive().max(1e10), devise: z.enum(['USD', 'CNY']) }).strict()
-      .safeParse({ commande_id: commande.id, nature: f.nature, flux, canal, compte_id: compte.id, montant: Number(f.montant.replace(',', '.')), devise: compte.devise });
+      canal: z.enum(['virement', 'wechat_pay', 'alipay', 'lettre_credit']), compte_id: z.string().uuid(), montant: z.number().positive().max(1e10), devise: z.enum(['USD', 'CNY']),
+      penalite_retenue: z.number().min(0).max(1e10), penalite_motif: z.string().trim().max(1000).nullable() }).strict()
+      .safeParse({ commande_id: commande.id, nature: f.nature, flux, canal, compte_id: compte.id, montant: Number(f.montant.replace(',', '.')), devise: compte.devise,
+        penalite_retenue: f.nature === 'solde' && f.retenue ? Number(f.retenue.replace(',', '.')) : 0, penalite_motif: f.motif.trim() || null });
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.from('paiements_fournisseurs').insert(v.data)))) onOk();
   };
@@ -443,6 +486,12 @@ function PreparerPaiement({ commande, dossier, onClose, onOk }: { commande: Comm
         <option value="">—</option>{(comptes.data ?? []).map((c) => <option key={c.id} value={c.id}>{t(`types_compte.${c.type}`)} · {c.devise} · {c.numero.replace(/.(?=.{4})/g, '•')}</option>)}</select></Champ>
       {(comptes.data ?? []).length === 0 && <Bandeau>{t('paiements.aucun_compte')}</Bandeau>}
       <Champ label={`${t('champs.montant')} ${compte ? `(${compte.devise})` : ''}`}><input inputMode="decimal" value={f.montant} onChange={(e) => setF({ ...f, montant: e.target.value })} /></Champ>
+      {f.nature === 'solde' && penalite.data?.applicable && Number(penalite.data.montant) > 0 && (<>
+        <Bandeau>{t('penalites.proposee', { montant: montant(penalite.data.montant, penalite.data.devise, langue), jours: penalite.data.jours_retard })}
+          {penalite.data.provisoire ? ` ${t('penalites.provisoire')}` : ''}</Bandeau>
+        <Champ label={`${t('penalites.retenue')} ${compte ? `(${compte.devise})` : ''}`}><input inputMode="decimal" value={f.retenue} onChange={(e) => setF({ ...f, retenue: e.target.value })} /></Champ>
+        <Champ label={t('penalites.motif_renonciation')}><textarea value={f.motif} maxLength={1000} onChange={(e) => setF({ ...f, motif: e.target.value })} /></Champ>
+      </>)}
       <Bandeau type="err">{a.erreur}</Bandeau>
       <Bouton variante="primaire" disabled={a.enCours} onClick={() => void envoyer()}>{t('paiements.preparer')}</Bouton>
     </Tiroir>

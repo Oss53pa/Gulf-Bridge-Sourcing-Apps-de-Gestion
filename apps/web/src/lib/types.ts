@@ -30,10 +30,14 @@ export interface Dossier {
   statut: string; phase_courante: string; chef_id: string | null; lettre_credit: boolean; reference_domiciliation: string | null;
   forfait_consultation_ht: number | null; forfait_projet_ht: number | null; taux_commission_projet: number | null; cadre_id: string | null;
 }
-export interface Phase { id: string; dossier_id: string; phase: string; ordre: number; statut: string; reelle_debut: string | null; reelle_fin: string | null; }
+export interface Phase {
+  id: string; dossier_id: string; phase: string; ordre: number; statut: string; reelle_debut: string | null; reelle_fin: string | null;
+  responsable_id: string | null; attente_tiers: string | null;
+}
 export interface Piece {
   id: string; dossier_id: string; phase: string; code: string; libelle: string; obligatoire: boolean; statut: string;
   fournie_par: string | null; document_chemin: string | null; statut_le: string | null; commentaire: string | null;
+  demandee_a?: string | null; demandee_le?: string | null; relances?: number;
 }
 export interface PointBloquant {
   id: string; dossier_id: string; description: string; categorie: string; impact_jours: number | null; echeance: string;
@@ -49,7 +53,7 @@ export interface Commande {
   montant_marchandise: number; fret: number | null; assurance: number | null; frais_jusqu_a_bord: number | null; fob_montant: number;
   sur_mesure: boolean; statut: string; contrat_document: string | null; contrat_mode: string | null; contrat_signe_le: string | null;
   contrat_valide_le: string | null; approbation_document: string | null; approbation_valide_le: string | null;
-  date_livraison_promise: string | null; transfert_risque: string | null;
+  date_livraison_promise: string | null; transfert_risque: string | null; livraison_reelle_le?: string | null;
 }
 export interface LigneCommande { id: string; commande_id: string; article_id: string; quantite: number; prix_unitaire: number; montant: number; sur_mesure: boolean; reassort: boolean; }
 export interface Article {
