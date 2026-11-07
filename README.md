@@ -101,6 +101,35 @@ pnpm --filter web test
 pnpm --filter web build
 ```
 
+### Hébergement sur Cloudflare Pages
+
+L'application web est un site statique. Dans le tableau de bord Cloudflare : **Workers & Pages → Create → Pages → Connect to Git**, dépôt `Gulf-Bridge-Sourcing-Apps-de-Gestion`, branche de production `main`, puis :
+
+| Réglage | Valeur |
+|---|---|
+| Framework preset | None |
+| Build command | `pnpm --filter web build` |
+| Build output directory | `apps/web/dist` |
+| Root directory | *(vide : racine du dépôt)* |
+
+Variables d'environnement (Production et Preview) :
+
+| Variable | Valeur |
+|---|---|
+| `NODE_VERSION` | `22` |
+| `VITE_SUPABASE_URL` | `https://<reference-du-projet>.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | la clé publique `anon` du projet (Project Settings → API Keys → Legacy) |
+
+Aucune autre clé ne doit y figurer : tout ce qui est préfixé `VITE_` part dans le navigateur. La politique de sécurité du contenu est générée au build à partir de `VITE_SUPABASE_URL` ; les autres en-têtes de sécurité sont dans `apps/web/public/_headers`. Sans fichier `404.html`, Cloudflare Pages renvoie `index.html` pour toute adresse inconnue, ce qui permet la navigation de l'application.
+
+Une fois l'adresse connue, déclarez-la à la fonction de dépôt (sinon les navigateurs refusent les dépôts) :
+
+```bash
+supabase secrets set GBS_ORIGINE=https://adresse-de-l-application --project-ref <reference-du-projet>
+```
+
+Ajoutez aussi cette adresse dans **Authentication → URL Configuration** (Site URL et Redirect URLs) pour que les liens d'invitation ramènent vers l'application.
+
 ### Projet Supabase (développement, recette, production)
 
 Trois projets distincts sont prévus (section 10 bis), et la recette n'utilise que des données fictives (`supabase/seed.sql`). Pour chaque projet :
