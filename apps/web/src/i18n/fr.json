@@ -1396,7 +1396,7 @@
  },
  "reception": {
   "aide": "Le procès-verbal se prépare avec ses réserves, puis s'enregistre signé par le client. Une réserve bloquante interdit l'acceptation ; les réserves levées, la réception est prononcée définitive.",
-  "aide_nc": "Réserve majeure ou bloquante du fournisseur : une non-conformité sera ouverte sur sa commande à la signature et comptera dans sa note qualité.",
+  "aide_nc": "Réserve majeure ou bloquante du fournisseur : une non-conformité sera ouverte sur sa commande à la signature, comptera dans sa note qualité et se clôturera à la levée de la réserve.",
   "aide_signature": "Joignez le procès-verbal signé par le client.",
   "ajouter_reserve": "Ajouter la réserve",
   "aucune": "Aucune réception.",

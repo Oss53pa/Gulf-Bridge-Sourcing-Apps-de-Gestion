@@ -1396,7 +1396,7 @@
  },
  "reception": {
   "aide": "The report is prepared with its reservations, then recorded signed by the client. A blocking reservation prevents acceptance; once reservations are lifted, final acceptance is declared.",
-  "aide_nc": "Major or blocking supplier reservation: a non-conformity will be opened on its order at signature and will count in its quality score.",
+  "aide_nc": "Major or blocking supplier reservation: a non-conformity will be opened on its order at signature, will count in its quality score and will close when the reservation is lifted.",
   "aide_signature": "Attach the report signed by the client.",
   "ajouter_reserve": "Add reservation",
   "aucune": "No reception.",

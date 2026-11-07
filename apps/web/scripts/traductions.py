@@ -711,7 +711,7 @@ T = {
  'reception.ouvertes': ('Ouvertes', 'Open', '未解除'), 'reception.ouvertes_sous': ('à lever', 'to lift', '待解除'),
  'reception.en_retard': ('En retard', 'Overdue', '已逾期'), 'reception.en_retard_sous': ('délai dépassé', 'deadline passed', '超过期限'),
  'reception.commande': ('Commande concernée', 'Order concerned', '相关订单'),
- 'reception.aide_nc': ('Réserve majeure ou bloquante du fournisseur : une non-conformité sera ouverte sur sa commande à la signature et comptera dans sa note qualité.', 'Major or blocking supplier reservation: a non-conformity will be opened on its order at signature and will count in its quality score.', '供应商严重或阻断性保留意见：签署时将对其订单开立不合格项，并计入质量评分。'),
+ 'reception.aide_nc': ('Réserve majeure ou bloquante du fournisseur : une non-conformité sera ouverte sur sa commande à la signature, comptera dans sa note qualité et se clôturera à la levée de la réserve.', 'Major or blocking supplier reservation: a non-conformity will be opened on its order at signature, will count in its quality score and will close when the reservation is lifted.', '供应商严重或阻断性保留意见：签署时将对其订单开立不合格项，计入质量评分，并在保留意见解除时关闭。'),
  'reception.nc_ouverte': ('Non-conformité ouverte sur la commande du fournisseur', 'Non-conformity opened on the supplier order', '已对供应商订单开立不合格项'),
  'reception.majeures': ('Majeures', 'Major', '严重'), 'reception.majeures_sous': ('à traiter en priorité', 'to handle first', '优先处理'),
 }

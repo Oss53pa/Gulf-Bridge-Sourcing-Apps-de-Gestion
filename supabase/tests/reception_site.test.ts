@@ -99,6 +99,13 @@ describe('Réception sur site (M28)', () => {
     expect(nc).toEqual([{ gravite: 'majeur', commande_id: c, fournisseur_id: m.fournisseur, numero: 1 }]);
     await as(db, m.achats);
     expect(Number((await one(db, `select note_qualite from gbs.qualite_fournisseurs() where fournisseur_id = $1`, [m.fournisseur])).note_qualite)).toBe(92);
+    // La levée de la réserve sur site clôt la non-conformité, sans contre-inspection.
+    await as(db, m.hub);
+    const x1 = (await one(db, `select id, non_conformite_id from gbs.reserves_reception where reception_id = $1 and numero = 1`, [r]));
+    await db.query(`select gbs.lever_reserve($1, 'Six sommiers remplacés par le fournisseur')`, [x1.id]);
+    await asRoot(db);
+    const n = await one(db, `select statut, preuve, hors_delai, contre_inspection_id from gbs.non_conformites where id = $1`, [x1.non_conformite_id]);
+    expect(n).toEqual({ statut: 'close', preuve: 'Six sommiers remplacés par le fournisseur', hors_delai: false, contre_inspection_id: null });
   }));
 
   it('plusieurs commandes : la commande de la réserve du fournisseur doit être précisée', () => withTx(async (db) => {
