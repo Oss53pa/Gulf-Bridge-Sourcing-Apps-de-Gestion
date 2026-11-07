@@ -648,6 +648,7 @@ E = {
  'GBS_SOCIETE_NON_CREEE': ('La société n\'existait pas encore à cette date.', 'The company did not exist yet at this date.', '该公司在此日期尚未成立。'),
  'GBS_SUPPRESSION_INTERDITE': ('Aucune suppression : archivez l\'enregistrement.', 'No deletion: archive the record instead.', '不可删除：请归档。'),
  'GBS_TAUX_ADMIN': ('Seule l\'administratrice modifie un taux de facture.', 'Only the administrator can change an invoice rate.', '仅管理员可修改发票税率。'),
+ 'GBS_TAUX_REJETE': ('Taux de change de la source refusé par les contrôles : saisissez-le à la main dans le paramétrage.', 'Source exchange rate rejected by the checks: enter it manually in settings.', '来源汇率未通过校验：请在参数设置中手动录入。'),
  'GBS_TAUX_MANQUANT': ('Taux de change manquant pour cette date : saisissez-le dans le paramétrage.', 'Exchange rate missing for this date: enter it in settings.', '缺少该日期汇率：请在参数设置中录入。'),
  'GBS_TRANCHE1_NON_EMISE': ('La première facture de commission doit être émise avant le solde.', 'The first commission invoice must be issued before the balance.', '须先开具首期佣金发票。'),
  'GBS_TRANCHE_DEJA_FACTUREE': ('Cette tranche de commission est déjà facturée.', 'This commission instalment is already invoiced.', '该期佣金已开票。'),

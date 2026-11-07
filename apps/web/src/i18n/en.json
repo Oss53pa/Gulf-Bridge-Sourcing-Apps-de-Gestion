@@ -433,6 +433,7 @@
   "GBS_SUPPRESSION_INTERDITE": "No deletion: archive the record instead.",
   "GBS_TAUX_ADMIN": "Only the administrator can change an invoice rate.",
   "GBS_TAUX_MANQUANT": "Exchange rate missing for this date: enter it in settings.",
+  "GBS_TAUX_REJETE": "Source exchange rate rejected by the checks: enter it manually in settings.",
   "GBS_TRANCHE1_NON_EMISE": "The first commission invoice must be issued before the balance.",
   "GBS_TRANCHE_DEJA_FACTUREE": "This commission instalment is already invoiced.",
   "GBS_TRANSITION_INVALIDE": "Status change not allowed at this stage.",

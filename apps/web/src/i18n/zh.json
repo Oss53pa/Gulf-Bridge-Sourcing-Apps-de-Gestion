@@ -433,6 +433,7 @@
   "GBS_SUPPRESSION_INTERDITE": "不可删除：请归档。",
   "GBS_TAUX_ADMIN": "仅管理员可修改发票税率。",
   "GBS_TAUX_MANQUANT": "缺少该日期汇率：请在参数设置中录入。",
+  "GBS_TAUX_REJETE": "来源汇率未通过校验：请在参数设置中手动录入。",
   "GBS_TRANCHE1_NON_EMISE": "须先开具首期佣金发票。",
   "GBS_TRANCHE_DEJA_FACTUREE": "该期佣金已开票。",
   "GBS_TRANSITION_INVALIDE": "当前阶段不允许变更状态。",

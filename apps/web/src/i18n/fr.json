@@ -433,6 +433,7 @@
   "GBS_SUPPRESSION_INTERDITE": "Aucune suppression : archivez l'enregistrement.",
   "GBS_TAUX_ADMIN": "Seule l'administratrice modifie un taux de facture.",
   "GBS_TAUX_MANQUANT": "Taux de change manquant pour cette date : saisissez-le dans le paramétrage.",
+  "GBS_TAUX_REJETE": "Taux de change de la source refusé par les contrôles : saisissez-le à la main dans le paramétrage.",
   "GBS_TRANCHE1_NON_EMISE": "La première facture de commission doit être émise avant le solde.",
   "GBS_TRANCHE_DEJA_FACTUREE": "Cette tranche de commission est déjà facturée.",
   "GBS_TRANSITION_INVALIDE": "Changement de statut non autorisé à ce stade.",

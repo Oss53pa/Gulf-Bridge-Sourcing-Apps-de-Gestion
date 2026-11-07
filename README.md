@@ -101,6 +101,35 @@ pnpm --filter web test
 pnpm --filter web build
 ```
 
+### Hébergement sur Cloudflare Pages
+
+L'application web est un site statique. Dans le tableau de bord Cloudflare : **Workers & Pages → Create → Pages → Connect to Git**, dépôt `Gulf-Bridge-Sourcing-Apps-de-Gestion`, branche de production `main`, puis :
+
+| Réglage | Valeur |
+|---|---|
+| Framework preset | None |
+| Build command | `pnpm --filter web build` |
+| Build output directory | `apps/web/dist` |
+| Root directory | *(vide : racine du dépôt)* |
+
+Variables d'environnement (Production et Preview) :
+
+| Variable | Valeur |
+|---|---|
+| `NODE_VERSION` | `22` |
+| `VITE_SUPABASE_URL` | `https://<reference-du-projet>.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | la clé publique `anon` du projet (Project Settings → API Keys → Legacy) |
+
+Aucune autre clé ne doit y figurer : tout ce qui est préfixé `VITE_` part dans le navigateur. La politique de sécurité du contenu est générée au build à partir de `VITE_SUPABASE_URL` ; les autres en-têtes de sécurité sont dans `apps/web/public/_headers`. Sans fichier `404.html`, Cloudflare Pages renvoie `index.html` pour toute adresse inconnue, ce qui permet la navigation de l'application.
+
+Une fois l'adresse connue, déclarez-la à la fonction de dépôt (sinon les navigateurs refusent les dépôts) :
+
+```bash
+supabase secrets set GBS_ORIGINE=https://adresse-de-l-application --project-ref <reference-du-projet>
+```
+
+Ajoutez aussi cette adresse dans **Authentication → URL Configuration** (Site URL et Redirect URLs) pour que les liens d'invitation ramènent vers l'application.
+
 ### Projet Supabase (développement, recette, production)
 
 Trois projets distincts sont prévus (section 10 bis), et la recette n'utilise que des données fictives (`supabase/seed.sql`). Pour chaque projet :
@@ -144,6 +173,16 @@ update gbs.profils
  where email = 'adresse-de-l-administratrice';
 ```
 
+Si la personne a déjà un compte dans une autre application du projet partagé, aucun profil GBS n'est créé (sa métadonnée `app` appartient à l'autre application et ne doit pas être modifiée). Créez alors le profil vous-même avant l'étape 2 :
+
+```sql
+insert into gbs.profils (id, nom, email)
+select id, 'Nom Prénom', email from auth.users where lower(email) = lower('adresse')
+on conflict (id) do nothing;
+```
+
+Le compte, le mot de passe et le second facteur restent communs à toutes les applications du projet.
+
 3. À la première connexion, l'application impose l'inscription du double facteur (QR code TOTP).
 
 Ensuite, l'administratrice attribue les rôles depuis **Paramétrage → Utilisateurs et rôles**.
@@ -175,6 +214,25 @@ select cron.schedule('gbs-mensualites-cadre', '0 7 1 * *',
   $c$do $$ begin perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
   perform gbs.facturer_mensualites_cadre(current_date); end $$$c$);
 ```
+
+### Taux de change automatiques (BCE)
+
+Les taux USD et CNY sont importés chaque jour ouvré depuis les taux de référence de la Banque centrale européenne. Le XOF ayant une parité fixe avec l'euro (655,957), 1 USD = 655,957 ÷ (USD pour 1 EUR publié par la BCE), et de même pour le CNY. L'import passe par `pg_net`, sans clé ni service tiers, et contrôle chaque réponse avant toute écriture :
+
+- statut HTTP 200, taille inférieure à 64 Ko, XML valide sans `DOCTYPE` ni `ENTITY` ;
+- date de publication dans les 7 derniers jours ;
+- taux dans des bornes de plausibilité (`taux.borne.USD`, `taux.borne.CNY`) ;
+- variation inférieure à 10 % (`taux.variation_max`) par rapport au dernier taux connu.
+
+Une publication refusée n'écrit rien, n'est pas redemandée le même jour et reste tracée dans `gbs.imports_taux` (lisible par l'administratrice et la comptabilité) : le taux se saisit alors à la main. Les erreurs réseau sont retentées, au plus 6 requêtes par jour (`taux.requetes_max_jour`).
+
+```sql
+select cron.schedule('gbs-taux-bce', '*/15 15-17 * * 1-5',
+  $c$do $$ begin perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  perform gbs.importer_taux_bce(); end $$$c$);
+```
+
+Les taux de la BCE sont des taux de référence, pas les taux appliqués par une banque : pour un paiement fournisseur, le taux réellement obtenu reste à saisir sur le paiement.
 
 ## Avant la mise en production
 
