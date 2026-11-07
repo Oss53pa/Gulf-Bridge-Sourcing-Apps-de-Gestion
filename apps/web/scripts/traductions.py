@@ -1052,6 +1052,28 @@ E.update({
  'GBS_BENEFICIAIRES_DEPASSENT_100': ('Les parts des bénéficiaires dépassent 100 %.', 'Beneficial owners\' shares exceed 100%.', '受益人持股合计超过 100%。'),
  'GBS_VERIFICATION_CLOSE': ('Cette vérification est close : ouvrez-en une nouvelle.', 'This verification is closed: open a new one.', '该核验已结束：请新建核验。'),
 })
+T.update({
+ 'penalites.titre': ('Pénalités de retard', 'Late-delivery penalties', '延迟交货罚款'),
+ 'penalites.sans_clause': ('Aucune clause de pénalité au contrat (taux par jour non renseigné).', 'No penalty clause in the contract (daily rate not set).', '合同无罚款条款（未填日费率）。'),
+ 'penalites.date_promise': ('Livraison promise', 'Promised delivery', '承诺交货日'),
+ 'penalites.date_livraison': ('Livraison effective', 'Actual delivery', '实际交货日'),
+ 'penalites.non_datee': ('Non datée', 'Not dated', '未登记'),
+ 'penalites.retard': ('Retard', 'Delay', '延迟'),
+ 'penalites.jours': ('{{n}} jour(s) calendaire(s)', '{{n}} calendar day(s)', '{{n}} 个自然日'),
+ 'penalites.montant': ('Pénalité', 'Penalty', '罚款'),
+ 'penalites.plafonnee': ('plafonnée', 'capped', '已封顶'),
+ 'penalites.provisoire': ('provisoire (calculée à ce jour)', 'provisional (computed to date)', '暂定（计算至今日）'),
+ 'penalites.dater_livraison': ('Date de livraison effective (au sens de l\'Incoterm)', 'Actual delivery date (per the Incoterm)', '实际交货日期（按贸易术语）'),
+ 'penalites.aide': ('Montant = valeur des marchandises × taux par jour × jours de retard, dans la limite du plafond du contrat. La date promise suit les avenants signés.', 'Amount = goods value × daily rate × days late, within the contract cap. The promised date follows signed amendments.', '金额 = 货值 × 日费率 × 延迟天数，以合同上限为限。承诺日期随已签补充协议调整。'),
+ 'penalites.proposee': ('Pénalité de retard proposée en retenue : {{montant}} ({{jours}} jours de retard).', 'Late-delivery penalty proposed as withholding: {{montant}} ({{jours}} days late).', '建议从尾款扣除延迟罚款：{{montant}}（延迟 {{jours}} 天）。'),
+ 'penalites.retenue': ('Retenue appliquée', 'Withholding applied', '实际扣款'),
+ 'penalites.motif_renonciation': ('Motif si la retenue est inférieure à la pénalité', 'Reason if the withholding is below the penalty', '扣款低于罚款时的理由'),
+})
+E.update({
+ 'GBS_DATE_LIVRAISON_INVALIDE': ('Date de livraison invalide : ni future, ni antérieure au contrat.', 'Invalid delivery date: neither future nor before the contract.', '交货日期无效：不得晚于今天或早于合同日期。'),
+ 'GBS_RETENUE_SUPERIEURE': ('La retenue dépasse la pénalité calculée.', 'The withholding exceeds the calculated penalty.', '扣款超过计算的罚款。'),
+ 'GBS_PENALITE_SUR_SOLDE': ('Une pénalité ne se retient que sur le solde.', 'A penalty is withheld only from the balance.', '罚款只能从尾款中扣除。'),
+})
 for code, v in E.items():
     T['erreurs.' + code] = v
 

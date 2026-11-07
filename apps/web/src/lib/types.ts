@@ -53,7 +53,7 @@ export interface Commande {
   montant_marchandise: number; fret: number | null; assurance: number | null; frais_jusqu_a_bord: number | null; fob_montant: number;
   sur_mesure: boolean; statut: string; contrat_document: string | null; contrat_mode: string | null; contrat_signe_le: string | null;
   contrat_valide_le: string | null; approbation_document: string | null; approbation_valide_le: string | null;
-  date_livraison_promise: string | null; transfert_risque: string | null;
+  date_livraison_promise: string | null; transfert_risque: string | null; livraison_reelle_le?: string | null;
 }
 export interface LigneCommande { id: string; commande_id: string; article_id: string; quantite: number; prix_unitaire: number; montant: number; sur_mesure: boolean; reassort: boolean; }
 export interface Article {
