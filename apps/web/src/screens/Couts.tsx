@@ -15,7 +15,7 @@ import type { Dossier } from '../lib/types';
 import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 
 const CATEGORIES = ['inspecteur', 'deplacement', 'hebergement', 'repas', 'echantillon', 'coursier', 'laboratoire', 'traduction',
-  'sous_traitance', 'commission_agent', 'transitaire', 'frais_bancaires', 'change', 'installation', 'apres_livraison', 'autre'] as const;
+  'sous_traitance', 'transitaire', 'frais_bancaires', 'change', 'installation', 'apres_livraison', 'autre'] as const;
 const CAUSES = ['jours_depasses', 'contre_inspection_non_facturee', 'deplacement_imprevu'] as const;
 const DEVISES = ['XOF', 'XAF', 'USD', 'CNY', 'EUR'] as const;
 const UUID = z.string().uuid();

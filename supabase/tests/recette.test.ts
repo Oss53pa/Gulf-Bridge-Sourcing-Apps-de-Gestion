@@ -504,7 +504,13 @@ describe('Inspection : échantillonnage ISO 2859-1', () => {
     await expectError(db, 'GBS_VALIDATION_ADMIN', `select gbs.valider_inspection($1, 'liberation')`, [i]);
     await as(db, m.admin);
     await expectError(db, 'GBS_NC_OUVERTE', `select gbs.valider_inspection($1, 'liberation')`, [i]);
-    await db.query(`update gbs.non_conformites set statut = 'close' where id = $1`, [nc]);
+    // Clôture : correction exigée, déclarée, puis confirmée par une contre-inspection acceptée.
+    await expectError(db, 'GBS_VALIDATION_RPC', `update gbs.non_conformites set statut = 'close' where id = $1`, [nc]);
+    await db.query(`select gbs.exiger_correction_nc($1, 'Reprendre le calibrage de la ligne 2', current_date + 7)`, [nc]);
+    await db.query(`select gbs.declarer_correction_nc($1, 'Outil de calibrage remplacé, 200 pièces recontrôlées')`, [nc]);
+    const ci = (await one(db, `insert into gbs.inspections (commande_id, type, inspecteur_id, taille_lot) values ($1, 'contre_inspection', $2, 1200) returning id`, [c, m.inspecteur])).id;
+    await db.query(`update gbs.inspections set statut = 'realisee', date_realisee = current_date where id = $1`, [ci]);
+    await db.query(`select gbs.clore_nc($1, $2)`, [nc, ci]);
     await db.query(`select gbs.valider_inspection($1, 'liberation')`, [i]);
   }));
 

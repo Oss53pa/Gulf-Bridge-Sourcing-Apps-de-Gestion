@@ -10,6 +10,7 @@ import type { Commande, Constat, Dossier, Etape, Expedition, Inspection, NonConf
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
 import { useNoms } from '../lib/referentiels';
 import { Depot as Depotx } from '../components/Depot';
+import { FicheNc } from './NonConformites';
 
 // ============================================================================ Inspections
 export function Inspections() {
@@ -111,6 +112,8 @@ export function RapportInspection() {
   const [decision, setDecision] = useState<'liberation' | 'refus' | null>(null);
   const [motif, setMotif] = useState('');
   const [nc, setNc] = useState({ gravite: 'majeur', description: '', delai: '' });
+  const [ncPhotos, setNcPhotos] = useState<string[]>([]);
+  const [ficheNc, setFicheNc] = useState<string | null>(null);
   const x = i.data;
   if (i.chargement) return <div className="screen"><Chargement /></div>;
   if (!x) return <div className="screen"><Vide>{i.erreur ?? t('inspections.introuvable')}</Vide></div>;
@@ -137,12 +140,14 @@ export function RapportInspection() {
     }
   };
   const ajouterNc = async () => {
-    const v = z.object({ gravite: z.enum(['critique', 'majeur', 'mineur']), description: z.string().trim().min(3).max(4000), delai: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable() }).strict()
-      .safeParse({ ...nc, delai: nc.delai || null });
+    const v = z.object({ gravite: z.enum(['critique', 'majeur', 'mineur']), description: z.string().trim().min(3).max(4000), delai: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+      photos: z.array(z.string().max(200)).max(20) }).strict()
+      .safeParse({ ...nc, delai: nc.delai || null, photos: ncPhotos });
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
-    if (await a.executer(async () => ok(await supabase.from('non_conformites').insert({ ...v.data, inspection_id: x.id })))) { setNc({ gravite: 'majeur', description: '', delai: '' }); recharger(); }
+    if (await a.executer(async () => ok(await supabase.from('non_conformites').insert({ ...v.data, inspection_id: x.id })))) {
+      setNc({ gravite: 'majeur', description: '', delai: '' }); setNcPhotos([]); recharger();
+    }
   };
-  const fermerNc = async (n: NonConformite) => { if (await a.executer(async () => ok(await supabase.from('non_conformites').update({ statut: 'close' }).eq('id', n.id)))) recharger(); };
   const valider = async () => {
     if (!decision) return;
     if (await a.executer(async () => ok(await supabase.rpc('valider_inspection', { p_inspection: x.id, p_decision: decision, p_motif: motif.trim() || null })))) { setDecision(null); recharger(); }
@@ -201,7 +206,7 @@ export function RapportInspection() {
             <table className="t"><tbody>{(ncs.data ?? []).map((n) => (
               <tr key={n.id}><td className="ref">{n.reference}</td><td>{t(`gravites.${n.gravite}`)}</td><td>{n.description}</td><td className="ref">{date(n.delai, langue)}</td>
                 <td><Statut statut={n.statut} libelle={t(`statuts_nc.${n.statut}`)} /></td>
-                <td className="num">{n.statut !== 'close' && ['admin', 'achats_chine'].includes(role) && <Bouton petit onClick={() => void fermerNc(n)}>{t('inspections.clore_nc')}</Bouton>}</td></tr>))}</tbody></table>
+                <td className="num"><Bouton petit onClick={() => setFicheNc(n.id)}>{t('nc.ouvrir_fiche')}</Bouton></td></tr>))}</tbody></table>
           )}
           {saisit && (
             <div className="grille3" style={{ alignItems: 'end', marginTop: 8, gridTemplateColumns: '1fr 3fr 1fr auto' }}>
@@ -211,6 +216,9 @@ export function RapportInspection() {
               <Bouton onClick={() => void ajouterNc()}>{t('commun.ajouter')}</Bouton>
             </div>
           )}
+          {saisit && <div className="actions" style={{ marginTop: 6 }}><Depotx dossierId={x.dossier_id} valeur={null} onChange={(c) => setNcPhotos((p) => (p.length < 20 ? [...p, c] : p))} />
+            {ncPhotos.length > 0 && <span className="mute">{t('nc.photos_jointes', { n: ncPhotos.length })}</span>}</div>}
+          {ficheNc && <FicheNc id={ficheNc} onClose={() => setFicheNc(null)} onChange={recharger} />}
         </section>
       </div>
       {decision && (
