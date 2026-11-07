@@ -562,7 +562,7 @@ T = {
  'commissions.export': ('Export comptable', 'Accounting export', '会计导出'),
  'commissions.a_relever': ('Commissions à relever (mois écoulés)', 'Commissions to include (past months)', '待对账佣金（已结束月份）'),
  'commissions.rien_a_relever': ('Aucune commission en attente de relevé.', 'No commission awaiting a statement.', '暂无待对账佣金。'),
- 'commissions.aide_releve': ('Le relevé reprend toutes les commissions non relevées jusqu\'au mois indiqué, y compris celles encaissées en retard sur un mois déjà validé.', 'The statement includes every commission not yet reported up to the month shown, including late receipts for an already validated month.', '对账单包含截至所示月份所有未对账佣金，包括已确认月份的延迟收款。'),
+ 'commissions.aide_releve': ('Le relevé reprend toutes les commissions non relevées jusqu\'au mois indiqué, y compris celles encaissées en retard et les reprises sur avoir ; un solde négatif attend le relevé suivant.', 'The statement includes every commission not yet reported up to the month shown, including late receipts and credit-note reversals; a negative balance waits for the next statement.', '对账单包含截至所示月份所有未对账佣金，包括延迟收款及红字发票冲回；负余额顺延至下期对账单。'),
  'commissions.agent': ('Agent', 'Agent', '代理'),
  'commissions.societe': ('Société débitrice', 'Paying company', '付款公司'),
  'commissions.jusqu_a': ('Jusqu\'au mois', 'Up to month', '截至月份'),
@@ -600,6 +600,7 @@ T = {
 }
 
 E = {
+ 'GBS_RELEVE_DEBITEUR': ('Les reprises sur avoir dépassent les commissions : le solde s\'imputera sur le relevé suivant.', 'Credit-note reversals exceed commissions: the balance will be offset on the next statement.', '红字发票冲回超过佣金：余额将在下期对账单中抵扣。'),
  'GBS_CONTRAT_FIGE': ('Seule la date de fin d\'un contrat se modifie ; un nouveau taux exige un nouveau contrat.', 'Only a contract\'s end date can change; a new rate requires a new contract.', '合同仅可修改截止日期；新费率须新建合同。'),
  'GBS_CONTRAT_FIN_INVALIDE': ('La fin du contrat ne peut précéder une commission déjà calculée.', 'The contract cannot end before a commission already calculated.', '合同截止日期不能早于已计算的佣金。'),
  'GBS_AGENT_INVALIDE': ('Le contrat lie un agent pays à son propre pays.', 'The contract must link a country agent to their own country.', '合同须对应国家代理本人所在国家。'),

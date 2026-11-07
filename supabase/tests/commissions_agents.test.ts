@@ -132,4 +132,47 @@ describe('Commissions des agents pays (M21)', () => {
     expect(marge.couts_par_categorie).toEqual({ commission_agent: 90_000 });
     expect(marge.marge_directe_facturee_xof).toBe(600_000 - 90_000);
   }));
+  it('avoir sur facture encaissée : commission reprise au prorata, jamais au-delà ; marge corrigée', () => withTx(async (db) => {
+    const m = await monde(db);
+    const d = await dossier(db, m, { client: m.clientGA, societe: m.cn });
+    const f = await encaisser(db, m, 1000, (await one(db, `select current_date::text d`)).d, d);
+    await as(db, m.admin);
+    // Avoir partiel de 40 % puis avoir total : la reprise s'arrête à la commission calculée.
+    const avoir = async (ht: number) => {
+      const a = (await one(db, `insert into gbs.factures (societe_id, client_id, dossier_id, type, objet, devise, avoir_de)
+        values ($1, $2, $3, 'avoir', 'Avoir commercial', 'USD', $4) returning id`, [m.cn, m.clientGA, d, f])).id;
+      await db.query(`insert into gbs.lignes_facture (facture_id, libelle, prix_unitaire) values ($1, 'Remise', $2)`, [a, -ht]);
+      await db.query(`select gbs.emettre_facture($1)`, [a]);
+    };
+    await avoir(400);
+    await avoir(1000);
+    await as(db, m.agentGA);
+    const p = await rows(db, `select montant_xof, encaissement_id is null reprise from gbs.partages order by cree_le, montant_xof desc`);
+    expect(p.map((x) => [Number(x.montant_xof), x.reprise])).toEqual([[90_000, false], [-36_000, true], [-54_000, true]]);
+    await as(db, m.admin);
+    const marge = (await one(db, `select gbs.marge_directe($1) j`, [d])).j;
+    expect(marge.couts_par_categorie).toEqual({ commission_agent: 0 });
+    // La ligne de reprise apparaît au relevé des flux, datée de l'avoir.
+    expect((await rows(db, `select montant_xof from gbs.v_releve_flux where montant_xof < 0`))).toHaveLength(2);
+  }));
+
+  it('annulation d’un dossier : l’avoir automatique reprend aussi le flux entre sociétés', () => withTx(async (db) => {
+    const m = await monde(db);
+    await as(db, m.admin);
+    const f = (await one(db, `insert into gbs.factures (societe_id, client_id, type, objet, devise) values ($1, $2, 'commission', 'Commission', 'XOF') returning id`,
+      [m.ci, m.clientCI])).id;
+    await db.query(`insert into gbs.lignes_facture (facture_id, libelle, prix_unitaire) values ($1, 'x', 1000000)`, [f]);
+    const e = await one(db, `select * from gbs.emettre_facture($1)`, [f]);
+    if (e.statut === 'en_attente_fne') await db.query(`select gbs.certifier_fne($1, $2, 'https://fne.dgi.gouv.ci/qr/1')`, [f, `DGI-${f.slice(0, 8)}`]);
+    const net = (await one(db, `select net_a_payer from gbs.factures where id = $1`, [f])).net_a_payer;
+    await db.query(`insert into gbs.encaissements (facture_id, montant, devise, recu_le, mode) values ($1, $2, 'XOF', current_date, 'virement')`, [f, net]);
+    await asRoot(db);
+    const a = (await one(db, `select (gbs_private.emettre_avoir($1, 'Annulation par le client')).id`, [f])).id;
+    // Avoir de GBS CI : la reprise attend la certification FNE.
+    expect(await rows(db, `select id from gbs.partages where facture_id = $1`, [a])).toEqual([]);
+    await as(db, m.admin);
+    await db.query(`select gbs.certifier_fne($1, $2, 'https://fne.dgi.gouv.ci/qr/2')`, [a, `DGI-${a.slice(0, 8)}`]);
+    const s = await one(db, `select sum(montant_xof) t from gbs.partages where du_par = 'GBS_CI' and du_a = 'GBS_CN'`);
+    expect(Number(s.t)).toBe(0);
+  }));
 });
