@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant } from '../lib/format';
 import type { Article, Commande, Compte, Dossier, Fournisseur, Inspection, LigneCommande, Paiement } from '../lib/types';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
+import { ApprobationEssais } from './ApprobationEssais';
 import { Depot } from '../components/Depot';
 import { useNoms } from '../lib/referentiels';
 import { DonneesCoutGlobal, ListeRapports } from './RapportOffres';
@@ -290,7 +291,6 @@ export function FicheCommande() {
   const a = useAction();
   const [ligne, setLigne] = useState({ article_id: '', quantite: '', prix_unitaire: '', sur_mesure: false, reassort: false });
   const [contrat, setContrat] = useState<{ doc: string; mode: string; date: string } | null>(null);
-  const [approb, setApprob] = useState<string | null>(null);
   const [pay, setPay] = useState(false);
   const [exec, setExec] = useState<Paiement | null>(null);
   const [motif, setMotif] = useState('');
@@ -311,7 +311,6 @@ export function FicheCommande() {
     if (!contrat?.doc || !/^\d{4}-\d{2}-\d{2}$/.test(contrat.date)) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.rpc('valider_contrat', { p_commande: cmd.id, p_document: contrat.doc, p_mode: contrat.mode, p_signe_le: contrat.date })))) { setContrat(null); recharger(); }
   };
-  const validerApprob = async () => { if (approb && await a.executer(async () => ok(await supabase.rpc('valider_approbation', { p_commande: cmd.id, p_document: approb })))) { setApprob(null); recharger(); } };
   const validerPaiement = async (p: Paiement) => { if (await a.executer(async () => ok(await supabase.rpc('valider_paiement', { p_paiement: p.id })))) recharger(); };
   const refuserPaiement = async (p: Paiement) => { const m = window.prompt(t('paiements.motif_refus'))?.trim(); if (m && await a.executer(async () => ok(await supabase.rpc('refuser_paiement', { p_paiement: p.id, p_motif: m.slice(0, 1000) })))) recharger(); };
   const fob = Number(cmd.fob_montant);
@@ -357,9 +356,10 @@ export function FicheCommande() {
         </section>
         <section style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {role === 'admin' && !cmd.contrat_valide_le && <Bouton variante="primaire" onClick={() => setContrat({ doc: '', mode: 'electronique', date: '' })}>{t('commandes.valider_contrat')}</Bouton>}
-          {ecrit && cmd.sur_mesure && !cmd.approbation_valide_le && <Bouton onClick={() => setApprob('')}>{t('commandes.approbation')}</Bouton>}
           {cmd.approbation_valide_le && <Statut statut="validee" libelle={t('commandes.approbation_ok')} />}
+          {cmd.sur_mesure && !cmd.approbation_valide_le && <Statut statut="att" libelle={t('approbation.requise')} />}
         </section>
+        {ecrit && <ApprobationEssais commandeId={cmd.id} dossierId={cmd.dossier_id} statutCommande={cmd.statut} onChange={recharger} />}
         {cmd.date_livraison_promise && <PenaliteCommande commande={cmd} peutDater={ecrit} onChange={recharger} />}
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -402,14 +402,6 @@ export function FicheCommande() {
           <Champ label={t('devis.document_signe')}><Depot dossierId={cmd.dossier_id} valeur={contrat.doc || null} onChange={(doc) => setContrat({ ...contrat, doc })} /></Champ>
           <Bandeau type="err">{a.erreur}</Bandeau>
           <Bouton variante="primaire" disabled={a.enCours} onClick={() => void validerContrat()}>{t('commun.valider')}</Bouton>
-        </Tiroir>
-      )}
-      {approb !== null && (
-        <Tiroir titre={t('commandes.approbation')} onClose={() => setApprob(null)}>
-          <p className="sec">{t('commandes.aide_approbation')}</p>
-          <Depot dossierId={cmd.dossier_id} valeur={approb || null} onChange={setApprob} />
-          <Bandeau type="err">{a.erreur}</Bandeau>
-          <Bouton variante="primaire" disabled={!approb || a.enCours} onClick={() => void validerApprob()}>{t('commun.valider')}</Bouton>
         </Tiroir>
       )}
       {annuler && (

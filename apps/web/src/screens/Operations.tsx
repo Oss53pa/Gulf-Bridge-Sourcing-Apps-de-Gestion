@@ -114,6 +114,11 @@ export function RapportInspection() {
   const [nc, setNc] = useState({ gravite: 'majeur', description: '', delai: '' });
   const [ncPhotos, setNcPhotos] = useState<string[]>([]);
   const [ficheNc, setFicheNc] = useState<string | null>(null);
+  const ref = useAsync(async () => {
+    const aid = (i.data as (Inspection & { approbation_id?: string | null }) | null)?.approbation_id;
+    return aid ? ok(await supabase.from('approbations_techniques').select('version, objet, echantillon_description, documents').eq('id', aid).maybeSingle()) as
+      { version: number; objet: string; echantillon_description: string | null; documents: string[] } | null : null;
+  }, [i.data]);
   const x = i.data;
   if (i.chargement) return <div className="screen"><Chargement /></div>;
   if (!x) return <div className="screen"><Vide>{i.erreur ?? t('inspections.introuvable')}</Vide></div>;
@@ -169,6 +174,7 @@ export function RapportInspection() {
           sous: t('inspections.plan', { l: plan[k].lettre, n: plan[k].n, ac: plan[k].ac, re: plan[k].re }),
         })).concat([{ lib: t('inspections.decision_proposee'), val: x.decision_proposee ? t(`decisions.${x.decision_proposee}`) : '—', sous: t('inspections.lot_niveau', { lot: x.taille_lot, n: x.niveau }) }])} />
       )}
+      {ref.data && <p className="mute">{t('approbation.reference_inspection', { v: ref.data.version, objet: ref.data.objet })}{ref.data.echantillon_description ? ` · ${t('approbation.echantillon')} : ${ref.data.echantillon_description}` : ''}</p>}
       <Bandeau type="err">{a.erreur}</Bandeau>
       <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {saisit && (

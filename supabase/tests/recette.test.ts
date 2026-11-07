@@ -309,7 +309,14 @@ describe('Verrou 1 : aucun achat sans contrat signé', () => {
     await db.query(`select gbs.valider_paiement($1)`, [p]);
     await db.query(`select gbs.executer_paiement($1, 'SWIFT-1', 'j.pdf')`, [p]);
     await expectError(db, 'GBS_VERROU1_APPROBATION', `select gbs.changer_statut_commande($1, 'en_production')`, [c]);
-    await db.query(`select gbs.valider_approbation($1, 'approbations/plans-v3.pdf')`, [c]);
+    // Approbation technique signée par le client (circuit M26).
+    await as(db, m.achats);
+    const ap = (await one(db, `insert into gbs.approbations_techniques (commande_id, objet, documents) values ($1, 'Plans de la cuve, version 3', $2) returning id`,
+      [c, [`${d}/3f1a2b4c-5d6e-4f70-8a91-b2c3d4e5f607.pdf`]])).id;
+    await db.query(`select gbs.soumettre_approbation($1)`, [ap]);
+    await db.query(`select gbs.enregistrer_decision_approbation($1, 'approuvee', 'M. Ndong, directeur technique', $2, current_date)`,
+      [ap, `${d}/9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d.pdf`]);
+    await as(db, m.admin);
     await db.query(`select gbs.changer_statut_commande($1, 'en_production')`, [c]);
   }));
 
