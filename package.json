@@ -7,6 +7,7 @@
     "db:reset": "bash supabase/tests/reset_db.sh",
     "test:db": "bash supabase/tests/reset_db.sh && vitest run --config supabase/tests/vitest.config.ts",
     "test:web": "pnpm --filter web test",
+    "build": "pnpm --filter web build",
     "build:web": "pnpm --filter web build",
     "typecheck": "pnpm --filter web typecheck",
     "dev": "pnpm --filter web dev"
@@ -19,5 +20,12 @@
     "vitest": "2.1.8"
   },
   "packageManager": "pnpm@10.9.0",
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }
