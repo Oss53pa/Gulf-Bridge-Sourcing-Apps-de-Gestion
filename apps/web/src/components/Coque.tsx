@@ -3,9 +3,51 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
-import { ECRANS } from '../lib/droits';
-import { dateHeure, type Langue } from '../lib/format';
+import { ECRANS, MODULES, ecranCourant, type Ecran } from '../lib/droits';
+import { dateHeure, jourCourt, type Langue } from '../lib/format';
 import { Sommaire } from './Sommaire';
+
+/** Glyphe du bouton Sommaire : quatre carrés, le dernier en bronze (maquette). */
+function GlypheSommaire() {
+  return (
+    <span aria-hidden="true" className="glyphe-sommaire">
+      <i /><i /><i /><i className="bronze" />
+    </span>
+  );
+}
+
+/** Bande de sections du module courant : sections numérotées (segment foncé), puis les écrans de la section active. */
+function BandeSections({ ecran }: { ecran: Ecran }) {
+  const { t } = useTranslation();
+  const nav = useNavigate();
+  const { profil } = useAuth();
+  const role = profil?.role;
+  const module = MODULES.find((m) => m.id === ecran.module);
+  if (!module || !role) return null;
+  const ouvrables = (section: string) => ECRANS.filter((e) => e.module === module.id && e.section === section && e.chemin && e.roles.includes(role));
+  const sections = module.sections.filter((s) => ouvrables(s).length > 0);
+  const liens = ouvrables(ecran.section);
+  return (
+    <nav className="bande no-print" aria-label={t('modules.' + module.id)}>
+      {sections.length > 0 && (
+        <div className="bande-sections" role="group" aria-label={t('coque.sections')}>
+          {sections.map((s, i) => (
+            <button key={s} aria-current={s === ecran.section ? 'true' : undefined}
+              onClick={() => { const cible = ouvrables(s)[0]; if (cible && s !== ecran.section) nav(cible.chemin); }}>
+              <span className="num">{String(i + 1).padStart(2, '0')}</span>{t('sections.' + s)}
+            </button>
+          ))}
+        </div>
+      )}
+      {liens.length > 0 && <span className="bande-sep" aria-hidden="true" />}
+      <div className="bande-liens" role="group" aria-label={t('coque.ecrans_section')}>
+        {liens.map((e) => (
+          <button key={e.id} aria-current={e.id === ecran.id ? 'page' : undefined} onClick={() => nav(e.chemin)}>{t('ecrans.' + e.id)}</button>
+        ))}
+      </div>
+    </nav>
+  );
+}
 
 export function Coque({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -18,7 +60,7 @@ export function Coque({ children }: { children: ReactNode }) {
   const [synchro, setSynchro] = useState<string | null>(null);
   const [enLigne, setEnLigne] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
 
-  const ecran = ECRANS.filter((e) => e.chemin && loc.pathname.startsWith(e.chemin)).sort((a, b) => b.chemin.length - a.chemin.length)[0];
+  const ecran = ecranCourant(loc.pathname);
   const mesSocietes = societes.filter((s) => profil?.role === 'admin' || profil?.societes.includes(s.id));
   const societe = societes.find((s) => s.id === societeActive);
 
@@ -67,18 +109,22 @@ export function Coque({ children }: { children: ReactNode }) {
     <div className="app">
       <header className="topbar no-print">
         <button className="pill-ink" onClick={() => setSommaire(true)} aria-haspopup="dialog">
-          <span aria-hidden="true">▦</span> {t('coque.sommaire')}
+          <GlypheSommaire /> {t('coque.sommaire')}
         </button>
-        <button className="pill" onClick={() => nav(-1)}>← {t('coque.retour')}</button>
-        <span className="titre">{ecran ? t(`ecrans.${ecran.id}`) : ''}</span>
-        <button className="pill" onClick={suivante} title={t('coque.changer_societe')}>
+        <button className="tb-btn" onClick={() => nav(-1)}>← {t('coque.retour')}</button>
+        <span className="tb-titre">
+          <span className="l1">{ecran ? t(`ecrans.${ecran.id}`) : ''}</span>
+          <span className="l2">{jourCourt(new Date(), langue, fuseau)}</span>
+        </span>
+        <button className="tb-societe" onClick={suivante} title={t('coque.changer_societe')}>
           <span className="dot" aria-hidden="true" />{societe ? societe.raison_sociale : t('coque.consolide')}
         </button>
-        <form onSubmit={rechercher} style={{ flex: 1, maxWidth: 420, display: 'flex' }}>
-          <input id="gbs-recherche" className="search" style={{ maxWidth: 'none' }} placeholder={t('coque.rechercher')}
-            value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} aria-label={t('coque.rechercher')} />
+        <form className="tb-recherche" onSubmit={rechercher} role="search">
+          <input id="gbs-recherche" placeholder={t('coque.rechercher')} value={q} maxLength={80}
+            onChange={(e) => setQ(e.target.value)} aria-label={t('coque.rechercher')} />
+          <kbd className="tb-kbd" aria-hidden="true">Ctrl K</kbd>
         </form>
-        <div className="seg" role="group" aria-label={t('coque.langue')}>
+        <div className="tb-langues" role="group" aria-label={t('coque.langue')}>
           {(['fr', 'en', 'zh'] as Langue[]).map((l) => (
             <button key={l} aria-pressed={langue === l} onClick={() => {
               setLangue(l);
@@ -86,14 +132,17 @@ export function Coque({ children }: { children: ReactNode }) {
             }}>{l === 'zh' ? '中文' : l.toUpperCase()}</button>
           ))}
         </div>
-        <button className="pill" onClick={() => nav('/tableau-de-bord')} aria-label={t('coque.alertes')}>
+        <button className="tb-btn" onClick={() => nav('/tableau-de-bord')} aria-label={t('coque.alertes')}>
           {t('coque.alertes')} {alertes !== null && alertes > 0 && <span className="badge">{alertes}</span>}
         </button>
         <span className={'sync' + (enLigne ? '' : ' off')}>
           {enLigne ? t('coque.synchronise') : t('coque.hors_ligne')}{synchro ? ` · ${dateHeure(synchro, langue, fuseau).slice(-5)}` : ''}
         </span>
-        <button className="pill" onClick={() => void deconnexion()} title={profil?.email}>{t('coque.deconnexion')}</button>
+        <button className="tb-btn tb-large" onClick={() => window.print()}>{t('coque.imprimer')}</button>
+        <button className="tb-btn" onClick={() => void deconnexion()} title={profil?.email}>{t('coque.deconnexion')}</button>
       </header>
+      <div className="filet-nuit no-print" aria-hidden="true" />
+      {ecran && <BandeSections ecran={ecran} />}
       <main className="main">{children}</main>
       {sommaire && <Sommaire onClose={() => setSommaire(false)} />}
     </div>

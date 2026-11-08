@@ -57,3 +57,11 @@ export function pourcent(v: number | string | null | undefined, langue: Langue, 
   const s = nombre(Number(v) * 100, langue, dec);
   return langue === 'fr' ? `${s} %` : `${s}%`;
 }
+
+/** Jour courant pour la barre supérieure : « jeu. 09.10.2026 », dans le fuseau de l'utilisateur. */
+export function jourCourt(maintenant: Date, langue: Langue, fuseau: string): string {
+  const p = Object.fromEntries(new Intl.DateTimeFormat(LOCALES[langue], {
+    timeZone: fuseau, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(maintenant).map((x) => [x.type, x.value]));
+  return langue === 'zh' ? `${p.year}-${p.month}-${p.day} ${p.weekday}` : `${p.weekday} ${p.day}.${p.month}.${p.year}`;
+}

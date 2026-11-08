@@ -386,12 +386,16 @@
   "changer_societe": "切换公司",
   "consolide": "合并视图",
   "deconnexion": "退出",
+  "ecrans_section": "分区页面",
   "hors_ligne": "离线",
+  "imprimer": "打印",
   "langue": "语言",
-  "rechercher": "搜索项目、客户…（Ctrl K）",
+  "rechercher": "搜索项目、客户、发票…",
   "retour": "返回",
+  "sections": "模块分区",
   "sommaire": "目录",
-  "synchronise": "已同步"
+  "synchronise": "已同步",
+  "vue_consolidee": "合并视图"
  },
  "couts": {
   "a_affecter": "稍后归属",
@@ -1529,8 +1533,10 @@
  },
  "modules": {
   "achats": "中国采购",
+  "apres_vente": "售后",
   "commercial": "销售",
   "dossiers": "项目",
+  "echanges": "沟通",
   "finance": "财务",
   "logistique": "物流",
   "parametrage": "参数设置",
@@ -2190,6 +2196,30 @@
  "sans_role": {
   "texte": "您的账户已创建，但尚未分配角色。请等待管理员分配。",
   "titre": "账户待开通"
+ },
+ "sections": {
+  "affaires": "业务",
+  "analyse": "分析",
+  "appels_offres": "招标",
+  "commandes": "订单",
+  "consultation": "询价",
+  "controle": "控制",
+  "controles": "检验",
+  "facturation": "开票",
+  "fournisseurs": "供应商",
+  "import": "进口",
+  "interventions": "现场作业",
+  "messagerie": "消息",
+  "non_conformites": "不合格项",
+  "partage": "分配",
+  "planning": "计划",
+  "portefeuille": "项目组合",
+  "prospection": "潜在客户",
+  "referentiel": "基础数据",
+  "suivi": "跟进",
+  "synthese": "概览",
+  "transport": "运输",
+  "tresorerie": "资金"
  },
  "services": {
   "S1": "尽职调查",

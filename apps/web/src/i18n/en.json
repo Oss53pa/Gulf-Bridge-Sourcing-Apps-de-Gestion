@@ -386,12 +386,16 @@
   "changer_societe": "Switch company",
   "consolide": "Consolidated",
   "deconnexion": "Sign out",
+  "ecrans_section": "Section screens",
   "hors_ligne": "Offline",
+  "imprimer": "Print",
   "langue": "Language",
-  "rechercher": "Search a file, a client… (Ctrl K)",
+  "rechercher": "Search a file, a client, an invoice…",
   "retour": "Back",
+  "sections": "Module sections",
   "sommaire": "Menu",
-  "synchronise": "Synced"
+  "synchronise": "Synced",
+  "vue_consolidee": "Consolidated view"
  },
  "couts": {
   "a_affecter": "To allocate later",
@@ -1529,8 +1533,10 @@
  },
  "modules": {
   "achats": "China purchasing",
+  "apres_vente": "After-sales",
   "commercial": "Sales",
   "dossiers": "Files",
+  "echanges": "Exchanges",
   "finance": "Finance",
   "logistique": "Logistics",
   "parametrage": "Settings",
@@ -2190,6 +2196,30 @@
  "sans_role": {
   "texte": "Your account exists but no role has been assigned yet. The administrator must assign you a role.",
   "titre": "Account pending"
+ },
+ "sections": {
+  "affaires": "Deals",
+  "analyse": "Analysis",
+  "appels_offres": "Tenders",
+  "commandes": "Orders",
+  "consultation": "Sourcing",
+  "controle": "Control",
+  "controles": "Inspections",
+  "facturation": "Invoicing",
+  "fournisseurs": "Suppliers",
+  "import": "Import",
+  "interventions": "Interventions",
+  "messagerie": "Messaging",
+  "non_conformites": "Non-conformities",
+  "partage": "Sharing",
+  "planning": "Planning",
+  "portefeuille": "Portfolio",
+  "prospection": "Prospecting",
+  "referentiel": "Reference data",
+  "suivi": "Follow-up",
+  "synthese": "Overview",
+  "transport": "Transport",
+  "tresorerie": "Treasury"
  },
  "services": {
   "S1": "Due diligence",
