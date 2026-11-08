@@ -1,0 +1,16 @@
+// Déploiement de l'application web sur Cloudflare (Workers, fichiers statiques).
+// - L'application est compilée par Vite dans apps/web/dist (commande de build ci-dessous).
+// - Toute adresse inconnue renvoie index.html : les pages publiques /suivi, /fournisseur,
+//   /due-diligence et /transitaire, et les routes internes, sont servies par l'application.
+// - Les en-têtes de sécurité viennent de apps/web/public/_headers, copié dans dist.
+// - Aucun secret ici : seules VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY (publiques par
+//   conception) sont lues au moment du build, depuis les variables du projet Cloudflare.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gbs-gestion",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "directory": "./apps/web/dist",
+    "not_found_handling": "single-page-application"
+  }
+}
