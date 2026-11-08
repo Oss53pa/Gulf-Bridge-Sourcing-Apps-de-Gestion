@@ -11,59 +11,70 @@ export interface Ecran {
   id: string;
   chemin: string;          // route ('' pour un écran prévu dans un lot ultérieur)
   module: string;
+  section: string;         // section du module (bande de navigation sous la barre supérieure)
   roles: Role[];
   lot: 0 | 1 | 2 | 3;
 }
 
-export interface Module { id: string; metier: Metier[]; }
+/** Un module regroupe des sections numérotées (01, 02…), chacune listant ses écrans. */
+export interface Module { id: string; metier: Metier[]; sections: string[]; }
 
 const TOUS: Role[] = ROLES_INTERNES;
 
+// Ordre et découpage repris de la maquette (Sommaire et bande de sections).
 export const MODULES: Module[] = [
-  { id: 'pilotage', metier: ['direction', 'finance'] },
-  { id: 'dossiers', metier: ['direction', 'commercial', 'achats', 'logistique'] },
-  { id: 'commercial', metier: ['commercial'] },
-  { id: 'achats', metier: ['achats'] },
-  { id: 'qualite', metier: ['achats'] },
-  { id: 'logistique', metier: ['logistique'] },
-  { id: 'finance', metier: ['finance'] },
-  { id: 'supervision', metier: ['direction', 'administration'] },
-  { id: 'parametrage', metier: ['administration'] },
+  { id: 'pilotage', metier: ['direction'], sections: ['synthese', 'analyse'] },
+  { id: 'supervision', metier: ['direction', 'administration'], sections: ['controle'] },
+  { id: 'commercial', metier: ['commercial'], sections: ['prospection', 'affaires', 'appels_offres'] },
+  { id: 'dossiers', metier: ['commercial'], sections: ['portefeuille', 'suivi', 'planning'] },
+  { id: 'achats', metier: ['achats'], sections: ['fournisseurs', 'consultation', 'commandes'] },
+  { id: 'qualite', metier: ['achats'], sections: ['controles', 'non_conformites'] },
+  { id: 'logistique', metier: ['logistique'], sections: ['transport', 'import'] },
+  { id: 'apres_vente', metier: ['commercial'], sections: ['interventions'] },
+  { id: 'finance', metier: ['finance'], sections: ['facturation', 'tresorerie', 'partage'] },
+  { id: 'echanges', metier: ['commercial', 'logistique'], sections: ['messagerie'] },
+  { id: 'parametrage', metier: ['administration'], sections: ['referentiel'] },
 ];
 
 export const ECRANS: Ecran[] = [
-  { id: 'tableau', chemin: '/tableau-de-bord', module: 'pilotage', roles: TOUS, lot: 0 },
-  { id: 'flux', chemin: '/flux', module: 'pilotage', roles: ['admin', 'comptable', 'hub_afrique', 'agent_pays'], lot: 0 },
-  { id: 'messagerie', chemin: '', module: 'pilotage', roles: TOUS, lot: 1 },
-  { id: 'retroplanning', chemin: '', module: 'pilotage', roles: TOUS, lot: 1 },
-  { id: 'portefeuille', chemin: '/dossiers', module: 'dossiers', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
-  { id: 'nouveau_dossier', chemin: '/dossiers/nouveau', module: 'dossiers', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 0 },
-  { id: 'mes_taches', chemin: '/mes-taches', module: 'dossiers', roles: TOUS, lot: 1 },
-  { id: 'gantt', chemin: '', module: 'dossiers', roles: TOUS, lot: 2 },
-  { id: 'clients', chemin: '/clients', module: 'commercial', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
-  { id: 'prospection', chemin: '/prospection', module: 'commercial', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 1 },
-  { id: 'appels_offres', chemin: '', module: 'commercial', roles: ['admin', 'hub_afrique'], lot: 2 },
-  { id: 'fournisseurs', chemin: '/fournisseurs', module: 'achats', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
-  { id: 'consultations', chemin: '/mise-en-concurrence', module: 'achats', roles: ['admin', 'achats_chine'], lot: 0 },
-  { id: 'commandes', chemin: '/commandes', module: 'achats', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
-  { id: 'articles', chemin: '/articles', module: 'achats', roles: TOUS, lot: 0 },
-  { id: 'approbation', chemin: '', module: 'achats', roles: ['admin', 'achats_chine'], lot: 1 },
-  { id: 'inspections', chemin: '/inspections', module: 'qualite', roles: ['admin', 'achats_chine', 'inspecteur'], lot: 0 },
-  { id: 'non_conformites', chemin: '/non-conformites', module: 'qualite', roles: ['admin', 'achats_chine'], lot: 1 },
-  { id: 'notes_frais', chemin: '/notes-frais', module: 'qualite', roles: TOUS, lot: 1 },
-  { id: 'expeditions', chemin: '/expeditions', module: 'logistique', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays'], lot: 0 },
-  { id: 'interventions', chemin: '/interventions', module: 'logistique', roles: ['admin', 'hub_afrique', 'achats_chine', 'inspecteur'], lot: 1 },
-  { id: 'reserves', chemin: '/reserves', module: 'logistique', roles: ['admin', 'hub_afrique', 'achats_chine'], lot: 1 },
-  { id: 'conformite_import', chemin: '', module: 'logistique', roles: ['admin', 'achats_chine'], lot: 2 },
-  { id: 'factures', chemin: '/factures', module: 'finance', roles: ['admin', 'hub_afrique', 'comptable'], lot: 0 },
-  { id: 'paiements', chemin: '/paiements', module: 'finance', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
-  { id: 'rapprochement', chemin: '/rapprochement', module: 'finance', roles: ['admin', 'comptable'], lot: 1 },
-  { id: 'commissions', chemin: '/commissions', module: 'finance', roles: ['admin', 'comptable', 'agent_pays'], lot: 1 },
-  { id: 'tresorerie', chemin: '', module: 'finance', roles: ['admin', 'comptable'], lot: 2 },
-  { id: 'journal', chemin: '/journal', module: 'supervision', roles: ['admin', 'comptable'], lot: 0 },
-  { id: 'rentabilite', chemin: '/rentabilite', module: 'supervision', roles: ['admin', 'comptable'], lot: 1 },
-  { id: 'parametrage', chemin: '/parametrage', module: 'parametrage', roles: ['admin'], lot: 0 },
+  { id: 'tableau', chemin: '/tableau-de-bord', module: 'pilotage', section: 'synthese', roles: TOUS, lot: 0 },
+  { id: 'rentabilite', chemin: '/rentabilite', module: 'pilotage', section: 'synthese', roles: ['admin', 'comptable'], lot: 1 },
+  { id: 'retroplanning', chemin: '', module: 'dossiers', section: 'planning', roles: TOUS, lot: 1 },
+  { id: 'journal', chemin: '/journal', module: 'supervision', section: 'controle', roles: ['admin', 'comptable'], lot: 0 },
+  { id: 'prospection', chemin: '/prospection', module: 'commercial', section: 'prospection', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 1 },
+  { id: 'clients', chemin: '/clients', module: 'commercial', section: 'prospection', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
+  { id: 'appels_offres', chemin: '', module: 'commercial', section: 'appels_offres', roles: ['admin', 'hub_afrique'], lot: 2 },
+  { id: 'portefeuille', chemin: '/dossiers', module: 'dossiers', section: 'portefeuille', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
+  { id: 'nouveau_dossier', chemin: '/dossiers/nouveau', module: 'dossiers', section: 'portefeuille', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 0 },
+  { id: 'mes_taches', chemin: '/mes-taches', module: 'dossiers', section: 'suivi', roles: TOUS, lot: 1 },
+  { id: 'gantt', chemin: '', module: 'dossiers', section: 'planning', roles: TOUS, lot: 2 },
+  { id: 'fournisseurs', chemin: '/fournisseurs', module: 'achats', section: 'fournisseurs', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
+  { id: 'articles', chemin: '/articles', module: 'achats', section: 'fournisseurs', roles: TOUS, lot: 0 },
+  { id: 'consultations', chemin: '/mise-en-concurrence', module: 'achats', section: 'consultation', roles: ['admin', 'achats_chine'], lot: 0 },
+  { id: 'commandes', chemin: '/commandes', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
+  { id: 'approbation', chemin: '', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine'], lot: 1 },
+  { id: 'inspections', chemin: '/inspections', module: 'qualite', section: 'controles', roles: ['admin', 'achats_chine', 'inspecteur'], lot: 0 },
+  { id: 'non_conformites', chemin: '/non-conformites', module: 'qualite', section: 'non_conformites', roles: ['admin', 'achats_chine'], lot: 1 },
+  { id: 'expeditions', chemin: '/expeditions', module: 'logistique', section: 'transport', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays'], lot: 0 },
+  { id: 'conformite_import', chemin: '', module: 'logistique', section: 'import', roles: ['admin', 'achats_chine'], lot: 2 },
+  { id: 'reserves', chemin: '/reserves', module: 'logistique', section: 'import', roles: ['admin', 'hub_afrique', 'achats_chine'], lot: 1 },
+  { id: 'interventions', chemin: '/interventions', module: 'apres_vente', section: 'interventions', roles: ['admin', 'hub_afrique', 'achats_chine', 'inspecteur'], lot: 1 },
+  { id: 'factures', chemin: '/factures', module: 'finance', section: 'facturation', roles: ['admin', 'hub_afrique', 'comptable'], lot: 0 },
+  { id: 'paiements', chemin: '/paiements', module: 'finance', section: 'facturation', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
+  { id: 'rapprochement', chemin: '/rapprochement', module: 'finance', section: 'facturation', roles: ['admin', 'comptable'], lot: 1 },
+  { id: 'flux', chemin: '/flux', module: 'finance', section: 'tresorerie', roles: ['admin', 'comptable', 'hub_afrique', 'agent_pays'], lot: 0 },
+  { id: 'tresorerie', chemin: '', module: 'finance', section: 'tresorerie', roles: ['admin', 'comptable'], lot: 2 },
+  { id: 'commissions', chemin: '/commissions', module: 'finance', section: 'partage', roles: ['admin', 'comptable', 'agent_pays'], lot: 1 },
+  { id: 'notes_frais', chemin: '/notes-frais', module: 'finance', section: 'partage', roles: TOUS, lot: 1 },
+  { id: 'messagerie', chemin: '', module: 'echanges', section: 'messagerie', roles: TOUS, lot: 1 },
+  { id: 'parametrage', chemin: '/parametrage', module: 'parametrage', section: 'referentiel', roles: ['admin'], lot: 0 },
 ];
+
+/** Écran courant d'après la route (le chemin le plus long qui préfixe la route). */
+export function ecranCourant(pathname: string): Ecran | undefined {
+  return ECRANS.filter((e) => e.chemin && (pathname === e.chemin || pathname.startsWith(e.chemin + '/')))
+    .sort((a, b) => b.chemin.length - a.chemin.length)[0];
+}
 
 export function ecranAutorise(id: string, role: Role | null | undefined): boolean {
   const e = ECRANS.find((x) => x.id === id);

@@ -38,7 +38,7 @@ export function Sommaire({ onClose }: { onClose: () => void }) {
       .filter((e) => !n || normaliser(t(`ecrans.${e.id}`)).includes(n) || normaliser(t(`modules.${e.module}`)).includes(n));
   }, [q, role, modules, t]);
   const ecransModule = q ? visibles : visibles.filter((e) => e.module === module);
-  const ouvrables = ecransModule.filter((e) => e.lot === 0 && e.chemin);
+  const ouvrables = ecransModule.filter((e) => Boolean(e.chemin));
 
   const ouvrir = (chemin: string) => { onClose(); nav(chemin); };
 
@@ -59,7 +59,7 @@ export function Sommaire({ onClose }: { onClose: () => void }) {
   const vueEff = etroit ? 'volets' : vue;
 
   const carte = (e: (typeof ECRANS)[number]) => {
-    const dispo = e.lot === 0 && Boolean(e.chemin);
+    const dispo = Boolean(e.chemin);
     const i = ouvrables.indexOf(e);
     return (
       <button key={e.id} className="ecran" aria-disabled={!dispo} onClick={() => dispo && ouvrir(e.chemin)}
@@ -104,7 +104,7 @@ export function Sommaire({ onClose }: { onClose: () => void }) {
             <section key={m.id}>
               <div className="surtitre">{t(`modules.${m.id}`)}</div>
               {visibles.filter((e) => e.module === m.id).map((e) => (
-                e.lot === 0 && e.chemin
+                Boolean(e.chemin)
                   ? <a key={e.id} onClick={() => ouvrir(e.chemin)} href={e.chemin} onClickCapture={(ev) => ev.preventDefault()}>{t(`ecrans.${e.id}`)}</a>
                   : <span key={e.id} className="mute" style={{ display: 'block', padding: '4px 0' }}>{t(`ecrans.${e.id}`)} · {t('sommaire.lot', { n: e.lot })}</span>
               ))}

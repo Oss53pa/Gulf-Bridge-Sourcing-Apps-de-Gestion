@@ -386,12 +386,16 @@
   "changer_societe": "Changer de société",
   "consolide": "Consolidé",
   "deconnexion": "Déconnexion",
+  "ecrans_section": "Écrans de la section",
   "hors_ligne": "Hors ligne",
+  "imprimer": "Imprimer",
   "langue": "Langue",
-  "rechercher": "Rechercher un dossier, un client… (Ctrl K)",
+  "rechercher": "Rechercher un dossier, un client, une facture…",
   "retour": "Retour",
+  "sections": "Sections du module",
   "sommaire": "Sommaire",
-  "synchronise": "Synchronisé"
+  "synchronise": "Synchronisé",
+  "vue_consolidee": "Vue consolidée"
  },
  "couts": {
   "a_affecter": "À affecter plus tard",
@@ -1529,8 +1533,10 @@
  },
  "modules": {
   "achats": "Achats Chine",
+  "apres_vente": "Après-vente",
   "commercial": "Commercial",
   "dossiers": "Dossiers",
+  "echanges": "Échanges",
   "finance": "Finance",
   "logistique": "Logistique",
   "parametrage": "Paramétrage",
@@ -2190,6 +2196,30 @@
  "sans_role": {
   "texte": "Votre compte existe mais aucun rôle ne lui est encore attribué. L'administratrice doit vous attribuer un profil.",
   "titre": "Compte en attente"
+ },
+ "sections": {
+  "affaires": "Affaires",
+  "analyse": "Analyse",
+  "appels_offres": "Appels d'offres",
+  "commandes": "Commandes",
+  "consultation": "Consultation",
+  "controle": "Contrôle",
+  "controles": "Contrôles",
+  "facturation": "Facturation",
+  "fournisseurs": "Fournisseurs",
+  "import": "Import",
+  "interventions": "Interventions",
+  "messagerie": "Messagerie",
+  "non_conformites": "Non-conformités",
+  "partage": "Partage",
+  "planning": "Planning",
+  "portefeuille": "Portefeuille",
+  "prospection": "Prospection",
+  "referentiel": "Référentiel",
+  "suivi": "Suivi",
+  "synthese": "Synthèse",
+  "transport": "Transport",
+  "tresorerie": "Trésorerie"
  },
  "services": {
   "S1": "Due diligence",
