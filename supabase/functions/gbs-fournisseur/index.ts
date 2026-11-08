@@ -5,15 +5,19 @@
 // - Équipe achats (jeton de session) : ouvrir les plis après la date limite. La base ne livre
 //   les plis qu'après la date limite et vérifie chaque contenu déchiffré contre son empreinte.
 // - Limitation de débit par adresse ; erreurs génériques ; ni jeton ni contenu dans les journaux.
-// Sans GBS_PLIS_CLE, le dépôt et l'ouverture sont fermés (503).
+// - Pièces de due diligence (jeton du lien de due diligence) : lecture et dépôt d'un fichier,
+//   type vérifié sur les octets, taille bornée, nom régénéré, empreinte SHA-256.
+// Sans GBS_PLIS_CLE, le dépôt et l'ouverture des plis sont fermés (503).
 import { createClient } from 'npm:@supabase/supabase-js@2.46.1';
 import { adresseClient, Limiteur } from '../_shared/suivi.ts';
-import { chiffrer, cle, contenuPli, dechiffrer, empreinte, lireDemande, lireOffre } from '../_shared/plis.ts';
+import { chiffrer, cle, contenuPli, dechiffrer, empreinte, hex, lireDemande, lireOffre } from '../_shared/plis.ts';
+import { lireDepotPiece, TAILLE_PIECE_MAX } from '../_shared/piecesdd.ts';
+import { detecter } from '../_shared/fichiers.ts';
 
 const ORIGINE = Deno.env.get('GBS_ORIGINE') ?? '';
 const limiteur = new Limiteur(Number(Deno.env.get('GBS_FOURNISSEUR_LIMITE_MINUTE') ?? '20'), 60_000);
 const TAILLE_MAX = 64 * 1024;
-const CODES = ['GBS_LIEN_INVALIDE', 'GBS_TROP_DE_CONSULTATIONS', 'GBS_CONSULTATION_CLOSE', 'GBS_TROP_DE_DEPOTS', 'GBS_TROP_DE_QUESTIONS',
+const CODES = ['GBS_LIEN_INVALIDE', 'GBS_DD_DEJA_STATUEE', 'GBS_TROP_DE_CONSULTATIONS', 'GBS_CONSULTATION_CLOSE', 'GBS_TROP_DE_DEPOTS', 'GBS_TROP_DE_QUESTIONS',
   'GBS_PLI_ALTERE', 'GBS_PLI_FERME', 'GBS_OFFRE_EXISTANTE', 'GBS_ACCES_REFUSE'];
 
 const entetes = (extra: Record<string, string> = {}) => ({
@@ -33,6 +37,36 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return refus(405, 'GBS_METHODE');
   if (ORIGINE && req.headers.get('origin') && req.headers.get('origin') !== ORIGINE) return refus(403, 'GBS_ORIGINE');
   if (!limiteur.autorise(adresseClient(req.headers))) return refus(429, 'GBS_TROP_DE_CONSULTATIONS');
+  const url = Deno.env.get('SUPABASE_URL')!;
+
+  // Dépôt d'une pièce de due diligence (formulaire multipart).
+  if ((req.headers.get('content-type') ?? '').startsWith('multipart/form-data')) {
+    if (Number(req.headers.get('content-length') ?? '0') > TAILLE_PIECE_MAX + 64 * 1024) return refus(413, 'GBS_FICHIER_TAILLE');
+    let form: FormData;
+    try { form = await req.formData(); } catch { return refus(400, 'GBS_PARAMETRES_INVALIDES'); }
+    const fichier = form.get('fichier');
+    if (form.get('action') !== 'deposer_piece' || !(fichier instanceof File) || form.getAll('fichier').length !== 1) return refus(400, 'GBS_PARAMETRES_INVALIDES');
+    const d = lireDepotPiece({ jeton: form.get('jeton'), type: form.get('type'), libelle: form.get('libelle'), taille: fichier.size, cles: [...form.keys()] });
+    if (!d) return refus(fichier.size > TAILLE_PIECE_MAX ? 413 : 400, fichier.size > TAILLE_PIECE_MAX ? 'GBS_FICHIER_TAILLE' : 'GBS_PARAMETRES_INVALIDES');
+    const octets = new Uint8Array(await fichier.arrayBuffer());
+    const type = detecter(octets.subarray(0, 12));
+    if (!type) return refus(415, 'GBS_FICHIER_TYPE');
+    const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false }, db: { schema: 'gbs' } });
+    // Le lien est vérifié avant d'écrire quoi que ce soit dans le stockage.
+    const lu = await service.rpc('formulaire_due_diligence', { p_jeton: d.jeton });
+    if (lu.error) return refus(codeErreur(lu.error) === 'GBS_TROP_DE_CONSULTATIONS' ? 429 : 404, 'GBS_LIEN_INVALIDE');
+    const chemin = `dd/${(lu.data as { due_diligence: string }).due_diligence}/${crypto.randomUUID()}.${type.ext}`;
+    const up = await service.storage.from('gbs-documents').upload(chemin, octets, { contentType: type.mime, upsert: false });
+    if (up.error) { console.error('fournisseur: echec de stockage'); return refus(500, 'GBS_DEPOT_ECHEC'); }
+    const { data, error } = await service.rpc('enregistrer_piece_due_diligence', { p_jeton: d.jeton, p_type: d.type, p_libelle: d.libelle,
+      p_chemin: chemin, p_empreinte: hex(await crypto.subtle.digest('SHA-256', octets)), p_taille: octets.length });
+    if (error) {
+      await service.storage.from('gbs-documents').remove([chemin]);
+      return refus(409, codeErreur(error));
+    }
+    return repondre(201, data);
+  }
+
   if (Number(req.headers.get('content-length') ?? '0') > TAILLE_MAX) return refus(413, 'GBS_PARAMETRES_INVALIDES');
   let corps: unknown;
   try {
@@ -41,7 +75,6 @@ Deno.serve(async (req) => {
     corps = JSON.parse(t);
   } catch { return refus(400, 'GBS_PARAMETRES_INVALIDES'); }
 
-  const url = Deno.env.get('SUPABASE_URL')!;
   const k = await cle(Deno.env.get('GBS_PLIS_CLE'));
 
   // Ouverture des plis par l'équipe achats (session de l'utilisateur, droits appliqués en base).
@@ -72,6 +105,11 @@ Deno.serve(async (req) => {
 
   if (d.action === 'lire') {
     const { data, error } = await service.rpc('formulaire_fournisseur', { p_jeton: d.jeton });
+    if (error) return refus(codeErreur(error) === 'GBS_TROP_DE_CONSULTATIONS' ? 429 : 404, codeErreur(error) === 'GBS_ERREUR' ? 'GBS_LIEN_INVALIDE' : codeErreur(error));
+    return repondre(200, data);
+  }
+  if (d.action === 'lire_dd') {
+    const { data, error } = await service.rpc('formulaire_due_diligence', { p_jeton: d.jeton });
     if (error) return refus(codeErreur(error) === 'GBS_TROP_DE_CONSULTATIONS' ? 429 : 404, codeErreur(error) === 'GBS_ERREUR' ? 'GBS_LIEN_INVALIDE' : codeErreur(error));
     return repondre(200, data);
   }

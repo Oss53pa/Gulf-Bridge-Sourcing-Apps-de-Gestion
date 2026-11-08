@@ -470,6 +470,48 @@
   "traiter": "Process",
   "validees_a_rembourser": "Approved, to reimburse"
  },
+ "dd_lien": {
+  "accepter": "Accept",
+  "aide": "Gulf Bridge Sourcing checks every supplier before working with them. Upload the requested documents here: each file is reviewed, then accepted or rejected with the reason.",
+  "aucune_piece": "No document received.",
+  "canaux": {
+   "interne": "uploaded by the team",
+   "lien": "uploaded by the supplier"
+  },
+  "creer_lien": "Upload link for the supplier",
+  "depose_ok": "Document received.",
+  "deposer": "Upload a document",
+  "envoyer": "Send",
+  "expire": "Link valid until {{date}}",
+  "fichier": "File",
+  "formats": "PDF, PNG, JPEG or WebP, 10 MB max.",
+  "libelle": "Detail (optional)",
+  "lien_cree": "Link created: it will not be shown again, send it to the supplier now. The old link is revoked.",
+  "manquante": "Not received",
+  "motif_refus": "Reason for rejection",
+  "pieces_attendues": "Expected documents",
+  "recues": "Documents sent",
+  "refuser": "Reject",
+  "statuts": {
+   "acceptee": "Accepted",
+   "recue": "Received, under review",
+   "refusee": "Rejected"
+  },
+  "titre": "Due diligence documents",
+  "type": "Document type",
+  "types": {
+   "attestation_bancaire": "Bank certificate (account in the company name)",
+   "autre": "Other document",
+   "beneficiaires_effectifs": "Beneficial owners and shareholders",
+   "certificat_qualite": "Quality certificate (ISO 9001…)",
+   "certification_produit": "Product certification (CE, CB…)",
+   "declaration_ethique": "Signed ethics declaration",
+   "licence_commerciale": "Business licence (营业执照)",
+   "licence_export": "Export licence or registration",
+   "rapport_audit": "Factory or social audit report",
+   "references_clients": "Customer references"
+  }
+ },
  "decisions": {
   "acceptee": "Accept",
   "liberation": "Release",
@@ -844,6 +886,7 @@
   "GBS_PERIODE_INVALIDE": "Invalid period (at most one year, end after start).",
   "GBS_PHOTOS_INVALIDES": "Invalid photos: only files uploaded to this file, at most 20.",
   "GBS_PIECES_MANQUANTES": "Mandatory documents missing:",
+  "GBS_PIECE_DD_FIGEE": "A submitted document cannot change file: upload a new one.",
   "GBS_PIECE_DEJA_FOURNIE": "This document has already been provided.",
   "GBS_PIECE_FIGEE": "The part stays attached to its file.",
   "GBS_PIECE_SANS_DOCUMENT": "Upload the document before validating it.",

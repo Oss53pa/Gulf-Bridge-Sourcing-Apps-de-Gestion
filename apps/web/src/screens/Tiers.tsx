@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { VerificationClient } from './VerificationClient';
+import { PiecesDd } from './PiecesDueDiligence';
 import { useAuth } from '../lib/auth';
 import { date, nombre } from '../lib/format';
 import { normaliser } from '../lib/droits';
@@ -190,6 +191,7 @@ export function Fournisseurs() {
                     <Bouton petit onClick={() => void statuerDd(x, 'validee')}>{t('fiche.valider')}</Bouton>
                     <Bouton petit variante="danger" onClick={() => void statuerDd(x, 'refusee')}>{t('fiche.refuser')}</Bouton></>}
                 </div>
+                {ecrit && <PiecesDd ddId={x.id} enCours={x.statut === 'en_cours'} />}
               </div>
             ))}
             {ecrit && <>

@@ -96,6 +96,7 @@ export async function dechiffrer(k: CryptoKey, chiffre: string, iv: string): Pro
 /** Corps public : { action, jeton, ... } ; seules les actions et champs prévus sont admis. */
 export type Demande =
   | { action: 'lire'; jeton: string }
+  | { action: 'lire_dd'; jeton: string }
   | { action: 'repondre'; jeton: string; offre: unknown }
   | { action: 'question'; jeton: string; question: string };
 export function lireDemande(corps: unknown): Demande | null {
@@ -104,6 +105,7 @@ export function lireDemande(corps: unknown): Demande | null {
   if (typeof o.jeton !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(o.jeton)) return null;
   const cles = Object.keys(o).sort().join(',');
   if (o.action === 'lire' && cles === 'action,jeton') return { action: 'lire', jeton: o.jeton };
+  if (o.action === 'lire_dd' && cles === 'action,jeton') return { action: 'lire_dd', jeton: o.jeton };
   if (o.action === 'repondre' && cles === 'action,jeton,offre') return { action: 'repondre', jeton: o.jeton, offre: o.offre };
   if (o.action === 'question' && cles === 'action,jeton,question' && texte(o.question, 5, 2000)) {
     return { action: 'question', jeton: o.jeton, question: propre(o.question as string) };

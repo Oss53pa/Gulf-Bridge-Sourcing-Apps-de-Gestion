@@ -470,6 +470,48 @@
   "traiter": "Traiter",
   "validees_a_rembourser": "Validées, à rembourser"
  },
+ "dd_lien": {
+  "accepter": "Accepter",
+  "aide": "Gulf Bridge Sourcing vérifie chaque fournisseur avant de travailler avec lui. Déposez ici les documents demandés : chaque fichier est contrôlé puis accepté, ou refusé avec le motif.",
+  "aucune_piece": "Aucune pièce reçue.",
+  "canaux": {
+   "interne": "déposé par l'équipe",
+   "lien": "déposé par le fournisseur"
+  },
+  "creer_lien": "Lien de dépôt pour le fournisseur",
+  "depose_ok": "Document reçu.",
+  "deposer": "Déposer un document",
+  "envoyer": "Envoyer",
+  "expire": "Lien valable jusqu'au {{date}}",
+  "fichier": "Fichier",
+  "formats": "PDF, PNG, JPEG ou WebP, 10 Mo au plus.",
+  "libelle": "Précision (facultatif)",
+  "lien_cree": "Lien créé : il ne sera plus affiché, transmettez-le maintenant au fournisseur. L'ancien lien est révoqué.",
+  "manquante": "Non reçu",
+  "motif_refus": "Motif du refus",
+  "pieces_attendues": "Documents attendus",
+  "recues": "Documents envoyés",
+  "refuser": "Refuser",
+  "statuts": {
+   "acceptee": "Accepté",
+   "recue": "Reçu, en vérification",
+   "refusee": "Refusé"
+  },
+  "titre": "Pièces de due diligence",
+  "type": "Type de document",
+  "types": {
+   "attestation_bancaire": "Attestation bancaire (compte au nom de la société)",
+   "autre": "Autre document",
+   "beneficiaires_effectifs": "Bénéficiaires effectifs et actionnaires",
+   "certificat_qualite": "Certificat qualité (ISO 9001…)",
+   "certification_produit": "Certification produit (CE, CB…)",
+   "declaration_ethique": "Déclaration éthique signée",
+   "licence_commerciale": "Licence commerciale (营业执照)",
+   "licence_export": "Licence ou enregistrement d'export",
+   "rapport_audit": "Rapport d'audit d'usine ou social",
+   "references_clients": "Références clients"
+  }
+ },
  "decisions": {
   "acceptee": "Acceptation",
   "liberation": "Libération",
@@ -844,6 +886,7 @@
   "GBS_PERIODE_INVALIDE": "Période invalide (au plus un an, fin après début).",
   "GBS_PHOTOS_INVALIDES": "Photos invalides : uniquement des fichiers déposés dans ce dossier, 20 au plus.",
   "GBS_PIECES_MANQUANTES": "Pièces obligatoires manquantes :",
+  "GBS_PIECE_DD_FIGEE": "Une pièce déposée ne change pas de fichier : déposez-en une nouvelle.",
   "GBS_PIECE_DEJA_FOURNIE": "Cette pièce a déjà été fournie.",
   "GBS_PIECE_FIGEE": "La pièce reste rattachée à son dossier.",
   "GBS_PIECE_SANS_DOCUMENT": "Déposez le document avant de valider la pièce.",
