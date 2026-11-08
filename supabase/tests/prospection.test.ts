@@ -81,6 +81,25 @@ describe('Prospection (M1)', () => {
     await expectError(db, 'GBS_PROSPECT_CLOS', `select gbs.enregistrer_action_prospect($1, 'appel', current_date, 'Relance')`, [p]);
   }));
 
+  it('rattachement du pays à une société : règle datée, réservée à l’administratrice, jamais modifiée', () => withTx(async (db) => {
+    const m = await monde(db);
+    await as(db, m.hub);
+    await expectError(db, '42501', `insert into gbs.rattachements_pays (pays, societe_id, date_effet) values ('SN', $1, current_date)`, [m.cn]);
+    await as(db, m.admin);
+    await db.query(`insert into gbs.rattachements_pays (pays, societe_id, date_effet, commentaire) values ('SN', $1, current_date, 'Sénégal suivi par GBS Chine')`, [m.cn]);
+    await expectError(db, '42501', `update gbs.rattachements_pays set societe_id = $1 where pays = 'SN'`, [m.ci]);
+    await expectError(db, '23503', `insert into gbs.rattachements_pays (pays, societe_id, date_effet) values ('TG', gen_random_uuid(), current_date)`);
+    const p = await prospect(db, m, m.hub, 'SN');
+    await as(db, m.hub);
+    await db.query(`select gbs.enregistrer_action_prospect($1, 'appel', current_date, 'Premier échange')`, [p]);
+    const c = await one(db, `select * from gbs.convertir_prospect($1)`, [p]);
+    expect([c.societe_id, c.devise]).toEqual([m.cn, 'XOF']);
+    const q = await prospect(db, m, m.hub, 'CI');
+    await as(db, m.hub);
+    await db.query(`select gbs.enregistrer_action_prospect($1, 'appel', current_date, 'Premier échange')`, [q]);
+    expect((await one(db, `select * from gbs.convertir_prospect($1)`, [q])).societe_id).toBe(m.ci);
+  }));
+
   it('perte motivée ; alerte des prospects sans premier contact ; cloisonnement par pays', () => withTx(async (db) => {
     const m = await monde(db);
     const p = await prospect(db, m, m.hub, 'CI');

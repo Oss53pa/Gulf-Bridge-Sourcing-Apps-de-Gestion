@@ -259,8 +259,37 @@ function Utilisateurs() {
 function Societes() {
   const { t } = useTranslation();
   const { societes, langue } = useAuth();
+  const nom = (id: string) => societes.find((s) => s.id === id)?.raison_sociale ?? '';
+  const r = useAsync(async () => ok(await supabase.from('rattachements_pays').select('*').order('pays').order('date_effet', { ascending: false })) as
+    { id: string; pays: string; societe_id: string; date_effet: string; commentaire: string | null }[], []);
+  const a = useAction();
+  const [f, setF] = useState({ pays: '', societe_id: '', date_effet: new Date().toISOString().slice(0, 10), commentaire: '' });
+  const ajouter = async () => {
+    const v = z.object({ pays: z.string().regex(/^([A-Z]{2}|defaut)$/), societe_id: z.string().uuid(), date_effet: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      commentaire: z.string().max(500).nullable() }).strict()
+      .safeParse({ ...f, pays: f.pays.trim() === 'defaut' ? 'defaut' : f.pays.trim().toUpperCase(), commentaire: f.commentaire.trim() || null });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.from('rattachements_pays').insert(v.data)))) { setF({ ...f, pays: '', commentaire: '' }); void r.recharger(); }
+  };
   return (
-    <table className="t"><thead><tr><th>{t('champs.raison_sociale')}</th><th>{t('champs.pays')}</th><th>{t('champs.devise')}</th><th>{t('parametrage.creee_le')}</th><th>FNE</th></tr></thead>
-      <tbody>{societes.map((s) => <tr key={s.id}><td>{s.raison_sociale}</td><td>{s.pays}</td><td>{s.devise}</td><td className="ref">{date(s.date_creation, langue)}</td><td>{s.fne ? t('commun.oui') : '—'}</td></tr>)}</tbody></table>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <table className="t"><thead><tr><th>{t('champs.raison_sociale')}</th><th>{t('champs.pays')}</th><th>{t('champs.devise')}</th><th>{t('parametrage.creee_le')}</th><th>FNE</th></tr></thead>
+        <tbody>{societes.map((s) => <tr key={s.id}><td>{s.raison_sociale}</td><td>{s.pays}</td><td>{s.devise}</td><td className="ref">{date(s.date_creation, langue)}</td><td>{s.fne ? t('commun.oui') : '—'}</td></tr>)}</tbody></table>
+      <div className="section-titre">{t('parametrage.rattachements')}</div>
+      <p className="mute">{t('parametrage.aide_rattachements')}</p>
+      <Bandeau type="err">{r.erreur ?? a.erreur}</Bandeau>
+      <table className="t"><thead><tr><th>{t('champs.pays')}</th><th>{t('champs.raison_sociale')}</th><th>{t('parametrage.date_effet')}</th><th>{t('champs.commentaire')}</th></tr></thead>
+        <tbody>{(r.data ?? []).map((x) => (
+          <tr key={x.id}><td className="ref">{x.pays === 'defaut' ? t('parametrage.autres_pays') : x.pays}</td><td>{nom(x.societe_id)}</td>
+            <td className="ref">{date(x.date_effet, langue)}</td><td className="mute">{x.commentaire ?? ''}</td></tr>))}</tbody></table>
+      <div className="actions" style={{ flexWrap: 'wrap' }}>
+        <input placeholder={t('parametrage.code_pays')} aria-label={t('champs.pays')} maxLength={6} value={f.pays} onChange={(e) => setF({ ...f, pays: e.target.value })} style={{ width: 120 }} />
+        <select aria-label={t('champs.raison_sociale')} value={f.societe_id} onChange={(e) => setF({ ...f, societe_id: e.target.value })}>
+          <option value="">—</option>{societes.map((s) => <option key={s.id} value={s.id}>{s.raison_sociale}</option>)}</select>
+        <input type="date" aria-label={t('parametrage.date_effet')} value={f.date_effet} onChange={(e) => setF({ ...f, date_effet: e.target.value })} />
+        <input placeholder={t('champs.commentaire')} aria-label={t('champs.commentaire')} maxLength={500} value={f.commentaire} onChange={(e) => setF({ ...f, commentaire: e.target.value })} />
+        <Bouton petit disabled={a.enCours} onClick={() => void ajouter()}>{t('parametrage.nouvelle_valeur')}</Bouton>
+      </div>
+    </div>
   );
 }
