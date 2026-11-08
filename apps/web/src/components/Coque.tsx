@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { ECRANS, MODULES, ecranCourant, type Ecran } from '../lib/droits';
 import { dateHeure, jourCourt, type Langue } from '../lib/format';
 import { Sommaire } from './Sommaire';
+import { Gloses } from './Gloses';
 
 /** Glyphe du bouton Sommaire : quatre carrés, le dernier en bronze (maquette). */
 function GlypheSommaire() {
@@ -92,7 +93,11 @@ export function Coque({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); document.getElementById('gbs-recherche')?.focus(); }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); document.getElementById('gbs-recherche')?.focus(); return; }
+      // Touche M : ouvre le Sommaire, sauf pendant une saisie.
+      const cible = e.target as HTMLElement | null;
+      if (e.key.toLowerCase() === 'm' && !e.ctrlKey && !e.metaKey && !e.altKey && cible
+        && !/^(input|textarea|select)$/i.test(cible.tagName) && !cible.isContentEditable) { e.preventDefault(); setSommaire(true); }
     };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
@@ -111,7 +116,7 @@ export function Coque({ children }: { children: ReactNode }) {
         <button className="pill-ink" onClick={() => setSommaire(true)} aria-haspopup="dialog">
           <GlypheSommaire /> {t('coque.sommaire')}
         </button>
-        <button className="tb-btn" onClick={() => nav(-1)}>← {t('coque.retour')}</button>
+        <button className="tb-btn tb-retour" onClick={() => nav(-1)}>← {t('coque.retour')}</button>
         <span className="tb-titre">
           <span className="l1">{ecran ? t(`ecrans.${ecran.id}`) : ''}</span>
           <span className="l2">{jourCourt(new Date(), langue, fuseau)}</span>
@@ -129,7 +134,7 @@ export function Coque({ children }: { children: ReactNode }) {
             <button key={l} aria-pressed={langue === l} onClick={() => {
               setLangue(l);
               if (profil) void supabase.from('profils').update({ langue: l }).eq('id', profil.id);
-            }}>{l === 'zh' ? '中文' : l.toUpperCase()}</button>
+            }}>{l === 'zh' ? '中文' : `${l.toUpperCase()} · 中文`}</button>
           ))}
         </div>
         <button className="tb-btn" onClick={() => nav('/tableau-de-bord')} aria-label={t('coque.alertes')}>
@@ -145,6 +150,7 @@ export function Coque({ children }: { children: ReactNode }) {
       {ecran && <BandeSections ecran={ecran} />}
       <main className="main">{children}</main>
       {sommaire && <Sommaire onClose={() => setSommaire(false)} />}
+      <Gloses />
     </div>
   );
 }

@@ -95,3 +95,12 @@ export function accueil(role: Role | null | undefined): string {
 
 /** Normalisation des accents pour la recherche du Sommaire. */
 export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+/** Codes d'écran (« T-codes ») : saisis dans la recherche du Sommaire, Entrée ouvre l'écran. */
+export const TCODES: Record<string, string> = {
+  tableau: 'TDB', rentabilite: 'RNT', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
+  appels_offres: 'AOF', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', gantt: 'GNT', fournisseurs: 'FOU',
+  articles: 'ART', consultations: 'MEC', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
+  expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
+  rapprochement: 'BNK', flux: 'FLX', tresorerie: 'TRC', commissions: 'COM', notes_frais: 'NDF', messagerie: 'MSG', parametrage: 'PAR',
+};
