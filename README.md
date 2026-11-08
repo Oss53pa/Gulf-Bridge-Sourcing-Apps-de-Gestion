@@ -252,6 +252,23 @@ select cron.schedule('gbs-taux-bce', '*/15 15-17 * * 1-5',
 
 Les taux de la BCE sont des taux de référence, pas les taux appliqués par une banque : pour un paiement fournisseur, le taux réellement obtenu reste à saisir sur le paiement.
 
+## Déploiement
+
+L'application est servie par Cloudflare sur **https://gbs.gulfbridgesourcing.com** (Worker
+`gulf-bridge-sourcing-apps-de-gestion`, configuration dans `wrangler.jsonc`). Le site public
+reste sur `gulfbridgesourcing.com`, servi par un autre Worker.
+
+- **Déclenchement** : chaque fusion sur `main` lance une compilation Cloudflare.
+- **Réglages Cloudflare** (Settings → Build) :
+  - Build command : `pnpm install --frozen-lockfile && pnpm build:web`
+  - Deploy command : `npx wrangler deploy`
+  - Root directory : `/`
+  - Variables de compilation : `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (publiques par conception) ; aucune autre clé.
+- **Réglages Supabase** :
+  - Edge Functions → Secrets : `GBS_ORIGINE` = `https://gbs.gulfbridgesourcing.com`, plus `GBS_PLIS_CLE` et `GBS_SITE_SECRET` (jamais dans Cloudflare) ;
+  - Authentication → URL Configuration : Site URL et Redirect URLs sur `https://gbs.gulfbridgesourcing.com`.
+- **Migrations** : appliquées une à une sur le projet Supabase, puis comparées au dépôt (fonctions et politiques d'accès).
+
 ## Avant la mise en production
 
 Ces points sont à vérifier ou à trancher. Ils ne sont pas couverts par le code.
