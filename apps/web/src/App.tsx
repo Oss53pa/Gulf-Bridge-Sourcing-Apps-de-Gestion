@@ -1,6 +1,12 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Commissions } from './screens/Commissions';
+import { Rapprochement } from './screens/Rapprochement';
+import { PageFournisseur } from './screens/PlisFournisseurs';
+import { Prospection } from './screens/Prospection';
 import { NonConformites } from './screens/NonConformites';
+import { ReservesOuvertes } from './screens/Receptions';
+import { Interventions } from './screens/Interventions';
+import { ImprimerCertificatLc } from './screens/LettresCredit';
 import type { ReactNode } from 'react';
 import { useAuth } from './lib/auth';
 import { configurationOk } from './lib/supabase';
@@ -32,6 +38,8 @@ export function App() {
   if (!configurationOk) return <ConfigurationManquante />;
   // Page de suivi du client : publique, sans compte ; le jeton du lien est vérifié côté serveur.
   if (window.location.pathname === '/suivi') return <PageSuivi />;
+  // Formulaire fournisseur : public, sans compte ; jeton du lien vérifié en base.
+  if (window.location.pathname === '/fournisseur') return <PageFournisseur />;
   if (!pret) return <div className="screen"><Chargement /></div>;
   // Double facteur obligatoire pour tous les comptes internes.
   if (!session || aal !== 'aal2') return <Connexion />;
@@ -42,6 +50,7 @@ export function App() {
       <Route path="/imprimer/facture/:id" element={g('factures', <ImprimerFacture />)} />
       <Route path="/imprimer/inspection/:id" element={g('inspections', <ImprimerInspection />)} />
       <Route path="/imprimer/due-diligence/:id" element={g('fournisseurs', <ImprimerDueDiligence />)} />
+      <Route path="/imprimer/certificat-lc/:id" element={g('portefeuille', <ImprimerCertificatLc />)} />
       <Route path="/imprimer/rapport-offres/:id" element={g('portefeuille', <ImprimerRapportOffres />)} />
       <Route path="*" element={
         <Coque>
@@ -55,6 +64,7 @@ export function App() {
             <Route path="/mes-taches" element={g('mes_taches', <MesTaches />)} />
             <Route path="/notes-frais" element={g('notes_frais', <NotesFrais />)} />
             <Route path="/rentabilite" element={g('rentabilite', <Rentabilite />)} />
+            <Route path="/prospection" element={g('prospection', <Prospection />)} />
             <Route path="/clients" element={g('clients', <Clients />)} />
             <Route path="/fournisseurs" element={g('fournisseurs', <Fournisseurs />)} />
             <Route path="/articles" element={g('articles', <Articles />)} />
@@ -65,10 +75,13 @@ export function App() {
             <Route path="/non-conformites" element={g('non_conformites', <NonConformites />)} />
             <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
             <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
+            <Route path="/interventions" element={g('interventions', <Interventions />)} />
+            <Route path="/reserves" element={g('reserves', <ReservesOuvertes />)} />
             <Route path="/expeditions/:id" element={g('expeditions', <FicheExpedition />)} />
             <Route path="/factures" element={g('factures', <Factures />)} />
             <Route path="/factures/:id" element={g('factures', <FicheFacture />)} />
             <Route path="/commissions" element={g('commissions', <Commissions />)} />
+            <Route path="/rapprochement" element={g('rapprochement', <Rapprochement />)} />
             <Route path="/paiements" element={g('paiements', <Paiements />)} />
             <Route path="/journal" element={g('journal', <Journal />)} />
             <Route path="/parametrage" element={g('parametrage', <Parametrage />)} />

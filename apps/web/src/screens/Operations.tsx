@@ -11,6 +11,7 @@ import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut,
 import { useNoms } from '../lib/referentiels';
 import { Depot as Depotx } from '../components/Depot';
 import { FicheNc } from './NonConformites';
+import { PackDocumentaire } from './PackDocumentaire';
 
 // ============================================================================ Inspections
 export function Inspections() {
@@ -371,6 +372,7 @@ export function FicheExpedition() {
             </div>
           </section>
         )}
+        {['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role) && <PackDocumentaire expeditionId={x.id} dossierId={x.dossier_id} />}
         <section>
           <div className="section-titre">{t('expeditions.etapes')}</div>
           {(etapes.data ?? []).length === 0 ? <span className="mute">{t('expeditions.aucune_etape')}</span> : (
