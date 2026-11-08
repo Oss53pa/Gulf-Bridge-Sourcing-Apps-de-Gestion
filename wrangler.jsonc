@@ -7,7 +7,7 @@
 //   conception) sont lues au moment du build, depuis les variables du projet Cloudflare.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "gbs-gestion",
+  "name": "gulf-bridge-sourcing-apps-de-gestion",
   "compatibility_date": "2025-10-01",
   "assets": {
     "directory": "./apps/web/dist",
