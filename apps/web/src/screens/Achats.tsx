@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant } from '../lib/format';
 import type { Article, Commande, Compte, Dossier, Fournisseur, Inspection, LigneCommande, Paiement } from '../lib/types';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
+import { PlisConsultation } from './PlisFournisseurs';
 import { ApprobationEssais } from './ApprobationEssais';
 import { CataloguePieces } from './PiecesRechange';
 import { Depot } from '../components/Depot';
@@ -75,6 +76,9 @@ export function MiseEnConcurrence() {
               <Bouton petit onClick={() => void inviter()}>{t('rfq.inviter')}</Bouton>
             </div>
             <p className="mute">{t('rfq.aide_agrement')}</p>
+            <div className="filet" />
+            <PlisConsultation consultationId={r.id} dateLimite={r.date_limite} invites={(invites.data ?? []).map((i) => i.fournisseur_id)} noms={fournisseurs}
+              onOuvert={() => void comparatif.recharger()} />
             <div className="filet" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="section-titre">{t('rfq.comparatif')}</span>
@@ -159,7 +163,7 @@ function SaisieOffre({ rfq, invites, onClose, onOk }: { rfq: Rfq; invites: strin
   const a = useAction();
   const n = (s: string) => (s.trim() === '' ? null : Number(s.replace(/\s/g, '').replace(',', '.')));
   const envoyer = async () => {
-    const v = z.object({ consultation_id: z.string().uuid(), fournisseur_id: z.string().uuid(), recu_le: z.string().min(10), canal: z.enum(['wechat', 'email', 'formulaire', 'autre']),
+    const v = z.object({ consultation_id: z.string().uuid(), fournisseur_id: z.string().uuid(), recu_le: z.string().min(10), canal: z.enum(['wechat', 'email', 'autre']),
       incoterm: z.enum(INCOTERMS), lieu: z.string().trim().min(2).max(120), devise: z.enum(['USD', 'CNY', 'XOF', 'XAF']), montant: z.number().min(0).max(1e12),
       fret: z.number().min(0).nullable(), assurance: z.number().min(0).nullable(), frais_jusqu_a_bord: z.number().min(0).nullable(),
       delai_jours: z.number().int().min(0).max(730).nullable(), garantie_mois: z.number().int().min(0).max(240).nullable(), note_technique: z.number().min(0).max(5).nullable() }).strict()
@@ -176,7 +180,7 @@ function SaisieOffre({ rfq, invites, onClose, onOk }: { rfq: Rfq; invites: strin
         <Champ label={t('champs.fournisseur')}><select value={f.fournisseur_id} onChange={(e) => setF({ ...f, fournisseur_id: e.target.value })}>
           <option value="">—</option>{invites.map((i) => <option key={i} value={i}>{fournisseurs[i]}</option>)}</select></Champ>
         <Champ label={t('rfq.recu_le')}><input type="datetime-local" value={f.recu_le} onChange={(e) => setF({ ...f, recu_le: e.target.value })} /></Champ>
-        <Champ label={t('rfq.canal')}><select value={f.canal} onChange={(e) => setF({ ...f, canal: e.target.value })}>{['wechat', 'email', 'formulaire', 'autre'].map((c) => <option key={c} value={c}>{t(`canaux.${c}`)}</option>)}</select></Champ>
+        <Champ label={t('rfq.canal')}><select value={f.canal} onChange={(e) => setF({ ...f, canal: e.target.value })}>{['wechat', 'email', 'autre'].map((c) => <option key={c} value={c}>{t(`canaux.${c}`)}</option>)}</select></Champ>
         <Champ label={t('champs.incoterm')}><select value={f.incoterm} onChange={(e) => setF({ ...f, incoterm: e.target.value })}>{INCOTERMS.map((i) => <option key={i}>{i}</option>)}</select></Champ>
         <Champ label={t('rfq.lieu_nomme')}><input value={f.lieu} maxLength={120} onChange={(e) => setF({ ...f, lieu: e.target.value })} /></Champ>
         <Champ label={t('champs.devise')}><select value={f.devise} onChange={(e) => setF({ ...f, devise: e.target.value })}>{['USD', 'CNY'].map((d) => <option key={d}>{d}</option>)}</select></Champ>

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Commissions } from './screens/Commissions';
 import { Rapprochement } from './screens/Rapprochement';
+import { PageFournisseur } from './screens/PlisFournisseurs';
 import { Prospection } from './screens/Prospection';
 import { NonConformites } from './screens/NonConformites';
 import { ReservesOuvertes } from './screens/Receptions';
@@ -37,6 +38,8 @@ export function App() {
   if (!configurationOk) return <ConfigurationManquante />;
   // Page de suivi du client : publique, sans compte ; le jeton du lien est vérifié côté serveur.
   if (window.location.pathname === '/suivi') return <PageSuivi />;
+  // Formulaire fournisseur : public, sans compte ; jeton du lien vérifié en base.
+  if (window.location.pathname === '/fournisseur') return <PageFournisseur />;
   if (!pret) return <div className="screen"><Chargement /></div>;
   // Double facteur obligatoire pour tous les comptes internes.
   if (!session || aal !== 'aal2') return <Connexion />;
