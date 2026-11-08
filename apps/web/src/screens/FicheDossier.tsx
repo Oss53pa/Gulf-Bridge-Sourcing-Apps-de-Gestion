@@ -22,8 +22,9 @@ import { DossierQualite } from './DossierQualite';
 import { PiecesDevis } from './PiecesRechange';
 import { InterventionsDossier } from './Interventions';
 import { ListeRapports } from './RapportOffres';
+import { EchantillonsDossier } from './Echantillons';
 
-type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'devis' | 'commandes' | 'avenants' | 'lc' | 'qualite' | 'receptions' | 'interventions' | 'suivi' | 'couts' | 'journal';
+type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'echantillons' | 'devis' | 'commandes' | 'avenants' | 'lc' | 'qualite' | 'receptions' | 'interventions' | 'suivi' | 'couts' | 'journal';
 
 export function FicheDossier() {
   const { id = '' } = useParams();
@@ -50,6 +51,7 @@ export function FicheDossier() {
     { id: 'blocages', lib: t('fiche.points_bloquants') },
   ];
   if (['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role ?? '')) onglets.push({ id: 'rapports', lib: t('fiche.rapports_offres') });
+  if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'echantillons', lib: t('fiche.echantillons') });
   if (['admin', 'hub_afrique', 'agent_pays', 'comptable'].includes(role ?? '')) onglets.push({ id: 'devis', lib: t('fiche.devis') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'commandes', lib: t('fiche.commandes') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'avenants', lib: t('fiche.avenants') });
@@ -81,6 +83,7 @@ export function FicheDossier() {
         {onglet === 'delais' && <DelaisDossier dossier={d} phases={phases.data ?? []} onChange={recharger} />}
         {onglet === 'blocages' && <Blocages dossierId={d.id} />}
         {onglet === 'rapports' && <ListeRapports dossierId={d.id} />}
+        {onglet === 'echantillons' && <EchantillonsDossier dossierId={d.id} />}
         {onglet === 'devis' && <DevisDossier dossier={d} />}
         {onglet === 'commandes' && <CommandesDossier dossier={d} />}
         {onglet === 'avenants' && <AvenantsDossier dossier={d} />}

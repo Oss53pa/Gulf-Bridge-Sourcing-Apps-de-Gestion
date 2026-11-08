@@ -12,6 +12,7 @@ import { useNoms } from '../lib/referentiels';
 import { Depot as Depotx } from '../components/Depot';
 import { FicheNc } from './NonConformites';
 import { PackDocumentaire } from './PackDocumentaire';
+import { TransitaireExpedition } from './Transitaires';
 
 // ============================================================================ Inspections
 export function Inspections() {
@@ -373,6 +374,7 @@ export function FicheExpedition() {
           </section>
         )}
         {['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role) && <PackDocumentaire expeditionId={x.id} dossierId={x.dossier_id} />}
+        {['admin', 'achats_chine', 'hub_afrique'].includes(role) && x.statut !== 'livree' && <TransitaireExpedition expeditionId={x.id} transitaire={x.transitaire} onChange={recharger} />}
         <section>
           <div className="section-titre">{t('expeditions.etapes')}</div>
           {(etapes.data ?? []).length === 0 ? <span className="mute">{t('expeditions.aucune_etape')}</span> : (

@@ -41,3 +41,7 @@ verify_jwt = false
 # Formulaire fournisseur par lien (jeton vérifié en base) et ouverture des plis par l'équipe
 # achats (jeton de session transmis à la base). Secret requis : GBS_PLIS_CLE.
 verify_jwt = false
+
+[functions.gbs-transitaire]
+# Formulaire du transitaire par lien : point d'entrée public, jeton du lien vérifié en base.
+verify_jwt = false

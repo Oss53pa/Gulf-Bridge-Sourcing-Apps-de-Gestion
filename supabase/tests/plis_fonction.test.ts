@@ -1,7 +1,8 @@
-// M17 et M5, lot 1 : logique pure de la fonction serveur gbs-fournisseur (plis fermés).
+// M17, M5 et M16, lot 1 : logique pure de la fonction serveur gbs-fournisseur (plis fermés, pièces de due diligence).
 import { createHash, randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { chiffrer, cle, contenuPli, dechiffrer, empreinte, lireDemande, lireOffre } from '../functions/_shared/plis';
+import { lireDepotPiece, TAILLE_PIECE_MAX } from '../functions/_shared/piecesdd';
 
 const J = 'A'.repeat(43);
 const offre = { incoterm: 'FOB', lieu: 'Shenzhen', devise: 'USD', montant: 10000.5, delai_jours: 45, garantie_mois: 24,
@@ -50,5 +51,24 @@ describe('fonction gbs-fournisseur : offre et plis', () => {
     const altere = Buffer.from(p.chiffre, 'base64'); altere[0] ^= 1;
     expect(await dechiffrer(k, altere.toString('base64'), p.iv)).toBeNull();
     expect(JSON.parse(c1)).toMatchObject({ incoterm: 'FOB', montant: 10000.5 });
+  });
+});
+
+describe('fonction gbs-fournisseur : pièces de due diligence', () => {
+  const base = { jeton: J, type: 'licence_commerciale', libelle: 'Licence 营业执照', taille: 1000, cles: ['action', 'jeton', 'type', 'libelle', 'fichier'] };
+  it('champs stricts : type connu, libellé borné, taille bornée, aucun champ en plus', () => {
+    expect(lireDepotPiece(base)).toEqual({ jeton: J, type: 'licence_commerciale', libelle: 'Licence 营业执照' });
+    expect(lireDepotPiece({ ...base, libelle: ' \u0000 ' })?.libelle).toBeNull();
+    expect(lireDepotPiece({ ...base, type: 'contrat' })).toBeNull();
+    expect(lireDepotPiece({ ...base, jeton: 'x' })).toBeNull();
+    expect(lireDepotPiece({ ...base, libelle: 'x'.repeat(201) })).toBeNull();
+    expect(lireDepotPiece({ ...base, taille: 0 })).toBeNull();
+    expect(lireDepotPiece({ ...base, taille: TAILLE_PIECE_MAX + 1 })).toBeNull();
+    expect(lireDepotPiece({ ...base, cles: [...base.cles, 'chemin'] })).toBeNull();
+    expect(lireDepotPiece({ ...base, cles: [...base.cles, 'fichier'] })).toBeNull();
+  });
+  it('lecture du dossier de due diligence : action dédiée, jeton seul', () => {
+    expect(lireDemande({ action: 'lire_dd', jeton: J })).toEqual({ action: 'lire_dd', jeton: J });
+    expect(lireDemande({ action: 'lire_dd', jeton: J, dd: 'x' })).toBeNull();
   });
 });
