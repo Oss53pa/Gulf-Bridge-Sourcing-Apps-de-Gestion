@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Commissions } from './screens/Commissions';
+import { Rapprochement } from './screens/Rapprochement';
 import { Prospection } from './screens/Prospection';
 import { NonConformites } from './screens/NonConformites';
 import { ReservesOuvertes } from './screens/Receptions';
@@ -77,6 +78,7 @@ export function App() {
             <Route path="/factures" element={g('factures', <Factures />)} />
             <Route path="/factures/:id" element={g('factures', <FicheFacture />)} />
             <Route path="/commissions" element={g('commissions', <Commissions />)} />
+            <Route path="/rapprochement" element={g('rapprochement', <Rapprochement />)} />
             <Route path="/paiements" element={g('paiements', <Paiements />)} />
             <Route path="/journal" element={g('journal', <Journal />)} />
             <Route path="/parametrage" element={g('parametrage', <Parametrage />)} />
