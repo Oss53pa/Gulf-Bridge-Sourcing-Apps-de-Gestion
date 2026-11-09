@@ -34,8 +34,10 @@ language sql stable security definer set search_path = '' as $$
    where auth.uid() is not null and gbs_private.fil_visible(f.id)
 $$;
 
--- Liste des fils avec le nombre de non lus (remplace la version de la migration 60).
-drop function gbs.mes_fils(int);
+-- Liste des fils avec le nombre de non lus (remplace la version de la migration 60). L'ancienne version
+-- est renommée et privée de tout droit (pas de suppression : aucune donnée en jeu, historique conservé).
+alter function gbs.mes_fils(int) rename to mes_fils_v60;
+revoke all on function gbs.mes_fils_v60(int) from public, anon, authenticated;
 create function gbs.mes_fils(p_limite int default 100)
 returns table (id uuid, audience text, sujet text, categorie text, reference text, dernier_message_le timestamptz, dernier_auteur text, dernier_extrait text, non_lus int)
 language sql stable security definer set search_path = '' as $$
