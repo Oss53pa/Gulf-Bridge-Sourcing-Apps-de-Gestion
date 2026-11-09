@@ -312,29 +312,152 @@ function Repartition({ cout, dossierId, onClose, onDone }: { cout: Cout; dossier
 }
 
 // ----------------------------------------------------------------------------- rentabilité
+interface MissionRnt { id: string; reference: string; intitule: string; modele: string; chef_id: string | null; client: string; m: Marge }
+type VueRnt = 'missions' | 'service' | 'client' | 'chef' | 'poste';
+type ClasseRnt = 'rentable' | 'faible' | 'perte';
+const TON_RNT: Record<ClasseRnt, string> = { rentable: 'ok', faible: 'att', perte: 'err' };
+
+/** Rentabilité réelle par mission (maquette RNT) : marge calculée en base pour chaque dossier visible ; seuil de marge faible paramétré. */
 export function Rentabilite() {
   const { t } = useTranslation();
   const { langue } = useAuth();
-  const l = useAsync(async () => ok(await supabase.rpc('missions_a_perte')) as
-    { dossier_id: string; reference: string; modele: string; client: string; honoraires_factures_xof: number; couts_xof: number;
-      marge_directe_facturee_xof: number; marge_directe_encaissee_xof: number; cause_perte: string }[], []);
+  const noms = useNoms('profils');
+  const seuil = useAsync(async () => ok(await supabase.from('parametres').select('valeur, date_effet').eq('cle', 'marge.seuil_directe')
+    .lte('date_effet', new Date().toISOString().slice(0, 10)).order('date_effet', { ascending: false }).limit(1)) as { valeur: unknown }[], []);
+  const l = useAsync(async () => {
+    const ds = ok(await supabase.from('dossiers').select('id, reference, intitule, modele, chef_id, clients(raison_sociale)')
+      .order('ouvert_le', { ascending: false }).limit(200)) as unknown as { id: string; reference: string; intitule: string; modele: string; chef_id: string | null; clients: { raison_sociale: string } | null }[];
+    const out: MissionRnt[] = [];
+    for (let i = 0; i < ds.length; i += 8) {
+      const lot = await Promise.all(ds.slice(i, i + 8).map(async (d) => ({ d, m: ok(await supabase.rpc('marge_directe', { p_dossier: d.id })) as Marge })));
+      for (const { d, m } of lot) {
+        if (Number(m.honoraires_factures_xof) > 0 || Number(m.couts_xof) > 0) out.push({ id: d.id, reference: d.reference, intitule: d.intitule, modele: d.modele, chef_id: d.chef_id, client: d.clients?.raison_sociale ?? '—', m });
+      }
+    }
+    return out;
+  }, []);
+  const [vue, setVue] = useState<VueRnt>('missions');
+  const [filtre, setFiltre] = useState<ClasseRnt | 'toutes'>('toutes');
+  const [sel, setSel] = useState<string | null>(null);
+  const s = seuil.data?.[0] ? Number(seuil.data[0].valeur) : null;
+  const tous = l.data ?? [];
+  const taux = (x: MissionRnt) => (Number(x.m.honoraires_factures_xof) > 0 ? Number(x.m.marge_directe_facturee_xof) / Number(x.m.honoraires_factures_xof) : null);
+  // Même règle que la base pour la perte (marge facturée ou encaissée négative) ; marge faible sous le seuil paramétré.
+  const classe = (x: MissionRnt): ClasseRnt => (Number(x.m.marge_directe_facturee_xof) < 0 || Number(x.m.marge_directe_encaissee_xof) < 0 ? 'perte'
+    : s !== null && (taux(x) ?? 0) < s ? 'faible' : 'rentable');
+  const somme = (k: keyof Marge, xs = tous) => xs.reduce((n, x) => n + Number(x.m[k] ?? 0), 0);
+  const pertes = tous.filter((x) => classe(x) === 'perte');
+  // Montant perdu : marges facturées négatives (un simple impayé classe la mission en perte sans compter ici).
+  const perdu = -pertes.reduce((n, x) => n + Math.min(0, Number(x.m.marge_directe_facturee_xof)), 0);
+  const fac = somme('honoraires_factures_xof'), enc = somme('honoraires_encaisses_xof'), cts = somme('couts_xof');
+  const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)} %`);
+  const mx = (v: number) => montant(v, 'XOF', langue);
+  const compte = (c: ClasseRnt) => tous.filter((x) => classe(x) === c).length;
+  const titre = t('rnt.titre', { n: tous.length, r: compte('rentable'), f: compte('faible'), p: compte('perte'), perdu: mx(perdu) });
+  const liste = [...tous].filter((x) => filtre === 'toutes' || classe(x) === filtre).sort((a, b) => (taux(a) ?? -9) - (taux(b) ?? -9));
+  const x = tous.find((y) => y.id === sel) ?? liste[0] ?? null;
+  const groupes = (cle: (y: MissionRnt) => string) => Object.entries(tous.reduce<Record<string, MissionRnt[]>>((m, y) => ({ ...m, [cle(y)]: [...(m[cle(y)] ?? []), y] }), {}))
+    .map(([k, ys]) => ({ k, n: ys.length, fac: somme('honoraires_factures_xof', ys), cts: somme('couts_xof', ys), marge: somme('marge_directe_facturee_xof', ys) }))
+    .sort((a, b) => a.marge - b.marge);
+  const postes = Object.entries(tous.reduce<Record<string, number>>((m, y) => {
+    for (const [k, v] of Object.entries(y.m.couts_par_categorie ?? {})) m[k] = (m[k] ?? 0) + Number(v);
+    return m;
+  }, {})).sort((a, b) => b[1] - a[1]);
   return (
     <div className="screen">
-      <Entete surtitre={t('modules.supervision')} titre={t('couts.missions_a_perte')} />
-      <div className="cadre">
-        <p className="mute">{t('couts.aide_rentabilite')}</p>
-        <Bandeau type="err">{l.erreur}</Bandeau>
-        {l.chargement && !l.data ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('couts.aucune_perte')}</Vide> : (
-          <div style={{ overflowX: 'auto' }}><table className="t"><thead><tr><th>{t('champs.dossier')}</th><th>{t('couts.client')}</th>
-            <th className="num">{t('couts.honoraires_factures')}</th><th className="num">{t('couts.couts')}</th><th className="num">{t('couts.marge_facturee')}</th>
-            <th className="num">{t('couts.marge_encaissee')}</th><th>{t('couts.cause_principale')}</th></tr></thead>
-            <tbody>{(l.data ?? []).map((x) => (
-              <tr key={x.dossier_id}><td className="ref"><Link to={`/dossiers/${x.dossier_id}`}>{x.reference}</Link></td><td>{x.client}</td>
-                <td className="num">{montant(x.honoraires_factures_xof, 'XOF', langue)}</td><td className="num">{montant(x.couts_xof, 'XOF', langue)}</td>
-                <td className="num">{montant(x.marge_directe_facturee_xof, 'XOF', langue)}</td><td className="num">{montant(x.marge_directe_encaissee_xof, 'XOF', langue)}</td>
-                <td><Statut statut="err" libelle={t(`couts.cause.${x.cause_perte}`)} /></td></tr>))}</tbody></table></div>
+      <Entete surtitre={`${t('modules.pilotage')} · ${t('rnt.surtitre')} · RNT`} titre={l.data ? titre : t('rnt.titre_court')} />
+      <p className="sec" style={{ marginTop: -8 }}>{t('rnt.aide')}</p>
+      <Bandeau type="err">{l.erreur ?? seuil.erreur}</Bandeau>
+      <Onglets actif={vue} onChange={setVue} items={(['missions', 'service', 'client', 'chef', 'poste'] as const).map((v) => ({ id: v, lib: t(`rnt.vues.${v}`) }))} />
+      {l.chargement && !l.data ? <Chargement /> : tous.length === 0 ? <Vide>{t('rnt.aucune')}</Vide> : <>
+        <Kpis items={[
+          { lib: t('rnt.honoraires'), val: mx(fac), sous: t('rnt.dont_encaisses', { m: mx(enc) }) },
+          { lib: t('rnt.couts'), val: mx(cts), sous: t('rnt.part_honoraires', { p: pct(fac > 0 ? cts / fac : null) }) },
+          { lib: t('rnt.marge'), val: mx(fac - cts), sous: t('rnt.part_honoraires', { p: pct(fac > 0 ? (fac - cts) / fac : null) }) },
+          { lib: t('rnt.en_perte'), val: String(pertes.length), sous: t('rnt.perdus', { m: mx(perdu) }) },
+          { lib: t('rnt.tresorerie'), val: mx(enc - cts), sous: t('rnt.tresorerie_sous') },
+        ]} />
+        {vue === 'missions' ? <>
+          <div className="actions rnt-filtres">
+            {(['toutes', 'rentable', 'faible', 'perte'] as const).map((c) => (
+              <button key={c} type="button" className={'chip' + (filtre === c ? ' actif' : '')} onClick={() => setFiltre(c)}>
+                {t(`rnt.classes.${c}`)} · {c === 'toutes' ? tous.length : compte(c)}</button>))}
+          </div>
+          <div className="ref-grille rnt-grille">
+            <div className="cadre">
+              <table className="t"><thead><tr><th>{t('rnt.mission')}</th><th className="num">{t('rnt.honoraires_court')}</th><th className="num">{t('rnt.couts_court')}</th>
+                <th className="num">{t('rnt.marge_court')}</th><th className="num">{t('rnt.taux')}</th></tr></thead>
+                <tbody>{liste.map((y) => {
+                  const c = classe(y);
+                  return (
+                    <tr key={y.id} className={'cliquable' + (x?.id === y.id ? ' choisi' : '')} onClick={() => setSel(y.id)}>
+                      <td><span className="ref">{y.reference}</span> {y.client}
+                        <div className="mute"><Statut statut={TON_RNT[c]} libelle={t(`rnt.classes.${c}`)} /> · {t(`modeles.${y.modele}`)}{y.chef_id ? ` · ${noms[y.chef_id] ?? ''}` : ''}</div></td>
+                      <td className="num">{mx(Number(y.m.honoraires_factures_xof))}</td><td className="num">{mx(Number(y.m.couts_xof))}</td>
+                      <td className={'num' + (Number(y.m.marge_directe_facturee_xof) < 0 ? ' txt-err' : '')}>{mx(Number(y.m.marge_directe_facturee_xof))}</td>
+                      <td className={'num' + (c === 'perte' ? ' txt-err' : c === 'faible' ? ' txt-att' : ' txt-ok')}>{pct(taux(y))}</td>
+                    </tr>);
+                })}</tbody></table>
+            </div>
+            {x && <DetailRentabilite x={x} classe={classe(x)} taux={taux(x)} />}
+          </div>
+        </> : (
+          <div className="cadre">
+            {vue === 'poste' ? (
+              <table className="t"><thead><tr><th>{t('rnt.poste')}</th><th className="num">{t('rnt.couts_court')}</th><th className="num">{t('rnt.part_couts')}</th></tr></thead>
+                <tbody>{postes.map(([k, v]) => <tr key={k}><td>{t(`couts.cat.${k}`)}</td><td className="num">{mx(v)}</td><td className="num">{pct(cts > 0 ? v / cts : null)}</td></tr>)}</tbody></table>
+            ) : (
+              <table className="t"><thead><tr><th>{t(`rnt.vues.${vue}`)}</th><th className="num">{t('rnt.missions')}</th><th className="num">{t('rnt.honoraires_court')}</th>
+                <th className="num">{t('rnt.couts_court')}</th><th className="num">{t('rnt.marge_court')}</th><th className="num">{t('rnt.taux')}</th></tr></thead>
+                <tbody>{groupes((y) => (vue === 'service' ? y.modele : vue === 'client' ? y.client : y.chef_id ?? '')).map((g) => (
+                  <tr key={g.k}><td>{vue === 'service' ? t(`modeles.${g.k}`) : vue === 'chef' ? (g.k ? noms[g.k] ?? '' : t('rnt.sans_chef')) : g.k}</td>
+                    <td className="num">{g.n}</td><td className="num">{mx(g.fac)}</td><td className="num">{mx(g.cts)}</td>
+                    <td className={'num' + (g.marge < 0 ? ' txt-err' : '')}>{mx(g.marge)}</td><td className="num">{pct(g.fac > 0 ? g.marge / g.fac : null)}</td></tr>))}</tbody></table>
+            )}
+          </div>
         )}
-      </div>
+        <p className="mute">{t('rnt.aide_seuil', { s: pct(s) })}</p>
+      </>}
     </div>
+  );
+}
+
+function DetailRentabilite({ x, classe, taux }: { x: MissionRnt; classe: ClasseRnt; taux: number | null }) {
+  const { t } = useTranslation();
+  const { langue } = useAuth();
+  const noms = useNoms('profils');
+  const c = useAsync(async () => ok(await supabase.from('couts').select('*').eq('dossier_id', x.id).in('statut', ['validee', 'remboursee'])
+    .order('date_cout', { ascending: false }).limit(200)) as Cout[], [x.id]);
+  const mx = (v: number) => montant(v, 'XOF', langue);
+  const cts = Number(x.m.couts_xof);
+  const postes = Object.entries(x.m.couts_par_categorie ?? {}).sort((a, b) => Number(b[1]) - Number(a[1]));
+  const lignes = c.data ?? [];
+  return (
+    <aside className="exp-aside rnt-detail">
+      <section>
+        <span className="mute">{x.reference} · {t(`modeles.${x.modele}`)}{x.chef_id ? ` · ${noms[x.chef_id] ?? ''}` : ''}</span>
+        <div className="liv-pv"><b className="liv-client">{x.client}</b><Statut statut={TON_RNT[classe]} libelle={t(`rnt.classes.${classe}`)} /></div>
+        <div className="ref-chiffres rnt-chiffres">
+          <div><span>{t('rnt.honoraires_court')}</span><b>{mx(Number(x.m.honoraires_factures_xof))}</b><small className="mute">{t('rnt.encaisse', { m: mx(Number(x.m.honoraires_encaisses_xof)) })}</small></div>
+          <div><span>{t('rnt.couts_court')}</span><b>{mx(cts)}</b></div>
+          <div><span>{t('rnt.marge_court')}</span><b className={Number(x.m.marge_directe_facturee_xof) < 0 ? 'txt-err' : ''}>{mx(Number(x.m.marge_directe_facturee_xof))}</b>
+            <small className="mute">{taux === null ? '—' : `${Math.round(taux * 100)} %`}</small></div>
+        </div>
+        {classe === 'perte' && x.m.cause_perte && <Bandeau type="err">{t('rnt.cause', { cause: t(`couts.cause.${x.m.cause_perte}`) })}</Bandeau>}
+      </section>
+      <section>
+        <div className="surtitre">{t('rnt.poste')}</div>
+        {postes.length === 0 ? <span className="mute">{t('rnt.aucun_cout')}</span> : postes.map(([k, v]) => (
+          <div key={k} className="rnt-poste"><span>{t(`couts.cat.${k}`)} · {cts > 0 ? Math.round((Number(v) / cts) * 100) : 0} %</span><b>{mx(Number(v))}</b></div>))}
+      </section>
+      <section>
+        <div className="surtitre">{t('rnt.journal', { n: lignes.length })}</div>
+        <Bandeau type="err">{c.erreur}</Bandeau>
+        {lignes.map((y) => (
+          <div key={y.id} className="rnt-poste"><span>{date(y.date_cout, langue)} · {y.libelle}<small className="mute"> · {t(`couts.cat.${y.categorie}`)}{y.depose_par ? ` · ${noms[y.depose_par] ?? ''}` : ''}</small></span>
+            <b>{y.montant_xof != null ? mx(Number(y.montant_xof)) : '—'}</b></div>))}
+        <Link to={`/dossiers/${x.id}`}>{t('rnt.ouvrir_dossier')}</Link>
+      </section>
+    </aside>
   );
 }

@@ -126,6 +126,8 @@ a.btn { text-decoration: none; }
 .kpi .val { font-family: var(--serif); font-size: 38px; line-height: 1; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kpi .sous { font-size: 13px; color: var(--mute); }
 .kpi .val.texte { font-size: 22px; line-height: 1.15; white-space: normal; }
+.kpis:has(> .kpi:nth-child(5)) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.kpis:has(> .kpi:nth-child(5)) .val { font-size: 30px; }
 
 /* Liste + détail */
 .liste-detail { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 0; }
@@ -722,3 +724,15 @@ td.retard-txt { color: var(--err); }
 /* Finance · notes de frais (maquette NDF) */
 button.lien { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
 button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+
+/* Pilotage · rentabilité par mission (maquette RNT) */
+.rnt-filtres { margin-bottom: 12px; }
+.rnt-filtres .chip { border: 1px solid transparent; cursor: pointer; font: inherit; font-size: 13px; }
+.rnt-filtres .chip.actif { background: var(--ink); color: #fff; }
+.ref-grille.rnt-grille { grid-template-columns: minmax(0, 1fr) 400px; }
+.rnt-chiffres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rnt-chiffres b { font-size: 20px; overflow-wrap: anywhere; }
+.rnt-chiffres small { display: block; font-size: 12px; }
+.rnt-poste { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; padding: 4px 0; }
+.rnt-poste b { font-weight: 500; white-space: nowrap; }
+@media (max-width: 1100px) { .ref-grille.rnt-grille { grid-template-columns: 1fr; } }
