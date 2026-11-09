@@ -1904,6 +1904,7 @@
    "insert": "创建",
    "update": "修改"
   },
+  "aide": "每项操作均带时间戳、记录操作人并与上一条链接，任何记录均不可修改或删除。",
   "ajout_seul": "仅追加",
   "apres": "修改后",
   "avant": "修改前",
@@ -1911,10 +1912,25 @@
   "chaine_ok": "哈希链完整：已校验 {{n}} 条。",
   "choisir": "选择一条记录查看修改前后。",
   "empreinte": "SHA-256 哈希",
+  "empreinte_court": "哈希",
+  "entrees": "{{n}} 条",
   "filtre_table": "按对象筛选",
+  "integre": "完整性已验证 · 哈希链完整（{{n}} 条）",
+  "module": "模块",
+  "motif": "原因：“{{m}}”",
+  "non_modifiable": "不可修改",
+  "rechercher": "按用户、项目、操作筛选…",
+  "statut_change": "{{objet}}：{{de}} → {{a}}",
   "systeme": "系统",
   "titre": "防篡改审计日志",
+  "titre_court": "审计日志",
+  "tous": "全部",
   "toutes_tables": "全部对象",
+  "types": {
+   "derogations": "例外放行",
+   "tout": "全部",
+   "validations": "审批"
+  },
   "verifier": "校验哈希链",
   "vide": "暂无记录。"
  },

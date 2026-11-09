@@ -736,3 +736,19 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .rnt-poste { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; padding: 4px 0; }
 .rnt-poste b { font-weight: 500; white-space: nowrap; }
 @media (max-width: 1100px) { .ref-grille.rnt-grille { grid-template-columns: 1fr; } }
+
+/* Supervision · journal d'audit (maquette AUD) */
+.aud-integrite { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 8px 14px; border-radius: var(--r); font-size: 14px; font-weight: 500; }
+.aud-integrite.ok { background: var(--ok-bg); color: var(--ok); }
+.aud-integrite .pt { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.aud-filtres { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.aud-filtres .segment { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: var(--r); background: var(--sable); }
+.aud-filtres .segment button { border: 1px solid transparent; background: none; padding: 7px 10px; border-radius: var(--r); font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+.aud-filtres .segment button[aria-pressed="true"] { background: var(--white); border-color: var(--bronze); }
+.aud-filtres .segment button:disabled { opacity: .45; cursor: default; }
+.aud-recherche { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.aud-recherche .search { width: 340px; max-width: 100%; }
+.aud-table td { vertical-align: top; }
+.aud-module { color: var(--err); text-transform: uppercase; letter-spacing: .06em; font-size: 13px; }
+.aud-derog td { background: var(--err-bg); }
+.aud-json { font-size: 12px; white-space: pre-wrap; word-break: break-word; margin: 0; }

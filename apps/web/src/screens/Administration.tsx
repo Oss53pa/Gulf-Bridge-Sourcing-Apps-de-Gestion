@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
@@ -6,21 +6,48 @@ import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, dateHeure } from '../lib/format';
 import type { Audit, Parametre, Profil } from '../lib/types';
-import { Bandeau, Bouton, CadreTableau, Champ, Entete, Onglets, Statut, Tiroir, Vide } from '../components/ui';
-import { useNoms } from '../lib/referentiels';
+import { Bandeau, Bouton, Champ, Chargement, Entete, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { CalendrierParam, DelaisCiblesParam } from './Delais';
+
+// Module de chaque table journalisée (filtre « module » du journal).
+const MODULES_AUDIT: Record<string, string[]> = {
+  commercial: ['prospects', 'prospects_actions', 'clients', 'verifications_clients', 'appels_offres', 'appels_offres_pieces', 'appels_offres_questions', 'fiches_reference', 'satisfactions', 'devis', 'devis_pieces'],
+  dossiers: ['dossiers', 'pieces', 'derogations', 'dossier_phases', 'points_bloquants', 'taches', 'phase_attentes', 'echeances_projet', 'avenants', 'calendrier', 'delais_cibles', 'modeles_dossier', 'pieces_modele'],
+  achats: ['commandes', 'lignes_commande', 'fournisseurs', 'comptes_paiement', 'beneficiaires_effectifs', 'liens_fournisseurs', 'liens_due_diligence', 'pieces_due_diligence', 'due_diligences',
+    'questions_consultation', 'rapports_offres', 'plis', 'registre_presentations', 'echantillons'],
+  qualite: ['inspections', 'non_conformites', 'dossiers_qualite_emis', 'listes_qualite_client'],
+  logistique: ['expeditions', 'expedition_etapes', 'expedition_commandes', 'liens_transitaires', 'documents_transitaires', 'receptions', 'reserves_reception', 'lettres_credit', 'certificats_lc'],
+  finance: ['factures', 'lignes_facture', 'encaissements', 'paiements_fournisseurs', 'couts', 'couts_repartition', 'partages', 'series_factures', 'releves_bancaires', 'lignes_releve',
+    'releves_valides', 'comptes_bancaires', 'taux_change', 'mensualites_cadre'],
+  apres_vente: ['interventions', 'numeros_serie', 'pieces_rechange'],
+  parametrage: ['parametres', 'profils', 'societes', 'rattachements_pays'],
+};
+const moduleDe = (table: string) => Object.entries(MODULES_AUDIT).find(([, ts]) => ts.includes(table))?.[0] ?? 'parametrage';
+// Validation : passage d'un statut vers un état validé, approuvé ou libéré.
+const VALIDES = ['validee', 'valide', 'validees', 'approuvee', 'approuve', 'accepte', 'acceptee', 'liberation', 'signee', 'definitive', 'payee', 'verifie', 'agree', 'emise'];
+const statutDe = (v: unknown) => (v && typeof v === 'object' && 'statut' in v ? String((v as { statut: unknown }).statut) : null);
+const objetDe = (v: unknown) => {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  for (const k of ['reference', 'numero', 'raison_sociale', 'libelle', 'cle', 'nom', 'intitule']) if (typeof o[k] === 'string' && o[k]) return String(o[k]);
+  return null;
+};
+const lisible = (x: string) => x.replace(/_/g, ' ');
 
 export function Journal() {
   const { t } = useTranslation();
   const { langue, fuseau } = useAuth();
-  const profils = useNoms('profils');
-  const [table, setTable] = useState('');
+  const [module, setModule] = useState('');
+  const [type, setType] = useState<'tout' | 'validations' | 'derogations'>('tout');
+  const [q, setQ] = useState('');
   const [sel, setSel] = useState<Audit | null>(null);
+  const profils = useAsync(async () => ok(await supabase.from('profils').select('id, nom, role')) as { id: string; nom: string; role: string }[], []);
   const l = useAsync(async () => {
     let r = supabase.from('journal_audit').select('*').order('id', { ascending: false }).limit(500);
-    if (table) r = r.eq('table_nom', table);
+    if (type === 'derogations') r = r.eq('table_nom', 'derogations');
+    else if (module) r = r.in('table_nom', MODULES_AUDIT[module] ?? []);
     return ok(await r) as Audit[];
-  }, [table]);
+  }, [module, type]);
   const a = useAction();
   const [verif, setVerif] = useState<{ premiere_ligne_alteree: number | null; lignes_verifiees: number } | null>(null);
   const verifier = async () => {
@@ -29,44 +56,72 @@ export function Journal() {
       setVerif(r[0] ?? null);
     });
   };
+  useEffect(() => { void verifier(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const qui = (u: string | null) => {
+    const p = u ? (profils.data ?? []).find((x) => x.id === u) : null;
+    return u ? (p ? `${p.nom} · ${t(`roles.${p.role}`)}` : '…') : t('journal.systeme');
+  };
+  const action = (j: Audit) => {
+    const av = statutDe(j.avant), ap = statutDe(j.apres);
+    if (j.action === 'update' && av !== ap && ap) return t('journal.statut_change', { objet: t(`tables.${j.table_nom}`, { defaultValue: lisible(j.table_nom) }), de: lisible(av ?? '—'), a: lisible(ap) });
+    return `${t(`journal.actions.${j.action}`, { defaultValue: j.action })} · ${t(`tables.${j.table_nom}`, { defaultValue: lisible(j.table_nom) })}`;
+  };
+  const estValidation = (j: Audit) => { const ap = statutDe(j.apres); return j.action === 'update' && ap !== statutDe(j.avant) && ap !== null && VALIDES.includes(ap); };
+  const terme = q.trim().toLowerCase();
+  const liste = (l.data ?? []).filter((j) => (type !== 'validations' || estValidation(j))
+    && (!terme || [qui(j.utilisateur), action(j), objetDe(j.apres) ?? objetDe(j.avant) ?? '', j.motif ?? ''].join(' ').toLowerCase().includes(terme)));
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.supervision')} · ${t('journal.ajout_seul')}`} titre={t('journal.titre')}
-        actions={<>
-          <select className="search" style={{ width: 220 }} value={table} onChange={(e) => setTable(e.target.value)} aria-label={t('journal.filtre_table')}>
-            <option value="">{t('journal.toutes_tables')}</option>
-            {['dossiers', 'pieces', 'derogations', 'commandes', 'paiements_fournisseurs', 'comptes_paiement', 'factures', 'encaissements', 'inspections', 'parametres', 'profils', 'fournisseurs'].map((x) =>
-              <option key={x} value={x}>{t(`tables.${x}`, { defaultValue: x })}</option>)}
-          </select>
-          <Bouton variante="primaire" onClick={() => void verifier()}>{t('journal.verifier')}</Bouton>
-        </>} />
-      {verif && (verif.premiere_ligne_alteree === null
-        ? <Bandeau type="ok">{t('journal.chaine_ok', { n: verif.lignes_verifiees })}</Bandeau>
-        : <Bandeau type="err">{t('journal.chaine_ko', { id: verif.premiere_ligne_alteree })}</Bandeau>)}
-      <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
-      <div className="liste-detail">
-        <div className="liste"><CadreTableau>
-          {(l.data ?? []).length === 0 ? <Vide>{t('journal.vide')}</Vide> : (
-            <table className="t"><thead><tr><th>#</th><th>{t('champs.horodatage')}</th><th>{t('champs.utilisateur')}</th><th>{t('champs.action')}</th><th>{t('champs.objet')}</th><th>{t('champs.motif')}</th></tr></thead>
-              <tbody>{(l.data ?? []).map((j) => (
-                <tr key={j.id} className="cliquable" aria-selected={sel?.id === j.id} onClick={() => setSel(j)}>
-                  <td className="ref">{j.id}</td><td className="ref">{dateHeure(j.horodatage, langue, fuseau)}</td>
-                  <td>{j.utilisateur ? profils[j.utilisateur] ?? '…' : t('journal.systeme')}</td>
-                  <td className="sec">{t(`journal.actions.${j.action}`, { defaultValue: j.action })}</td>
-                  <td className="sec">{t(`tables.${j.table_nom}`, { defaultValue: j.table_nom })}</td><td>{j.motif ?? ''}</td></tr>))}</tbody></table>
-          )}
-        </CadreTableau></div>
-        <aside className="detail">
-          {!sel ? <Vide>{t('journal.choisir')}</Vide> : (<>
-            <div className="surtitre">#{sel.id} · {t(`tables.${sel.table_nom}`, { defaultValue: sel.table_nom })}</div>
-            <dl className="dl"><dt>{t('journal.empreinte')}</dt><dd style={{ wordBreak: 'break-all' }}><code>{sel.empreinte}</code></dd></dl>
-            <div className="section-titre">{t('journal.avant')}</div>
-            <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{sel.avant ? JSON.stringify(sel.avant, null, 2) : '—'}</pre>
-            <div className="section-titre">{t('journal.apres')}</div>
-            <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{sel.apres ? JSON.stringify(sel.apres, null, 2) : '—'}</pre>
-          </>)}
-        </aside>
+      <Entete surtitre={`${t('modules.supervision')} · ${t('journal.non_modifiable')}`} titre={t('journal.titre_court')} />
+      <p className="sec" style={{ marginTop: -8 }}>{t('journal.aide')}</p>
+      {verif ? (verif.premiere_ligne_alteree === null
+        ? <div className="aud-integrite ok"><span className="pt" />{t('journal.integre', { n: verif.lignes_verifiees })}</div>
+        : <Bandeau type="err">{t('journal.chaine_ko', { id: verif.premiere_ligne_alteree })}</Bandeau>)
+        : <Bouton disabled={a.enCours} onClick={() => void verifier()}>{t('journal.verifier')}</Bouton>}
+      <Bandeau type="err">{l.erreur ?? profils.erreur ?? a.erreur}</Bandeau>
+      <div className="aud-filtres">
+        <div className="segment">
+          {['', ...Object.keys(MODULES_AUDIT)].map((m) => <button key={m || 'tous'} type="button" aria-pressed={module === m} disabled={type === 'derogations'} onClick={() => setModule(m)}>{m ? t(`modules.${m}`) : t('journal.tous')}</button>)}
+        </div>
+        <div className="segment">
+          {(['tout', 'validations', 'derogations'] as const).map((x) => <button key={x} type="button" aria-pressed={type === x} onClick={() => setType(x)}>{t(`journal.types.${x}`)}</button>)}
+        </div>
       </div>
+      <div className="aud-recherche">
+        <input className="search" value={q} maxLength={100} placeholder={t('journal.rechercher')} onChange={(e) => setQ(e.target.value)} aria-label={t('journal.rechercher')} />
+        <span className="mute">{t('journal.entrees', { n: liste.length })}</span>
+      </div>
+      <div className="cadre">
+        {l.chargement && !l.data ? <Chargement /> : liste.length === 0 ? <Vide>{t('journal.vide')}</Vide> : (
+          <table className="t aud-table"><thead><tr><th>{t('champs.horodatage')}</th><th>{t('champs.utilisateur')}</th><th>{t('journal.module')}</th><th>{t('champs.action')}</th>
+            <th className="num">{t('journal.empreinte_court')}</th></tr></thead>
+            <tbody>{liste.map((j) => {
+              const derog = j.table_nom === 'derogations';
+              const objet = objetDe(j.apres) ?? objetDe(j.avant);
+              return (
+                <tr key={j.id} className={'cliquable' + (derog ? ' aud-derog' : '')} onClick={() => setSel(j)}>
+                  <td className="ref">{dateHeure(j.horodatage, langue, fuseau)}</td>
+                  <td>{qui(j.utilisateur)}</td>
+                  <td className="aud-module">{t(`modules.${moduleDe(j.table_nom)}`)}</td>
+                  <td><b className={derog ? 'txt-err' : ''}>{action(j)}</b>
+                    {objet && <div className="sec">{objet}</div>}
+                    {j.motif && <div>{t('journal.motif', { m: j.motif })}</div>}</td>
+                  <td className="num ref mute">{j.empreinte.slice(0, 8)}</td>
+                </tr>);
+            })}</tbody></table>
+        )}
+      </div>
+      {sel && (
+        <Tiroir titre={`#${sel.id} · ${action(sel)}`} onClose={() => setSel(null)}>
+          <dl className="dl"><dt>{t('champs.horodatage')}</dt><dd>{dateHeure(sel.horodatage, langue, fuseau)}</dd>
+            <dt>{t('champs.utilisateur')}</dt><dd>{qui(sel.utilisateur)}</dd>
+            <dt>{t('journal.empreinte')}</dt><dd style={{ wordBreak: 'break-all' }}><code>{sel.empreinte}</code></dd></dl>
+          <div className="section-titre">{t('journal.avant')}</div>
+          <pre className="aud-json">{sel.avant ? JSON.stringify(sel.avant, null, 2) : '—'}</pre>
+          <div className="section-titre">{t('journal.apres')}</div>
+          <pre className="aud-json">{sel.apres ? JSON.stringify(sel.apres, null, 2) : '—'}</pre>
+        </Tiroir>
+      )}
     </div>
   );
 }

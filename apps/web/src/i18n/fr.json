@@ -1904,6 +1904,7 @@
    "insert": "Création",
    "update": "Modification"
   },
+  "aide": "Chaque action est horodatée, attribuée à son auteur et chaînée à la précédente. Aucune ligne ne peut être modifiée ni supprimée.",
   "ajout_seul": "ajout seul",
   "apres": "Après",
   "avant": "Avant",
@@ -1911,10 +1912,25 @@
   "chaine_ok": "Chaîne intègre : {{n}} lignes vérifiées.",
   "choisir": "Choisissez une ligne pour voir l'avant et l'après.",
   "empreinte": "Empreinte SHA-256",
+  "empreinte_court": "Empreinte",
+  "entrees": "{{n}} entrée(s)",
   "filtre_table": "Filtrer par objet",
+  "integre": "Intégrité vérifiée · chaîne d'empreintes intacte ({{n}} lignes)",
+  "module": "Module",
+  "motif": "Motif : « {{m}} »",
+  "non_modifiable": "non modifiable",
+  "rechercher": "Filtrer par utilisateur, dossier, action…",
+  "statut_change": "{{objet}} : {{de}} → {{a}}",
   "systeme": "Système",
   "titre": "Journal d'audit à altération détectable",
+  "titre_court": "Journal d'audit",
+  "tous": "Tous",
   "toutes_tables": "Tous les objets",
+  "types": {
+   "derogations": "Dérogations",
+   "tout": "Tout",
+   "validations": "Validations"
+  },
   "verifier": "Vérifier la chaîne d'empreintes",
   "vide": "Aucune ligne."
  },

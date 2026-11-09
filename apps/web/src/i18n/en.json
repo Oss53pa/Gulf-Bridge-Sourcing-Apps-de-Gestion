@@ -1904,6 +1904,7 @@
    "insert": "Creation",
    "update": "Update"
   },
+  "aide": "Every action is time-stamped, attributed to its author and chained to the previous one. No line can be changed or deleted.",
   "ajout_seul": "append-only",
   "apres": "After",
   "avant": "Before",
@@ -1911,10 +1912,25 @@
   "chaine_ok": "Chain intact: {{n}} lines verified.",
   "choisir": "Select a line to see before and after.",
   "empreinte": "SHA-256 hash",
+  "empreinte_court": "Hash",
+  "entrees": "{{n}} entry(ies)",
   "filtre_table": "Filter by object",
+  "integre": "Integrity verified · hash chain intact ({{n}} lines)",
+  "module": "Module",
+  "motif": "Reason: \"{{m}}\"",
+  "non_modifiable": "read-only",
+  "rechercher": "Filter by user, file, action…",
+  "statut_change": "{{objet}}: {{de}} → {{a}}",
   "systeme": "System",
   "titre": "Tamper-evident audit log",
+  "titre_court": "Audit log",
+  "tous": "All",
   "toutes_tables": "All objects",
+  "types": {
+   "derogations": "Waivers",
+   "tout": "Everything",
+   "validations": "Approvals"
+  },
   "verifier": "Verify hash chain",
   "vide": "No line."
  },
