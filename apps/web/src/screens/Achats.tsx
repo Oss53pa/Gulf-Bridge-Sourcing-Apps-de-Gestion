@@ -7,7 +7,7 @@ import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant } from '../lib/format';
 import type { Article, Commande, Compte, Dossier, Fournisseur, Inspection, LigneCommande, Paiement } from '../lib/types';
-import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
+import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { PlisConsultation } from './PlisFournisseurs';
 import { ApprobationEssais } from './ApprobationEssais';
 import { CataloguePieces } from './PiecesRechange';
@@ -322,6 +322,9 @@ export function FicheCommande() {
   const [exec, setExec] = useState<Paiement | null>(null);
   const [motif, setMotif] = useState('');
   const [annuler, setAnnuler] = useState(false);
+  const [onglet, setOnglet] = useState<'dossier' | 'lignes' | 'approbation' | 'paiements' | 'contrat'>('dossier');
+  const phases = useAsync(async () => (c.data ? ok(await supabase.from('dossier_phases').select('phase, ordre, statut, reelle_debut, reelle_fin, prevue_fin')
+    .eq('dossier_id', c.data.dossier_id).order('ordre')) as { phase: string; ordre: number; statut: string; reelle_debut: string | null; reelle_fin: string | null; prevue_fin: string | null }[] : []), [c.data?.dossier_id]);
   const cmd = c.data;
   if (c.chargement) return <div className="screen"><Chargement /></div>;
   if (!cmd) return <div className="screen"><Vide>{c.erreur ?? t('commandes.introuvable')}</Vide></div>;
@@ -342,25 +345,65 @@ export function FicheCommande() {
   const refuserPaiement = async (p: Paiement) => { const m = window.prompt(t('paiements.motif_refus'))?.trim(); if (m && await a.executer(async () => ok(await supabase.rpc('refuser_paiement', { p_paiement: p.id, p_motif: m.slice(0, 1000) })))) recharger(); };
   const fob = Number(cmd.fob_montant);
   const validateur = role === 'admin' || profil?.delegue_validation;
+  const jourISO = new Date().toISOString().slice(0, 10);
+  const enCoursCmd = ['contrat_signe', 'en_production', 'production_terminee'].includes(cmd.statut);
+  const retardJ = enCoursCmd && cmd.date_livraison_promise && cmd.date_livraison_promise < jourISO
+    ? Math.round((Date.parse(jourISO) - Date.parse(cmd.date_livraison_promise)) / 86400000) : 0;
+  const faites = (phases.data ?? []).filter((x) => ['complete', 'validee'].includes(x.statut)).length;
+  const GROUPES: [string, string[]][] = [['A', ['consultation', 'verification', 'mise_en_concurrence', 'devis_mandat']], ['B', ['contrat', 'approbation_technique']],
+    ['C', ['production', 'inspection', 'expedition']], ['D', ['livraison', 'cloture']]];
+  const jjmmaaaa = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : '');
 
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.achats')} · ${dossier.data?.reference ?? ''} · ${t(`modes.${dossier.data?.mode_financier ?? 'accompagne'}`)}`}
-        titre={`${cmd.reference} — ${fournisseurs[cmd.fournisseur_id] ?? ''}`}
+      <Entete surtitre={`${t('modules.achats')} · ${t('commandes.fiche')} · ${cmd.reference} · ${dossier.data?.reference ?? ''} · CMD`}
+        titre={<>{dossier.data?.intitule ?? cmd.reference} <span className="h1-statut"><Statut statut={cmd.statut} libelle={t(`statuts_commande.${cmd.statut}`)} /></span></>}
         actions={<>
-          <Statut statut={cmd.statut} libelle={t(`statuts_commande.${cmd.statut}`)} />
           {ecrit && cmd.statut === 'contrat_signe' && <Bouton variante="primaire" onClick={() => void statut('en_production')}>{t('commandes.lancer_production')}</Bouton>}
           {ecrit && cmd.statut === 'en_production' && <Bouton onClick={() => void statut('production_terminee')}>{t('commandes.production_terminee')}</Bouton>}
           {role === 'admin' && !['annulee', 'livree', 'expediee'].includes(cmd.statut) && <Bouton variante="danger" onClick={() => setAnnuler(true)}>{t('commandes.annuler')}</Bouton>}
         </>} />
+      <div className="sec" style={{ marginTop: -10 }}>{fournisseurs[cmd.fournisseur_id] ?? ''} · {t(`modes.${dossier.data?.mode_financier ?? 'accompagne'}`)}</div>
       <Kpis items={[
-        { lib: t('champs.montant'), val: montant(cmd.montant_marchandise, cmd.devise, langue), sous: `${cmd.incoterm} ${cmd.lieu}` },
-        { lib: t('champs.fob'), val: montant(fob, cmd.devise, langue), sous: t('commandes.base_commission') },
+        { lib: t('commandes.valeur'), val: montant(fob || cmd.montant_marchandise, cmd.devise, langue), sous: `${cmd.incoterm} ${cmd.lieu}` },
+        { lib: t('commandes.prochain_jalon'), val: cmd.date_livraison_promise ? `${cmd.date_livraison_promise.slice(8, 10)}.${cmd.date_livraison_promise.slice(5, 7)}` : '—', sous: t('commandes.livraison_promise') },
+        { lib: t('commandes.retard'), val: t('commandes.jours', { n: retardJ }), sous: retardJ > 0 ? t('commandes.retard_constate') : t('commandes.aucun_retard') },
         { lib: t('commandes.contrat'), texte: true, val: cmd.contrat_valide_le ? t('commandes.signe') : t('commandes.non_signe'), sous: cmd.contrat_signe_le ? `${date(cmd.contrat_signe_le, langue)} · ${t(`modes_contrat.${cmd.contrat_mode}`)}` : t('commandes.verrou1') },
-        { lib: t('commandes.risque'), texte: true, val: cmd.transfert_risque ?? cmd.incoterm, sous: t('commandes.inspection_avant') },
       ]} />
+      <Onglets actif={onglet} onChange={setOnglet} items={[
+        { id: 'dossier', lib: `${t('commandes.o_dossier')} · ${faites}/${(phases.data ?? []).length}` },
+        { id: 'lignes', lib: `${t('commandes.lignes')} · ${(lignes.data ?? []).length}` },
+        { id: 'approbation', lib: t('commandes.o_approbation') },
+        { id: 'paiements', lib: `${t('commandes.o_paiements')} · ${(paiements.data ?? []).length}` },
+        { id: 'contrat', lib: t('commandes.o_contrat') }]} />
       <Bandeau type="err">{a.erreur}</Bandeau>
       <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {onglet === 'dossier' && <>
+          <div className="cmd-plan">
+            {GROUPES.map(([g, codes]) => {
+              const items = (phases.data ?? []).filter((x) => codes.includes(x.phase));
+              if (items.length === 0) return null;
+              return (
+                <div key={g} className="cmd-col">
+                  <div className="cmd-col-tete"><span><b className="bronze">{g}</b> {t(`commandes.groupes.${g}`)}</span>
+                    <span className="mute">{items.filter((x) => ['complete', 'validee'].includes(x.statut)).length}/{items.length}</span></div>
+                  {items.map((x) => (
+                    <div key={x.phase} className={'cmd-pas ' + (['complete', 'validee'].includes(x.statut) ? 'fait' : x.phase === dossier.data?.phase_courante ? 'courant' : '')}>
+                      <span className="ref">{String(x.ordre).padStart(2, '0')}</span>
+                      <span><b>{t(`phases.${x.phase}`)}</b><br /><span className="mute">{['complete', 'validee'].includes(x.statut)
+                        ? (x.reelle_fin ? t('commandes.pas_valide', { d: jjmmaaaa(x.reelle_fin) }) : t('commandes.pas_valide_sans_date')) : x.phase === dossier.data?.phase_courante ? t('commandes.pas_en_cours')
+                          : x.prevue_fin ? t('commandes.pas_prevu', { d: jjmmaaaa(x.prevue_fin) }) : t('commandes.pas_a_venir')}</span></span>
+                    </div>))}
+                </div>);
+            })}
+          </div>
+          {(phases.data ?? []).length > 0 && <div className="cmd-avancement"><span className="surtitre">{t('commandes.avancement')}</span>
+            <b>{Math.round((faites / (phases.data ?? []).length) * 100)} %</b>
+            <span className="cmd-barre"><span style={{ width: `${(faites / (phases.data ?? []).length) * 100}%` }} /></span>
+            <span className="mute">{t('commandes.etapes_validees', { n: faites, total: (phases.data ?? []).length })}</span>
+            <Link className="btn petit" to={`/dossiers/${cmd.dossier_id}`}>{t('commandes.ouvrir_dossier')}</Link></div>}
+        </>}
+        {onglet === 'lignes' && <>
         <section>
           <div className="section-titre">{t('commandes.lignes')}</div>
           <table className="t"><thead><tr><th>{t('champs.article')}</th><th className="num">{t('champs.quantite')}</th><th className="num">{t('commandes.pu')}</th><th className="num">{t('champs.montant')}</th><th>{t('commandes.options')}</th><th /></tr></thead>
@@ -386,9 +429,19 @@ export function FicheCommande() {
           {cmd.approbation_valide_le && <Statut statut="validee" libelle={t('commandes.approbation_ok')} />}
           {cmd.sur_mesure && !cmd.approbation_valide_le && <Statut statut="att" libelle={t('approbation.requise')} />}
         </section>
-        {ecrit && <ApprobationEssais commandeId={cmd.id} dossierId={cmd.dossier_id} statutCommande={cmd.statut} onChange={recharger} />}
-        {cmd.date_livraison_promise && <PenaliteCommande commande={cmd} peutDater={ecrit} onChange={recharger} />}
-        {ecrit && <CataloguePieces dossierId={cmd.dossier_id} fournisseurId={cmd.fournisseur_id} />}
+          {ecrit && <CataloguePieces dossierId={cmd.dossier_id} fournisseurId={cmd.fournisseur_id} />}
+        </>}
+        {onglet === 'approbation' && (ecrit ? <ApprobationEssais commandeId={cmd.id} dossierId={cmd.dossier_id} statutCommande={cmd.statut} onChange={recharger} />
+          : <span className="mute">{t('commandes.reserve_achats')}</span>)}
+        {onglet === 'contrat' && <>
+          <div className="pf-champs" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+            <div><span>{t('commandes.contrat')}</span><b>{cmd.contrat_valide_le ? t('commandes.signe') : t('commandes.non_signe')}</b></div>
+            <div><span>{t('commandes.risque')}</span><b>{cmd.transfert_risque ?? cmd.incoterm}</b></div>
+            <div><span>{t('commandes.livraison_promise')}</span><b>{cmd.date_livraison_promise ? date(cmd.date_livraison_promise, langue) : '—'}</b></div>
+          </div>
+          {cmd.date_livraison_promise ? <PenaliteCommande commande={cmd} peutDater={ecrit} onChange={recharger} /> : <span className="mute">{t('commandes.sans_date_promise')}</span>}
+        </>}
+        {onglet === 'paiements' && <>
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="section-titre">{t('commandes.paiements')}</span>
@@ -420,6 +473,7 @@ export function FicheCommande() {
                 <td><Statut statut={i.statut} libelle={t(`statuts_inspection.${i.statut}`)} /></td></tr>))}</tbody></table>
           )}
         </section>
+        </>}
       </div>
       {contrat && (
         <Tiroir titre={t('commandes.valider_contrat')} onClose={() => setContrat(null)}>

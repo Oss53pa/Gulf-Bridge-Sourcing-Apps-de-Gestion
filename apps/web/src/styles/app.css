@@ -563,6 +563,18 @@ td.retard-txt { color: var(--err); }
 .etapes-pros li { border-top: 3px solid var(--border); padding-top: 6px; font-size: 13px; color: var(--sec); }
 .etapes-pros li span { color: var(--mute); }
 .ao-cal { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.cmd-plan { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--ink); }
+.cmd-col { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-right: 1px solid var(--border); }
+.cmd-col:last-child { border-right: 0; }
+.cmd-col-tete { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+.bronze { color: var(--bronze-text); }
+.cmd-pas { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: var(--r); background: var(--white); font-size: 13px; }
+.cmd-pas.fait { border-left-color: var(--ink); }
+.cmd-pas.courant { border-color: var(--bronze); border-left-color: var(--bronze); }
+.cmd-pas.courant .ref, .cmd-pas.courant b { color: var(--bronze-text); }
+.cmd-avancement { display: grid; grid-template-columns: auto auto minmax(120px, 1fr) auto auto; gap: 16px; align-items: center; border-top: 1px solid var(--border); padding-top: 12px; }
+.cmd-avancement b { font-family: var(--serif); font-size: 30px; font-weight: 400; }
+@media (max-width: 900px) { .cmd-plan { grid-template-columns: 1fr 1fr; } .cmd-avancement { grid-template-columns: 1fr; } }
 .cmd-etape { display: flex; flex-direction: column; gap: 3px; min-width: 180px; }
 .cmd-barre { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
 .cmd-barre span { display: block; height: 100%; background: var(--bronze); }
