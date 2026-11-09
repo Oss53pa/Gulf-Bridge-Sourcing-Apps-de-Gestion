@@ -45,6 +45,7 @@ export const ECRANS: Ecran[] = [
   { id: 'consultations_clients', chemin: '/consultations', module: 'commercial', section: 'affaires', roles: ['admin', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'nouvelle_consultation', chemin: '/consultations/nouvelle', module: 'commercial', section: 'affaires', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 0 },
   { id: 'appels_offres', chemin: '/appels-offres', module: 'commercial', section: 'appels_offres', roles: ['admin', 'hub_afrique'], lot: 2 },
+  { id: 'fiches_reference', chemin: '/fiches-reference', module: 'commercial', section: 'appels_offres', roles: ['admin', 'hub_afrique'], lot: 2 },
   { id: 'portefeuille', chemin: '/dossiers', module: 'dossiers', section: 'portefeuille', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'nouveau_dossier', chemin: '/dossiers/nouveau', module: 'dossiers', section: 'portefeuille', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 0 },
   { id: 'mes_taches', chemin: '/mes-taches', module: 'dossiers', section: 'suivi', roles: TOUS, lot: 1 },
@@ -106,7 +107,7 @@ export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacriti
 /** Codes d'écran (« T-codes ») : saisis dans la recherche du Sommaire, Entrée ouvre l'écran. */
 export const TCODES: Record<string, string> = {
   tableau: 'TDB', rentabilite: 'RNT', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
-  appels_offres: 'AOF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
+  appels_offres: 'AOF', fiches_reference: 'REF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
   articles: 'ART', consultations: 'MEC', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
   expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
   rapprochement: 'BNK', flux: 'FLX', tresorerie: 'TRC', commissions: 'COM', notes_frais: 'NDF', messagerie: 'MSG', parametrage: 'PAR',
