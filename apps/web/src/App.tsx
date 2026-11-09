@@ -13,6 +13,7 @@ import type { ReactNode } from 'react';
 import { useAuth } from './lib/auth';
 import { configurationOk } from './lib/supabase';
 import { accueil, ecranAutorise, ROLES_INTERNES } from './lib/droits';
+import { PiecesManquantes, PointsBloquants } from './screens/SuiviDossiers';
 import { Coque } from './components/Coque';
 import { AccesReserve, Chargement } from './components/ui';
 import { ConfigurationManquante, Connexion, SansRole } from './screens/Connexion';
@@ -66,6 +67,8 @@ export function App() {
             <Route path="/dossiers/nouveau" element={g('nouveau_dossier', <NouveauDossier />)} />
             <Route path="/dossiers/:id" element={g('portefeuille', <FicheDossier />)} />
             <Route path="/mes-taches" element={g('mes_taches', <MesTaches />)} />
+            <Route path="/pieces-manquantes" element={g('pieces_manquantes', <PiecesManquantes />)} />
+            <Route path="/points-bloquants" element={g('points_bloquants', <PointsBloquants />)} />
             <Route path="/notes-frais" element={g('notes_frais', <NotesFrais />)} />
             <Route path="/rentabilite" element={g('rentabilite', <Rentabilite />)} />
             <Route path="/prospection" element={g('prospection', <Prospection />)} />

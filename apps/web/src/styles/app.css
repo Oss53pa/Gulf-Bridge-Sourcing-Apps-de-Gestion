@@ -188,7 +188,7 @@ button[data-gen]::after, [role="tab"][data-gen]::after { color: inherit; opacity
 .topbar button:not(.tb-retour)[data-gen]::after { display: none; }
 th[data-gen] { white-space: normal; }
 .statut[data-gen]::after { white-space: nowrap; }
-table.t .btn.petit[data-gen]::after { display: none; }
+table.t .btn.petit[data-gen]::after, .tache-act .btn[data-gen]::after { display: none; }
 .tb-titre .l1[data-gen]::after { white-space: nowrap; }
 @media (max-width: 1180px) { .topbar [data-gen]::after { display: none !important; } }
 @media print { [data-gen]::after { display: none !important; } }
@@ -449,3 +449,33 @@ table.t tr.phase-courante td:first-child { color: var(--bronze-text); }
 .ligne-montant { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
 .ligne-montant b { font-weight: 500; white-space: nowrap; }
 @media (max-width: 1100px) { .fiche-grille { grid-template-columns: 1fr; } .frise { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Mes tâches (maquette) : lignes groupées, case ronde à cocher. */
+.taches-groupe { display: flex; flex-direction: column; margin-bottom: 14px; }
+.taches-groupe > .surtitre { padding: 10px 0 6px; border-bottom: 1px solid var(--border); margin: 0; }
+.tache { display: grid; grid-template-columns: 28px minmax(0, 1fr) 130px 70px 50px 96px; align-items: center; gap: 12px;
+  min-height: 52px; padding: 4px 10px; border-bottom: 1px solid var(--sable); }
+.tache:hover { background: var(--sable); }
+.tache-case { width: 18px; height: 18px; border-radius: 999px; border: 1.5px solid var(--strong); background: transparent; cursor: pointer; padding: 0; }
+.tache-case:hover { border-color: var(--ok); background: var(--ok-bg); }
+.tache-case.vide { border-style: dashed; cursor: default; }
+.tache-case.coche { border-color: var(--ok); background: var(--ok); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+.tache.faite .tache-lib { text-decoration: line-through; color: var(--sec); }
+.tache-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tache-lib { font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.tache-urgent { width: 6px; height: 6px; border-radius: 99px; background: var(--err); flex: none; }
+.tache-date { font-size: 13px; }
+.tache-date.retard { color: var(--err); font-weight: 500; }
+.tache-act { display: flex; justify-content: flex-end; }
+@media (max-width: 760px) { .tache { grid-template-columns: 28px minmax(0, 1fr) 60px 90px; } .tache-nat, .tache-qui { display: none; } }
+
+/* Pièces manquantes et points bloquants */
+table.t tr.bloque td:first-child { box-shadow: inset 3px 0 0 var(--err); }
+td.retard-txt { color: var(--err); }
+.escalade { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.escalade li { display: flex; gap: 10px; align-items: flex-start; }
+.escalade li > span:last-child { display: flex; flex-direction: column; }
+.escalade b { font-weight: 500; }
+.escalade .pastille { width: 22px; height: 22px; border-radius: 99px; background: var(--border); color: var(--sec); font-size: 12px; display: flex; align-items: center; justify-content: center; flex: none; }
+.escalade li.atteint .pastille { background: var(--ink); color: var(--bg); }
+.escalade li.atteint:last-child .pastille { background: var(--bronze); }
