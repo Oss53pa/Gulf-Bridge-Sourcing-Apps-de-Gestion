@@ -18,6 +18,7 @@ export interface FicheNcData {
   gravite: 'critique' | 'majeur' | 'mineur'; description: string; photos: string[]; correction: string | null; delai: string | null;
   statut: 'ouverte' | 'corrigee' | 'close'; preuve: string | null; photos_correction: string[]; corrigee_le: string | null;
   contre_inspection_id: string | null; motif_cloture: string | null; hors_delai: boolean | null; close_le: string | null; cree_le: string;
+  libelle_client: string | null; libelle_client_le: string | null;
 }
 interface Qualite { fournisseur_id: string; fournisseur: string; nc_12_mois: number; nc_ouvertes: number; nc_en_retard: number; critiques_12_mois: number; note_qualite: number }
 type Filtre = 'a_traiter' | 'en_retard' | 'toutes';
@@ -115,7 +116,7 @@ export function FicheNcContenu({ id, onChange }: { id: string; onChange: () => v
     return ok(await r) as { id: string; reference: string; date_realisee: string | null; decision_proposee: string | null }[];
   }, [x?.id, x?.statut]);
   const a = useAction();
-  const [f, setF] = useState({ correction: '', delai: '', preuve: '', contre: '', motif: '' });
+  const [f, setF] = useState({ correction: '', delai: '', preuve: '', contre: '', motif: '', libelle: '' });
   const [photos, setPhotos] = useState<string[]>([]);
   const apres = () => { void n.recharger(); onChange(); };
   const exiger = async () => {
@@ -129,6 +130,12 @@ export function FicheNcContenu({ id, onChange }: { id: string; onChange: () => v
       .safeParse({ p_nc: id, p_preuve: f.preuve, p_photos: photos });
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.rpc('declarer_correction_nc', v.data)))) { setPhotos([]); apres(); }
+  };
+  const publier = async (retirer: boolean) => {
+    const v = z.object({ p_nc: z.string().uuid(), p_libelle: z.string().trim().min(10).max(1000).nullable() }).strict()
+      .safeParse({ p_nc: id, p_libelle: retirer ? null : f.libelle });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('publier_nc_client', v.data)))) { setF((g) => ({ ...g, libelle: '' })); apres(); }
   };
   const clore = async () => {
     const v = z.object({ p_nc: z.string().uuid(), p_contre_inspection: z.string().uuid().nullable(), p_motif: z.string().trim().max(1000).nullable() }).strict()
@@ -177,6 +184,17 @@ export function FicheNcContenu({ id, onChange }: { id: string; onChange: () => v
           <Champ label={t('champs.commentaire')}><input maxLength={1000} value={f.motif} onChange={(e) => setF({ ...f, motif: e.target.value })} /></Champ>
           <p className="mute">{t('nc.aide_cloture')}</p>
           <Bouton variante="primaire" disabled={a.enCours} onClick={() => void clore()}>{t('inspections.clore_nc')}</Bouton>
+        </>}
+        <div className="section-titre">{t('nc.libelle_client')}</div>
+        {x.libelle_client ? <p>{x.libelle_client}<br /><span className="mute">{t('nc.publie_le', { d: date(x.libelle_client_le, langue) })}</span></p>
+          : <p className="mute">{t('nc.non_publie')}</p>}
+        {agit && <>
+          <Champ label={x.libelle_client ? t('nc.remplacer_libelle') : t('nc.libelle_client')}><textarea rows={2} maxLength={1000} value={f.libelle} onChange={(e) => setF({ ...f, libelle: e.target.value })} /></Champ>
+          <p className="mute">{t('nc.aide_libelle_client')}</p>
+          <div className="actions">
+            <Bouton disabled={a.enCours || f.libelle.trim().length < 10} onClick={() => void publier(false)}>{t('nc.publier_client')}</Bouton>
+            {x.libelle_client && <Bouton disabled={a.enCours} onClick={() => void publier(true)}>{t('nc.retirer_client')}</Bouton>}
+          </div>
         </>}
         {x.statut === 'close' && <p className="mute">{t('nc.close_le', { date: date(x.close_le, langue) })}{x.hors_delai ? ` · ${t('nc.hors_delai')}` : ''}{x.motif_cloture ? ` · ${x.motif_cloture}` : ''}</p>}
       </>}

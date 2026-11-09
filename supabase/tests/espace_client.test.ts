@@ -27,8 +27,10 @@ describe('Espace client', () => {
     await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.admin_compte_client($1, $2, 'directeur')`, [u, m.clientCI]);
     await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.admin_definir_profil($1, 'client', '{}')`, [u]);
     await db.query(`select gbs.admin_compte_client($1, $2, 'valideur')`, [u, m.clientCI]);
-    // Le client se connecte (sans double facteur, comme les autres comptes externes aujourd'hui).
+    // Sans double facteur : aucun accès au portail.
     await as(db, u, 'aal1');
+    await expectError(db, '42501', `select gbs.espace_client()`);
+    await as(db, u);
     const e = (await one(db, `select gbs.espace_client() e`)).e;
     expect(e.dossiers.map((x: any) => x.id)).toEqual([d]);
     const c = (await one(db, `select gbs.espace_client_dossier($1) c`, [d])).c;
@@ -48,7 +50,7 @@ describe('Espace client', () => {
     const u = await compte(db, 'yao');
     await as(db, m.admin);
     await db.query(`select gbs.admin_compte_client($1, $2, 'demandeur')`, [u, m.clientCI]);
-    await as(db, u, 'aal1');
+    await as(db, u);
     await expectError(db, '42501', `update gbs.profils set client_id = $2 where id = $1`, [u, m.clientGA]);
     await expectError(db, '42501', `update gbs.profils set sous_role = 'valideur' where id = $1`, [u]);
     await as(db, m.hub);
@@ -74,11 +76,21 @@ describe('Espace client', () => {
     const i2 = (await one(db, `insert into gbs.inspections (commande_id, type, inspecteur_id, taille_lot) values ($1, 'en_production', $2, 1200) returning id`, [c, m.inspecteur])).id;
     await as(db, m.inspecteur);
     await db.query(`update gbs.inspections set statut = 'realisee', date_realisee = current_date, defauts_critiques = 1 where id = $1`, [i2]);
-    await db.query(`insert into gbs.non_conformites (inspection_id, gravite, description) values ($1, 'majeur', 'Émail écaillé sur les bords')`, [i2]);
+    const nc = (await one(db, `insert into gbs.non_conformites (inspection_id, gravite, description) values ($1, 'majeur', 'Fournisseur négligent, émail écaillé') returning id`, [i2])).id;
     const u = await compte(db, 'ama');
     await as(db, m.admin);
     await db.query(`select gbs.admin_compte_client($1, $2, 'technique')`, [u, m.clientCI]);
-    await as(db, u, 'aal1');
+    await as(db, u);
+    expect((await one(db, `select gbs.espace_client_dossier($1) c`, [d])).c.production.non_conformites).toEqual([]);
+    // Libellé client : publié par la qualité seulement, jamais écrit directement.
+    await as(db, m.achats);
+    await expectError(db, 'GBS_VALIDATION_RPC', `update gbs.non_conformites set libelle_client = 'Joint de hublot à reprendre' where id = $1`, [nc]);
+    await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.publier_nc_client($1, 'court')`, [nc]);
+    await as(db, m.hub);
+    await expectError(db, '42501', `select gbs.publier_nc_client($1, 'Émail à reprendre sur une unité')`, [nc]);
+    await as(db, m.achats);
+    await db.query(`select gbs.publier_nc_client($1, 'Émail à reprendre sur une unité')`, [nc]);
+    await as(db, u);
     const p = (await one(db, `select gbs.espace_client_dossier($1) c`, [d])).c.production;
     expect(p.commandes).toHaveLength(1);
     expect(p.commandes[0].fabricant).toBeTruthy();
@@ -87,7 +99,8 @@ describe('Espace client', () => {
     const valide = p.inspections.find((x: any) => x.statut === 'validee');
     expect(valide).toMatchObject({ decision: 'liberation', defauts: { critiques: 0, majeurs: 2, mineurs: 1 } });
     expect(p.inspections.find((x: any) => x.statut === 'realisee')).toMatchObject({ decision: null, defauts: null });
-    expect(p.non_conformites).toEqual([expect.objectContaining({ gravite: 'majeur', statut: 'ouverte' })]);
+    expect(p.non_conformites).toEqual([expect.objectContaining({ gravite: 'majeur', statut: 'ouverte', libelle: 'Émail à reprendre sur une unité' })]);
+    expect(JSON.stringify(p)).not.toMatch(/négligent/);
     const pn = (await one(db, `select gbs.espace_client_dossier($1) c`, [n])).c.production;
     expect(pn.commandes[0].fabricant).toBeNull();
   }));

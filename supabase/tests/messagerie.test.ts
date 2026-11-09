@@ -27,7 +27,7 @@ describe('Messagerie', () => {
     await as(db, m.achats);
     const fFrn = await fil(db, { audience: 'fournisseur', commande_id: c, categorie: 'qualite' });
     // Le client voit son fil, répond, mais ne voit ni le fil interne ni le fil fournisseur.
-    await as(db, cli, 'aal1');
+    await as(db, cli);
     expect((await rows(db, `select id from gbs.mes_fils()`)).map((x) => x.id)).toEqual([fClient]);
     await db.query(`select gbs.envoyer_message($1, 'Merci, bien reçu.')`, [fClient]);
     await expectError(db, '42501', `select gbs.envoyer_message($1, 'Indiscret')`, [fInterne]);
@@ -35,7 +35,7 @@ describe('Messagerie', () => {
     await expectError(db, '42501', `select gbs.creer_fil($1)`, [JSON.stringify({ audience: 'interne', dossier_id: d, sujet: 'Tentative', message: 'x' })]);
     expect((await rows(db, `select id from gbs.messages`)).length).toBe(2);
     // Le fournisseur voit son fil seulement.
-    await as(db, frn, 'aal1');
+    await as(db, frn);
     expect((await rows(db, `select id from gbs.mes_fils()`)).map((x) => x.id)).toEqual([fFrn]);
     await expectError(db, '42501', `select * from gbs.messages_du_fil($1)`, [fClient]);
     // L'équipe : le Hub ne voit pas le fil fournisseur ; les achats si.

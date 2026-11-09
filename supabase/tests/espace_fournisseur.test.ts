@@ -29,6 +29,8 @@ describe('Espace fournisseur', () => {
     // Les achats ne transforment pas un compte interne en compte fournisseur.
     await expectError(db, '42501', `select gbs.admin_compte_fournisseur($1, $2, 'finance')`, [m.comptable, m.fournisseur]);
     await as(db, u, 'aal1');
+    await expectError(db, '42501', `select gbs.espace_fournisseur()`);
+    await as(db, u);
     const e = (await one(db, `select gbs.espace_fournisseur() e`)).e;
     expect(e.commandes.length).toBe(1);
     expect(e.commandes[0].lignes[0]).toMatchObject({ quantite: 6, prix_unitaire: 23000 });
@@ -40,7 +42,7 @@ describe('Espace fournisseur', () => {
     expect(texte).not.toContain(d);
     for (const c of e.comptes) expect(c.fin_numero.length).toBeLessThanOrEqual(4);
     // Aucune lecture directe des tables internes.
-    await as(db, u, 'aal1');
+    await as(db, u);
     expect((await db.query(`select id from gbs.commandes`)).rows).toEqual([]);
     expect((await db.query(`select id from gbs.fournisseurs`)).rows).toEqual([]);
     await expectError(db, '42501', `select gbs.espace_client()`);
@@ -52,7 +54,7 @@ describe('Espace fournisseur', () => {
     const u = await compte(db, 'li');
     await as(db, m.admin);
     await db.query(`select gbs.admin_compte_fournisseur($1, $2, 'qualite')`, [u, m.fournisseur]);
-    await as(db, u, 'aal1');
+    await as(db, u);
     await expectError(db, '42501', `update gbs.profils set fournisseur_id = $2 where id = $1`, [u, autre]);
     await as(db, m.achats);
     await expectError(db, '42501', `select gbs.espace_fournisseur()`);

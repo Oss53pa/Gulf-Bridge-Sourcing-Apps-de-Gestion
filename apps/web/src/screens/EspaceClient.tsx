@@ -29,7 +29,7 @@ interface Contenu {
     commandes: { reference: string; statut: string; fabricant: string | null; produits: { designation: string; quantite: number }[] }[];
     inspections: { reference: string | null; type: string; produit: string | null; date_prevue: string | null; date_realisee: string | null; statut: string;
       decision: string | null; defauts: { critiques: number; majeurs: number; mineurs: number } | null }[];
-    non_conformites: { reference: string | null; gravite: string; description: string; correction: string | null; statut: string; delai: string | null }[];
+    non_conformites: { reference: string | null; gravite: string; libelle: string; statut: string; delai: string | null }[];
   };
   factures: { numero: string | null; objet: string; type: string; date_emission: string | null; echeance: string | null; devise: string; ttc: number; net_a_payer: number; encaisse: number; statut: string }[];
 }
@@ -128,7 +128,7 @@ export function EspaceClient() {
             {x.production.non_conformites.length === 0 ? <Vide>{t('portail.aucune_nc')}</Vide> : (
               <table className="t"><tbody>{x.production.non_conformites.map((nc, n) => <tr key={(nc.reference ?? '') + n}>
                 <td><Statut statut={nc.gravite === 'critique' ? 'err' : nc.gravite === 'majeur' ? 'att' : 'neutre'} libelle={t(`gravites.${nc.gravite}`)} /></td>
-                <td>{nc.description}{nc.correction && <div className="sec">{t('portail.correction')} : {nc.correction}</div>}<div className="mute ref">{nc.reference ?? ''}</div></td>
+                <td>{nc.libelle}<div className="mute ref">{nc.reference ?? ''}</div></td>
                 <td className="ref">{nc.delai ? date(nc.delai, langue) : '—'}</td>
                 <td><Statut statut={nc.statut === 'ouverte' ? 'att' : 'ok'} libelle={t(`statuts_nc.${nc.statut}`)} /></td></tr>)}</tbody></table>)}
           </>}
