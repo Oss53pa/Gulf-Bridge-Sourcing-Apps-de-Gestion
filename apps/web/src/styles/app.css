@@ -563,6 +563,12 @@ td.retard-txt { color: var(--err); }
 .etapes-pros li { border-top: 3px solid var(--border); padding-top: 6px; font-size: 13px; color: var(--sec); }
 .etapes-pros li span { color: var(--mute); }
 .ao-cal { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.ref-grille.prix-grille { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+.prix-grille td .statut { white-space: nowrap; }
+.prix-grille td:first-child { min-width: 240px; }
+.prix-barres { display: flex; align-items: flex-end; gap: 24px; min-height: 170px; border-bottom: 1px solid var(--ink); padding: 8px 4px 0; overflow-x: auto; }
+.prix-barre { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; }
+.prix-col { width: 40px; background: var(--ink); display: block; }
 .cmd-plan { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--ink); }
 .cmd-col { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-right: 1px solid var(--border); }
 .cmd-col:last-child { border-right: 0; }

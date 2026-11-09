@@ -59,6 +59,7 @@ export const ECRANS: Ecran[] = [
   { id: 'fournisseurs', chemin: '/fournisseurs', module: 'achats', section: 'fournisseurs', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
   { id: 'articles', chemin: '/articles', module: 'achats', section: 'fournisseurs', roles: TOUS, lot: 0 },
   { id: 'consultations', chemin: '/mise-en-concurrence', module: 'achats', section: 'consultation', roles: ['admin', 'achats_chine'], lot: 0 },
+  { id: 'historique_prix', chemin: '/historique-prix', module: 'achats', section: 'consultation', roles: ['admin', 'achats_chine'], lot: 0 },
   { id: 'commandes', chemin: '/commandes', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
   { id: 'approbation', chemin: '', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine'], lot: 1 },
   { id: 'inspections', chemin: '/inspections', module: 'qualite', section: 'controles', roles: ['admin', 'achats_chine', 'inspecteur'], lot: 0 },
@@ -108,7 +109,7 @@ export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacriti
 export const TCODES: Record<string, string> = {
   tableau: 'TDB', rentabilite: 'RNT', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
   appels_offres: 'AOF', fiches_reference: 'REF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
-  articles: 'ART', consultations: 'MEC', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
+  articles: 'ART', consultations: 'MEC', historique_prix: 'PRX', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
   expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
   rapprochement: 'BNK', flux: 'FLX', tresorerie: 'TRC', commissions: 'COM', notes_frais: 'NDF', messagerie: 'MSG', parametrage: 'PAR',
 };

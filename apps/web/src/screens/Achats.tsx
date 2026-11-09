@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { date, dateHeure, montant } from '../lib/format';
+import { date, dateHeure, montant, nombre } from '../lib/format';
+import { normaliser } from '../lib/droits';
 import type { Article, Commande, Compte, Dossier, Fournisseur, Inspection, LigneCommande, Paiement } from '../lib/types';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { PlisConsultation } from './PlisFournisseurs';
@@ -596,5 +597,88 @@ function ExecuterPaiement({ paiement, dossierId, onClose, onOk }: { paiement: Pa
       <Bandeau type="err">{a.erreur}</Bandeau>
       <Bouton variante="primaire" disabled={a.enCours} onClick={() => void envoyer()}>{t('commun.valider')}</Bouton>
     </Tiroir>
+  );
+}
+
+interface PrixReleve {
+  id: string; article_id: string; prix_unitaire: number; quantite: number; reassort: boolean; cree_le: string;
+  commandes: { reference: string | null; fournisseur_id: string; devise: string; incoterm: string; lieu: string; statut: string; contrat_signe_le: string | null } | null;
+}
+
+/** Historique des prix par produit et par fournisseur (maquette PRX), à partir des lignes de commande. */
+export function HistoriquePrix() {
+  const { t } = useTranslation();
+  const nav = useNavigate();
+  const { langue } = useAuth();
+  const fournisseurs = useNoms('fournisseurs');
+  const [q, setQ] = useState('');
+  const [sel, setSel] = useState<string | null>(null);
+  const l = useAsync(async () => ok(await supabase.from('lignes_commande')
+    .select('id, article_id, prix_unitaire, quantite, reassort, cree_le, commandes(reference, fournisseur_id, devise, incoterm, lieu, statut, contrat_signe_le)')
+    .order('cree_le', { ascending: true }).limit(5000)) as unknown as PrixReleve[], []);
+  const arts = useAsync(async () => ok(await supabase.from('articles').select('id, reference, designation, designation_zh, categorie, unite')) as Article[], []);
+  const fos = useAsync(async () => ok(await supabase.from('fournisseurs').select('id, statut_agrement')) as { id: string; statut_agrement: string }[], []);
+  const releves = (l.data ?? []).filter((x) => x.commandes && x.commandes.statut !== 'annulee');
+  const dateRel = (x: PrixReleve) => (x.commandes?.contrat_signe_le ?? x.cree_le).slice(0, 10);
+  const produits = (arts.data ?? []).map((a) => {
+    const rs = releves.filter((x) => x.article_id === a.id).sort((x, y) => dateRel(x).localeCompare(dateRel(y)));
+    const dernier = rs[rs.length - 1], precedent = rs[rs.length - 2];
+    const ecart = dernier && precedent && precedent.commandes?.devise === dernier.commandes?.devise && Number(precedent.prix_unitaire) > 0
+      ? (Number(dernier.prix_unitaire) - Number(precedent.prix_unitaire)) / Number(precedent.prix_unitaire) : null;
+    const agree = dernier ? (fos.data ?? []).find((f) => f.id === dernier.commandes?.fournisseur_id)?.statut_agrement === 'agree' : false;
+    return { a, rs, dernier, ecart, reassort: Boolean(dernier) && agree };
+  }).filter((p) => p.rs.length > 0);
+  const n = normaliser(q.trim());
+  const liste = produits.filter((p) => !n || normaliser(`${p.a.designation} ${p.a.designation_zh ?? ''} ${p.a.categorie} ${fournisseurs[p.dernier?.commandes?.fournisseur_id ?? ''] ?? ''}`).includes(n));
+  const x = liste.find((p) => p.a.id === sel) ?? liste[0] ?? null;
+  const reassortables = produits.filter((p) => p.reassort).length;
+  const mmaaaa = (d: string) => `${d.slice(5, 7)}.${d.slice(0, 4)}`;
+  const maxPrix = x ? Math.max(...x.rs.map((r) => Number(r.prix_unitaire))) : 0;
+  return (
+    <div className="screen">
+      <Entete surtitre={`${t('modules.achats')} · ${t('prix.surtitre')} · PRX`} titre={l.data ? t('prix.titre', { n: reassortables }) : t('ecrans.historique_prix')}
+        actions={<input className="pf-recherche" placeholder={t('prix.filtrer')} value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} aria-label={t('prix.filtrer')} />} />
+      <Bandeau type="err">{l.erreur ?? arts.erreur ?? fos.erreur}</Bandeau>
+      <div className="ref-grille prix-grille">
+        <div className="cadre">
+          {l.chargement && !l.data ? <Chargement /> : liste.length === 0 ? <Vide>{t('prix.aucun')}</Vide> : (
+            <table className="t"><thead><tr><th>{t('prix.produit')}</th><th>{t('prix.dernier_fournisseur')}</th><th className="num">{t('prix.dernier_prix')}</th>
+              <th className="num">{t('prix.ecart')}</th><th>{t('prix.reassort')}</th></tr></thead>
+              <tbody>{liste.map((p) => (
+                <tr key={p.a.id} className={'cliquable' + (x?.a.id === p.a.id ? ' choisi' : '')} onClick={() => setSel(p.a.id)}>
+                  <td><div style={{ fontWeight: 500 }}>{p.a.designation}{p.a.designation_zh && <span className="mute"> · {p.a.designation_zh}</span>}</div>
+                    <div className="mute">{p.a.categorie} · {t('prix.n_releves', { n: p.rs.length })}</div></td>
+                  <td>{fournisseurs[p.dernier?.commandes?.fournisseur_id ?? ''] ?? '—'}</td>
+                  <td className="num">{p.dernier ? nombre(Number(p.dernier.prix_unitaire), langue, Number(p.dernier.prix_unitaire) < 100 ? 2 : 0) : '—'}</td>
+                  <td className={'num ' + (p.ecart === null ? 'mute' : p.ecart > 0 ? 'txt-err' : 'txt-ok')}>{p.ecart === null ? '—' : `${p.ecart > 0 ? '+' : ''}${nombre(p.ecart * 100, langue, 1)} %`}</td>
+                  <td>{p.reassort ? <Statut statut="ok" libelle={t('prix.reassort_possible')} /> : <Statut statut="neutre" libelle={t('prix.nouvelle_consultation')} />}</td>
+                </tr>))}</tbody></table>
+          )}
+        </div>
+        {x && (
+          <div className="ref-detail">
+            <div className="mute">{x.a.categorie} · {x.dernier?.commandes?.devise} / {x.a.unite}</div>
+            <div className="cons-action">{x.a.designation}</div>
+            <div className="prix-barres" role="img" aria-label={t('prix.graphique', { n: x.rs.length })}>
+              {x.rs.map((r) => (
+                <div key={r.id} className="prix-barre">
+                  <span className="ref">{nombre(Number(r.prix_unitaire), langue, Number(r.prix_unitaire) < 100 ? 2 : 0)}</span>
+                  <span className="prix-col" style={{ height: `${maxPrix ? Math.max(8, (Number(r.prix_unitaire) / maxPrix) * 120) : 8}px` }} />
+                  <span className="mute">{mmaaaa(dateRel(r))}</span>
+                </div>))}
+            </div>
+            {[...x.rs].reverse().map((r) => (
+              <div key={r.id} className="ligne-montant">
+                <span><span className="ref">{mmaaaa(dateRel(r))}</span> · <b>{fournisseurs[r.commandes?.fournisseur_id ?? ''] ?? '—'}</b><br />
+                  <span className="mute">{r.commandes?.reference} · {r.commandes?.incoterm} {r.commandes?.lieu}{r.reassort ? ` · ${t('prix.en_reassort')}` : ''}</span></span>
+                <b>{nombre(Number(r.prix_unitaire), langue, Number(r.prix_unitaire) < 100 ? 2 : 0)} {r.commandes?.devise}</b>
+              </div>))}
+            <p className="mute" style={{ margin: 0 }}>{x.reassort ? t('prix.aide_reassort') : t('prix.aide_consultation')}</p>
+            <Bouton variante={x.reassort ? 'primaire' : undefined} data-sans-glose style={{ width: '100%', justifyContent: 'center' }}
+              onClick={() => nav(x.reassort ? '/commandes' : '/mise-en-concurrence')}>{x.reassort ? t('prix.commander_reassort') : t('prix.lancer_consultation')}</Bouton>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
