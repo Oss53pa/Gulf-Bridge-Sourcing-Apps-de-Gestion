@@ -77,6 +77,7 @@ export const ECRANS: Ecran[] = [
   { id: 'paiements', chemin: '/paiements', module: 'finance', section: 'facturation', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
   { id: 'rapprochement', chemin: '/rapprochement', module: 'finance', section: 'facturation', roles: ['admin', 'comptable'], lot: 1 },
   { id: 'flux', chemin: '/flux', module: 'finance', section: 'tresorerie', roles: ['admin', 'comptable', 'hub_afrique', 'agent_pays'], lot: 0 },
+  { id: 'garanties', chemin: '/garanties', module: 'finance', section: 'tresorerie', roles: ['admin', 'comptable', 'hub_afrique'], lot: 2 },
   { id: 'tresorerie', chemin: '', module: 'finance', section: 'tresorerie', roles: ['admin', 'comptable'], lot: 2 },
   { id: 'commissions', chemin: '/commissions', module: 'finance', section: 'partage', roles: ['admin', 'comptable', 'agent_pays'], lot: 1 },
   { id: 'notes_frais', chemin: '/notes-frais', module: 'finance', section: 'partage', roles: TOUS, lot: 1 },
@@ -113,7 +114,7 @@ export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacriti
 
 /** Codes d'écran (« T-codes ») : saisis dans la recherche du Sommaire, Entrée ouvre l'écran. */
 export const TCODES: Record<string, string> = {
-  tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', documents: 'DOC', sav: 'SAV', stock: 'STK', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
+  tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', garanties: 'GAR', documents: 'DOC', sav: 'SAV', stock: 'STK', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
   appels_offres: 'AOF', fiches_reference: 'REF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
   articles: 'ART', consultations: 'MEC', historique_prix: 'PRX', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
   expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
