@@ -7,9 +7,30 @@
 // - erreurs génériques ; ni corps, ni adresse, ni donnée personnelle dans les journaux.
 import { createClient } from 'npm:@supabase/supabase-js@2.46.1';
 import { adresseClient, Limiteur } from '../_shared/suivi.ts';
-import { CORPS_MAX, empreinteIp, lireDemande, signatureValide } from '../_shared/demande.ts';
+import { avisNouvelleDemande, CORPS_MAX, destinataires, empreinteIp, lireDemande, signatureValide } from '../_shared/demande.ts';
 
 const SECRET = Deno.env.get('GBS_SITE_SECRET') ?? '';
+// Avis sans donnée personnelle à l'équipe (Resend) : désactivé si aucun destinataire n'est configuré.
+const AVIS_A = destinataires(Deno.env.get('GBS_AVIS_DEMANDE_A'));
+const AVIS_DE = Deno.env.get('GBS_AVIS_DEMANDE_DE') ?? 'Gulf Bridge Sourcing <notifications@atlas-studio.org>';
+const APP_URL = (Deno.env.get('GBS_APP_URL') ?? 'https://gbs.gulfbridgesourcing.com').replace(/\/$/, '');
+const RESEND = Deno.env.get('RESEND_API_KEY') ?? '';
+
+async function aviser(service: ReturnType<typeof createClient>, prospect: string) {
+  if (AVIS_A.length === 0 || !RESEND) return;
+  try {
+    const { data } = await service.from('prospects').select('reference, pays, specialite').eq('id', prospect).single();
+    if (!data) return;
+    const a = avisNouvelleDemande({ ...(data as { reference: string; pays: string; specialite: string }), lien: `${APP_URL}/prospection/${prospect}` });
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST', headers: { Authorization: `Bearer ${RESEND}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: AVIS_DE, to: AVIS_A, subject: a.sujet, html: a.html, text: a.texte }),
+    });
+    if (!r.ok) console.error(`demande: avis non envoyé (${r.status})`);
+  } catch {
+    console.error('demande: avis non envoyé');
+  }
+}
 const limiteur = new Limiteur(Number(Deno.env.get('GBS_DEMANDE_LIMITE_MINUTE') ?? '60'), 60_000);
 const entetes = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
 const repondre = (status: number, corps: unknown) => new Response(JSON.stringify(corps), { status, headers: entetes });
@@ -54,5 +75,7 @@ Deno.serve(async (req) => {
       if (j.error) console.error('demande: echec de rattachement des fichiers');
     }
   }
+  // La demande est enregistrée : l'échec de l'avis est journalisé, jamais renvoyé au site.
+  if (!doublon) await aviser(service, prospect_id);
   return repondre(201, { recu: true });
 });

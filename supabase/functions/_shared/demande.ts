@@ -85,3 +85,28 @@ export function lireDemande(corps: unknown): Demande | null {
   }
   return { champs, fichiers, ip };
 }
+
+/** Destinataires de l'avis : adresses séparées par des virgules, 5 au plus ; toute adresse invalide est écartée. */
+export function destinataires(valeur: string | undefined): string[] {
+  return (valeur ?? '').split(',').map((x) => x.trim()).filter((x) => /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[A-Za-z]{2,}$/.test(x) && x.length <= 254).slice(0, 5);
+}
+
+const SPECIALITES: Record<string, string> = { equipement_site: "Équipement d'un site", approvisionnement_industriel: 'Approvisionnement industriel', autre: 'Autre secteur' };
+const echapper = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
+/**
+ * Avis à l'équipe pour une nouvelle demande du site : sans donnée personnelle (ni nom, ni e-mail,
+ * ni téléphone, ni message). Seulement la référence du prospect, son pays, sa spécialité et le lien
+ * vers la fiche dans l'application, où l'accès est contrôlé.
+ */
+export function avisNouvelleDemande(p: { reference: string; pays: string; specialite: string; lien: string }): { sujet: string; html: string; texte: string } {
+  const pays = p.pays === 'ZZ' ? 'à préciser' : p.pays;
+  const spec = SPECIALITES[p.specialite] ?? 'Autre secteur';
+  const lignes: [string, string][] = [['Prospect', p.reference], ['Pays', pays], ['Spécialité', spec]];
+  return {
+    sujet: `Nouvelle demande du site · ${p.reference}`,
+    html: `<div style="font-family:Arial,sans-serif;font-size:14px;color:#222;max-width:560px"><p>Une demande est arrivée par le formulaire du site. Elle est enregistrée comme prospect dans l'application ; premier contact attendu sous 1 jour ouvré.</p><table style="border-collapse:collapse">${lignes
+      .map(([k, v]) => `<tr><th style="text-align:left;padding:4px 12px 4px 0;color:#666;font-weight:normal">${echapper(k)}</th><td style="padding:4px 0">${echapper(v)}</td></tr>`).join('')}</table><p><a href="${echapper(p.lien)}">Ouvrir la fiche dans l'application</a></p><p style="color:#666;font-size:12px">Cet avis ne contient aucune coordonnée : elles ne sont consultables que dans l'application.</p></div>`,
+    texte: [...lignes.map(([k, v]) => `${k} : ${v}`), `Fiche : ${p.lien}`].join('\n'),
+  };
+}

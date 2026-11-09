@@ -232,6 +232,7 @@ select cron.schedule('gbs-mensualites-cadre', '0 7 1 * *',
 Le formulaire de www.gulfbridgesourcing.com envoie ses demandes au Worker du site (`POST /api/demande`), qui les contrôle, les signe (HMAC-SHA256, secret `GBS_SITE_SECRET`, horodatage à ±5 minutes) et les relaie à la fonction `gbs-demande` : chaque demande devient directement un prospect (source « site web »), avec sa spécialité, son pays et sa page d'origine, et la tâche « premier contact sous 1 jour ouvré ». Rien ne passe plus par la console Atlas Studio.
 
 - Pays : Côte d'Ivoire, Gabon, Cameroun ; « Autre pays » et la demande du modèle de rapport arrivent en « ZZ » (à préciser), confiées au Hub Afrique. Un prospect « ZZ » ne se convertit pas en client tant que son pays n'est pas précisé sur sa fiche (`GBS_PAYS_A_PRECISER`).
+- Avis à l'équipe (la console n'en garde qu'une notification, cahier des charges M1) : à chaque nouveau prospect, un e-mail sans aucune donnée personnelle (référence, pays, spécialité, lien vers la fiche) part aux adresses de `GBS_AVIS_DEMANDE_A` (séparées par des virgules, 5 au plus), par Resend (`RESEND_API_KEY`), expéditeur `GBS_AVIS_DEMANDE_DE`, lien construit sur `GBS_APP_URL`. Sans destinataire, aucun avis ; un échec d'envoi n'empêche jamais l'enregistrement.
 - Le secret est posé à l'identique dans Supabase (secret de `gbs-demande`) et dans le Worker du site (`npx wrangler secret put GBS_SITE_SECRET`).
 
 ```bash
