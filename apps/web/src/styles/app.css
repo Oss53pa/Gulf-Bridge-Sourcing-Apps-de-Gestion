@@ -718,3 +718,7 @@ td.retard-txt { color: var(--err); }
 .liv-pv { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .liv-reserve { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px; }
 @media (max-width: 1100px) { .ref-grille.liv-grille { grid-template-columns: 1fr; } }
+
+/* Finance · notes de frais (maquette NDF) */
+button.lien { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }

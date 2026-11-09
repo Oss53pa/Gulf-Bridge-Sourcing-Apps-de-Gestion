@@ -13,6 +13,7 @@ import { deposer, FichierRefuse, urlSignee } from '../lib/fichiers';
 import { useNoms } from '../lib/referentiels';
 import type { Dossier } from '../lib/types';
 import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
+import { celluleCsv } from './Commissions';
 
 const CATEGORIES = ['inspecteur', 'deplacement', 'hebergement', 'repas', 'echantillon', 'coursier', 'laboratoire', 'traduction',
   'sous_traitance', 'transitaire', 'frais_bancaires', 'change', 'installation', 'apres_livraison', 'autre'] as const;
@@ -38,50 +39,85 @@ function erreurFichier(err: unknown): never {
 }
 
 // ----------------------------------------------------------------------------- notes de frais
+const ONGLETS_NDF = ['soumise', 'validee', 'remboursee', 'refusee', 'toutes'] as const;
+type OngletNdf = typeof ONGLETS_NDF[number];
+
+/** Notes de frais (maquette NDF) : file par statut, validation dans la liste, export comptable. La finance voit toutes les notes, chacun voit les siennes (règle en base). */
 export function NotesFrais() {
   const { t } = useTranslation();
   const { profil, langue } = useAuth();
   const finance = ['admin', 'comptable'].includes(profil?.role ?? '');
-  const [onglet, setOnglet] = useState<'miennes' | 'a_traiter'>('miennes');
+  const [onglet, setOnglet] = useState<OngletNdf>('soumise');
   const dossiers = useNoms('dossiers');
   const noms = useNoms('profils');
-  const l = useAsync(async () => {
-    let q = supabase.from('couts').select('*').eq('nature', 'note_frais').order('date_cout', { ascending: false }).limit(500);
-    q = onglet === 'miennes' ? q.eq('depose_par', profil?.id ?? '') : q.in('statut', ['soumise', 'validee']);
-    return ok(await q) as Cout[];
-  }, [onglet, profil?.id]);
+  const l = useAsync(async () => ok(await supabase.from('couts').select('*').eq('nature', 'note_frais')
+    .order('date_cout', { ascending: false }).limit(1000)) as Cout[], [profil?.id]);
+  // Catégories exigeant un justificatif : paramètre en vigueur, appliqué en base à la validation.
+  const pj = useAsync(async () => ok(await supabase.from('parametres').select('valeur, date_effet').eq('cle', 'frais.justificatif_obligatoire')
+    .lte('date_effet', new Date().toISOString().slice(0, 10)).order('date_effet', { ascending: false }).limit(1)) as { valeur: unknown }[], []);
+  const exige = Array.isArray(pj.data?.[0]?.valeur) ? (pj.data![0].valeur as string[]) : [];
   const a = useAction();
   const [nouvelle, setNouvelle] = useState(false);
   const [traiter, setTraiter] = useState<Cout | null>(null);
   const voir = async (c: Cout) => { if (c.justificatif_chemin) { const u = await urlSignee(c.justificatif_chemin); if (u) window.open(u, '_blank', 'noopener,noreferrer'); } };
-  const total = (l.data ?? []).filter((c) => c.statut === 'validee').reduce((s, c) => s + Number(c.montant_xof ?? 0), 0);
+  const tous = l.data ?? [];
+  const liste = onglet === 'toutes' ? tous : tous.filter((c) => c.statut === onglet);
+  const manque = (c: Cout) => !c.justificatif_chemin && exige.includes(c.categorie);
+  const aValider = tous.filter((c) => c.statut === 'soumise');
+  const parDevise = Object.entries(aValider.reduce<Record<string, number>>((m, c) => ({ ...m, [c.devise]: (m[c.devise] ?? 0) + Number(c.montant_ht) }), {}))
+    .map(([d, v]) => montant(v, d, langue)).join(t('expeditions.et'));
+  const sansPj = aValider.filter(manque).length;
+  const titre = aValider.length === 0 ? t('couts.titre_rien') : [t('couts.titre_a_valider', { n: aValider.length, montants: parDevise }),
+    sansPj ? t('couts.titre_sans_pj', { n: sansPj }) : null].filter(Boolean).join(' ; ');
+  const valider = async (c: Cout) => { if (await a.executer(async () => ok(await supabase.rpc('statuer_cout', { p_cout: c.id, p_decision: 'validee', p_motif: null })))) void l.recharger(); };
+  const rembourser = async (c: Cout) => { if (await a.executer(async () => ok(await supabase.rpc('statuer_cout', { p_cout: c.id, p_decision: 'remboursee', p_motif: null })))) void l.recharger(); };
+  const exporter = () => {
+    const cols = ['date', 'collaborateur', 'categorie', 'libelle', 'imputation', 'devise', 'montant', 'montant_xof', 'statut', 'justificatif'];
+    const lignes = liste.map((c) => [c.date_cout, c.depose_par ? noms[c.depose_par] ?? '' : '', t(`couts.cat.${c.categorie}`), c.libelle,
+      c.dossier_id ? dossiers[c.dossier_id] ?? '' : c.frais_generaux ? t('couts.frais_generaux') : '', c.devise, c.montant_ht, c.montant_xof ?? '',
+      t(`couts.statut.${c.statut}`), c.justificatif_chemin ? 'oui' : 'non']);
+    const csv = [cols.map(celluleCsv).join(';'), ...lignes.map((x) => x.map(celluleCsv).join(';'))].join('\r\n');
+    const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+    const lien = document.createElement('a'); lien.href = url; lien.download = `notes-de-frais_${onglet}_${new Date().toISOString().slice(0, 10)}.csv`; lien.click();
+    URL.revokeObjectURL(url);
+  };
+  const ddmm = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
   return (
     <div className="screen">
-      <Entete surtitre={t('modules.qualite')} titre={t('ecrans.notes_frais')}
-        actions={<Bouton variante="primaire" onClick={() => setNouvelle(true)}>{t('couts.nouvelle_note')}</Bouton>} />
-      {finance && <Onglets actif={onglet} onChange={setOnglet} items={[{ id: 'miennes', lib: t('couts.mes_notes') }, { id: 'a_traiter', lib: t('couts.a_traiter') }]} />}
-      <Kpis items={[
-        { lib: t('couts.notes'), val: (l.data ?? []).length },
-        { lib: t('couts.validees_a_rembourser'), val: montant(total, 'XOF', langue) },
-      ]} />
+      <Entete surtitre={`${t('modules.finance')} · ${t('couts.surtitre')} · NDF`} titre={l.data ? titre : t('ecrans.notes_frais')}
+        actions={<>
+          <Bouton onClick={() => setNouvelle(true)}>{t('couts.nouvelle_note')}</Bouton>
+          {finance && <Bouton disabled={liste.length === 0} onClick={exporter}>{t('couts.export')}</Bouton>}
+        </>} />
+      <Onglets actif={onglet} onChange={setOnglet} items={ONGLETS_NDF.map((o) => ({ id: o, lib: o === 'toutes' ? t('couts.toutes') : t(`couts.onglets.${o}`) }))} />
+      <Bandeau type="err">{l.erreur ?? pj.erreur ?? a.erreur}</Bandeau>
       <div className="cadre">
-        <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
-        {l.chargement && !l.data ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('couts.aucune_note')}</Vide> : (
-          <div style={{ overflowX: 'auto' }}><table className="t"><thead><tr><th>{t('suivi.date')}</th>{onglet === 'a_traiter' && <th>{t('couts.auteur')}</th>}
-            <th>{t('couts.libelle')}</th><th>{t('couts.categorie')}</th><th>{t('couts.imputation')}</th><th className="num">{t('couts.montant')}</th>
-            <th className="num">FCFA</th><th>{t('champs.statut')}</th><th /></tr></thead>
-            <tbody>{(l.data ?? []).map((c) => (
-              <tr key={c.id}><td className="ref">{date(c.date_cout, langue)}</td>
-                {onglet === 'a_traiter' && <td>{c.depose_par ? noms[c.depose_par] ?? '' : ''}</td>}
-                <td>{c.libelle}</td><td>{t(`couts.cat.${c.categorie}`)}</td>
-                <td>{c.dossier_id ? dossiers[c.dossier_id] ?? '' : c.frais_generaux ? t('couts.frais_generaux') : <Statut statut="err" libelle={t('couts.non_affectee')} />}</td>
-                <td className="num">{montant(c.montant_ht, c.devise, langue)}</td><td className="num">{c.montant_xof != null ? montant(c.montant_xof, 'XOF', langue) : '—'}</td>
-                <td><Statut statut={STATUT_COUT[c.statut]} libelle={t(`couts.statut.${c.statut}`)} /></td>
-                <td className="num"><span className="actions" style={{ justifyContent: 'flex-end' }}>
-                  {c.justificatif_chemin && <Bouton petit onClick={() => void voir(c)}>{t('couts.justificatif')}</Bouton>}
-                  {onglet === 'a_traiter' && c.depose_par !== profil?.id && <Bouton petit onClick={() => setTraiter(c)}>{t('couts.traiter')}</Bouton>}
-                </span></td></tr>))}</tbody></table></div>
+        {l.chargement && !l.data ? <Chargement /> : liste.length === 0 ? <Vide>{t('couts.aucune_note')}</Vide> : (
+          <div style={{ overflowX: 'auto' }}><table className="t"><thead><tr><th>{t('suivi.date')}</th><th>{t('couts.auteur')}</th>
+            <th>{t('couts.nature_categorie')}</th><th>{t('couts.imputation')}</th><th className="num">{t('couts.montant')}</th>
+            <th>{t('couts.justificatif')}</th><th>{t('champs.statut')}</th><th /></tr></thead>
+            <tbody>{liste.map((c) => {
+              const peut = finance && c.depose_par !== profil?.id;
+              return (
+                <tr key={c.id}><td className="ref">{ddmm(c.date_cout)}</td>
+                  <td>{c.depose_par ? noms[c.depose_par] ?? '' : ''}</td>
+                  <td>{c.libelle}<div className="mute">{t(`couts.cat.${c.categorie}`)}</div>
+                    {c.motif_refus && <div className="txt-err" style={{ fontSize: 13 }}>{c.motif_refus}</div>}</td>
+                  <td className="ref">{c.dossier_id ? dossiers[c.dossier_id] ?? '' : c.frais_generaux ? t('couts.frais_generaux') : <Statut statut="err" libelle={t('couts.non_affectee')} />}</td>
+                  <td className="num">{montant(c.montant_ht, c.devise, langue)}{c.devise !== 'XOF' && c.montant_xof != null && <div className="mute">{montant(c.montant_xof, 'XOF', langue)}</div>}</td>
+                  <td>{c.justificatif_chemin ? <button type="button" className="lien" onClick={() => void voir(c)}><Statut statut="ok" libelle={t('couts.photo')} /></button>
+                    : manque(c) ? <Statut statut="err" libelle={t('couts.pj_manquant')} /> : <span className="mute">—</span>}</td>
+                  <td><Statut statut={STATUT_COUT[c.statut]} libelle={t(`couts.statut.${c.statut}`)} /></td>
+                  <td className="num"><span className="actions" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                    {peut && c.statut === 'soumise' && <>
+                      <Bouton petit onClick={() => setTraiter(c)}>{t('couts.refuser_imputer')}</Bouton>
+                      <Bouton petit variante="primaire" disabled={a.enCours || manque(c) || (!c.dossier_id && !c.frais_generaux)} onClick={() => void valider(c)}>{t('commun.valider')}</Bouton>
+                    </>}
+                    {peut && c.statut === 'validee' && <Bouton petit disabled={a.enCours} onClick={() => void rembourser(c)}>{t('couts.marquer_remboursee')}</Bouton>}
+                  </span></td></tr>);
+            })}</tbody></table></div>
         )}
+        <p style={{ marginTop: 12 }} className="mute">{t('couts.aide_ndf', { liste: exige.map((k) => t(`couts.cat.${k}`).toLowerCase()).join(', ') || '—' })}</p>
       </div>
       {nouvelle && <NouvelleNote onClose={() => setNouvelle(false)} onSaved={() => { setNouvelle(false); void l.recharger(); }} />}
       {traiter && <TraiterNote note={traiter} onClose={() => setTraiter(null)} onDone={() => { setTraiter(null); void l.recharger(); }} />}
