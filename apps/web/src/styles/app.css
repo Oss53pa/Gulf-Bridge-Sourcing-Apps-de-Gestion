@@ -781,3 +781,15 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .rch-ligne { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--border); color: var(--ink); text-decoration: none; }
 .rch-ligne > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rch-ligne:hover { background: var(--white); }
+
+/* Paramétrage · grille tarifaire */
+.grl { display: flex; flex-direction: column; gap: 12px; }
+.grl-grille { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 32px; align-items: start; }
+.grl-carte { display: flex; flex-direction: column; gap: 10px; }
+.grl-regle { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.grl-regle > span { display: flex; flex-direction: column; gap: 2px; }
+.grl-regle > b { white-space: nowrap; }
+.grl-carte .btn { align-self: flex-start; }
+.grl-version { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; font-size: 14px; padding: 4px 0; }
+.grl-version > span { display: flex; flex-direction: column; gap: 2px; }
+@media (max-width: 1100px) { .grl-grille { grid-template-columns: 1fr; } }

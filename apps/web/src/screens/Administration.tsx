@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { date, dateHeure } from '../lib/format';
+import { date, dateHeure, montant } from '../lib/format';
 import type { Audit, Parametre, Profil } from '../lib/types';
 import { Bandeau, Bouton, Champ, Chargement, Entete, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { CalendrierParam, DelaisCiblesParam } from './Delais';
@@ -126,16 +126,17 @@ export function Journal() {
   );
 }
 
-type OngletParam = 'parametres' | 'taux' | 'calendrier' | 'delais' | 'utilisateurs' | 'societes';
+type OngletParam = 'grille' | 'parametres' | 'taux' | 'calendrier' | 'delais' | 'utilisateurs' | 'societes';
 
 export function Parametrage() {
   const { t } = useTranslation();
-  const [onglet, setOnglet] = useState<OngletParam>('parametres');
+  const [onglet, setOnglet] = useState<OngletParam>('grille');
   return (
     <div className="screen">
       <Entete surtitre={`${t('modules.parametrage')} · ${t('parametrage.dates')}`} titre={t('parametrage.titre')} />
-      <Onglets actif={onglet} onChange={setOnglet} items={(['parametres', 'taux', 'calendrier', 'delais', 'utilisateurs', 'societes'] as OngletParam[]).map((id) => ({ id, lib: t(`parametrage.onglets.${id}`) }))} />
+      <Onglets actif={onglet} onChange={setOnglet} items={(['grille', 'parametres', 'taux', 'calendrier', 'delais', 'utilisateurs', 'societes'] as OngletParam[]).map((id) => ({ id, lib: t(`parametrage.onglets.${id}`) }))} />
       <div className="cadre">
+        {onglet === 'grille' && <GrilleTarifaire />}
         {onglet === 'parametres' && <Parametres />}
         {onglet === 'taux' && <Taux />}
         {onglet === 'calendrier' && <CalendrierParam />}
@@ -143,6 +144,104 @@ export function Parametrage() {
         {onglet === 'utilisateurs' && <Utilisateurs />}
         {onglet === 'societes' && <Societes />}
       </div>
+    </div>
+  );
+}
+
+interface Tranche { jusqu_a: number | null; taux: number }
+
+/** Grille tarifaire (maquette « Services et barèmes ») : barème de commission par tranches, règles d'application,
+ *  autres tarifs et versions datées. Une nouvelle version s'enregistre comme un paramètre daté ; la base la valide. */
+function GrilleTarifaire() {
+  const { t } = useTranslation();
+  const { langue, profil } = useAuth();
+  const admin = profil?.role === 'admin';
+  const cat = useAsync(async () => ok(await supabase.rpc('catalogue_parametres')) as ParamCatalogue[], []);
+  const versions = useAsync(async () => ok(await supabase.from('parametres').select('id, valeur, date_effet, commentaire, cree_par').eq('cle', 'commission.bareme')
+    .order('date_effet', { ascending: false })) as { id: string; valeur: unknown; date_effet: string; commentaire: string | null; cree_par: string | null }[], []);
+  const noms = useAsync(async () => ok(await supabase.from('profils').select('id, nom')) as { id: string; nom: string }[], []);
+  const a = useAction();
+  const [ed, setEd] = useState<{ tranches: { jusqu_a: string; taux: string }[]; date_effet: string; commentaire: string } | null>(null);
+  const val = (cle: string) => (cat.data ?? []).find((p) => p.cle === cle);
+  const bareme = (Array.isArray(val('commission.bareme')?.valeur) ? val('commission.bareme')!.valeur : []) as Tranche[];
+  const mx = (n: number) => montant(n, 'XOF', langue);
+  const pct = (n: number) => `${(n * 100).toLocaleString(langue, { maximumFractionDigits: 2 })} %`;
+  const enVigueur = (versions.data ?? []).findIndex((v) => v.date_effet <= new Date().toISOString().slice(0, 10));
+  const nbV = (versions.data ?? []).length;
+  const regles: { cle: string; lib: string; aide: string; aff: (v: number) => string }[] = [
+    { cle: 'commission.majoration_sur_mesure', lib: t('grille.sur_mesure'), aide: t('grille.sur_mesure_aide'), aff: (v) => `+${(v * 100).toLocaleString(langue)} ${t('grille.points')}` },
+    { cle: 'commission.minimum_xof', lib: t('grille.minimum'), aide: t('grille.minimum_aide'), aff: mx },
+    { cle: 'commission.reduction_reassort', lib: t('grille.reassort'), aide: t('grille.reassort_aide'), aff: (v) => `−${pct(v)}` },
+    { cle: 'commission.part_premiere_facture', lib: t('grille.premiere_facture'), aide: t('grille.premiere_facture_aide'), aff: pct },
+  ];
+  const tarifs = (cat.data ?? []).filter((p) => p.cle.startsWith('tarif.'));
+  const preparer = () => setEd({ date_effet: new Date(Date.now() + 86400000).toISOString().slice(0, 10), commentaire: '',
+    tranches: bareme.map((x) => ({ jusqu_a: x.jusqu_a === null ? '' : String(x.jusqu_a), taux: String(Number((x.taux * 100).toFixed(4))) })) });
+  const enregistrer = async () => {
+    if (!ed) return;
+    const tranches = ed.tranches.map((x, i) => ({ jusqu_a: i === ed.tranches.length - 1 ? null : Number(x.jusqu_a.replace(/\s/g, '')), taux: Number((Number(x.taux.replace(',', '.')) / 100).toFixed(6)) }));
+    // Contrôle de saisie : bornes croissantes, dernière tranche ouverte, taux entre 0 et 100 % ; la base revalide (validateur bareme_commission).
+    const v = z.object({ cle: z.literal('commission.bareme'), valeur: z.array(z.object({ jusqu_a: z.number().positive().max(1e13).nullable(), taux: z.number().min(0).max(1) }).strict()).min(1).max(20),
+      date_effet: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), commentaire: z.string().trim().min(3).max(500) }).strict()
+      .refine((x) => x.valeur.every((y, i) => i === 0 || y.jusqu_a === null || (x.valeur[i - 1].jusqu_a ?? Infinity) < y.jusqu_a))
+      .safeParse({ cle: 'commission.bareme', valeur: tranches, date_effet: ed.date_effet, commentaire: ed.commentaire });
+    if (!v.success) { a.setErreur(t('grille.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.from('parametres').insert(v.data)))) { setEd(null); void cat.recharger(); void versions.recharger(); }
+  };
+  let bas = 0;
+  return (
+    <div className="grl">
+      <p className="mute">{t('grille.aide')}</p>
+      <Bandeau type="err">{cat.erreur ?? versions.erreur ?? a.erreur}</Bandeau>
+      <div className="grl-grille">
+        <section className="grl-carte">
+          <div className="liv-pv"><b className="liv-client">{t('grille.commission')}</b>
+            {enVigueur >= 0 && <span className="mute">{t('grille.version', { v: nbV - enVigueur, d: date(versions.data![enVigueur].date_effet, langue) })}</span>}</div>
+          <table className="t"><thead><tr><th>{t('grille.valeur_fob')}</th><th className="num">{t('grille.taux')}</th></tr></thead>
+            <tbody>{bareme.map((x, i) => {
+              const lib = x.jusqu_a === null ? t('grille.au_dela', { m: mx(bas) }) : i === 0 ? t('grille.jusqu_a', { m: mx(x.jusqu_a) }) : t('grille.de_a', { de: mx(bas), a: mx(x.jusqu_a) });
+              if (x.jusqu_a !== null) bas = x.jusqu_a;
+              return <tr key={i}><td>{lib}</td><td className="num"><b>{pct(x.taux)}</b></td></tr>;
+            })}</tbody></table>
+          <p className="mute">{t('grille.lecture')}</p>
+          <div className="section-titre">{t('grille.regles')}</div>
+          {regles.map((r) => { const p = val(r.cle); return (
+            <div key={r.cle} className="grl-regle"><span><b>{r.lib}</b><span className="mute">{r.aide}</span></span><b>{p && typeof p.valeur === 'number' ? r.aff(p.valeur) : '—'}</b></div>); })}
+          {admin && <Bouton variante="primaire" onClick={preparer}>{t('grille.preparer')}</Bouton>}
+        </section>
+        <aside className="exp-aside">
+          <section>
+            <div className="surtitre">{t('grille.historique')}</div>
+            {(versions.data ?? []).map((v, i) => (
+              <div key={v.id} className="grl-version"><b>v{nbV - i}</b><span>{date(v.date_effet, langue)}{i === enVigueur && <> · <span className="txt-ok">{t('grille.en_vigueur')}</span></>}
+                {v.date_effet > new Date().toISOString().slice(0, 10) && <> · <span className="txt-att">{t('grille.a_venir')}</span></>}
+                <span className="mute">{v.commentaire ?? ''}{v.cree_par ? ` · ${(noms.data ?? []).find((n) => n.id === v.cree_par)?.nom ?? ''}` : ''}</span></span></div>))}
+          </section>
+          <section>
+            <div className="surtitre">{t('grille.autres_tarifs')}</div>
+            {tarifs.map((p) => <div key={p.cle} className="grl-regle"><span>{p.libelle}</span><b>{afficherParam(p, langue)}</b></div>)}
+            <span className="mute">{t('grille.modifier_ailleurs')}</span>
+          </section>
+        </aside>
+      </div>
+      {ed && (
+        <Tiroir titre={t('grille.preparer')} onClose={() => setEd(null)}>
+          <p className="sec">{t('grille.aide_version')}</p>
+          {ed.tranches.map((x, i) => (
+            <div key={i} className="grille3" style={{ gridTemplateColumns: '1fr 120px auto', alignItems: 'end' }}>
+              <Champ label={i === ed.tranches.length - 1 ? t('grille.tranche_ouverte') : t('grille.jusqu_a_xof')}>
+                <input inputMode="numeric" disabled={i === ed.tranches.length - 1} value={i === ed.tranches.length - 1 ? '' : x.jusqu_a}
+                  onChange={(e) => setEd({ ...ed, tranches: ed.tranches.map((y, j) => (j === i ? { ...y, jusqu_a: e.target.value.replace(/[^\d\s]/g, '') } : y)) })} /></Champ>
+              <Champ label={t('grille.taux_pct')}><input inputMode="decimal" value={x.taux} onChange={(e) => setEd({ ...ed, tranches: ed.tranches.map((y, j) => (j === i ? { ...y, taux: e.target.value } : y)) })} /></Champ>
+              <Bouton petit disabled={ed.tranches.length <= 1} onClick={() => setEd({ ...ed, tranches: ed.tranches.filter((_, j) => j !== i) })}>{t('grille.retirer')}</Bouton>
+            </div>))}
+          <Bouton petit disabled={ed.tranches.length >= 20} onClick={() => setEd({ ...ed, tranches: [...ed.tranches.slice(0, -1), { jusqu_a: '', taux: '' }, ...ed.tranches.slice(-1)] })}>{t('grille.ajouter_tranche')}</Bouton>
+          <Champ label={t('parametrage.date_effet')}><input type="date" value={ed.date_effet} onChange={(e) => setEd({ ...ed, date_effet: e.target.value })} /></Champ>
+          <Champ label={t('grille.motif')}><input value={ed.commentaire} maxLength={500} onChange={(e) => setEd({ ...ed, commentaire: e.target.value })} /></Champ>
+          <Bandeau type="err">{a.erreur}</Bandeau>
+          <Bouton variante="primaire" disabled={a.enCours} onClick={() => void enregistrer()}>{t('commun.enregistrer')}</Bouton>
+        </Tiroir>
+      )}
     </div>
   );
 }
