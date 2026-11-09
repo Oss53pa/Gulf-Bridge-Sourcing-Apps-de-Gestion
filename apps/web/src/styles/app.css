@@ -816,3 +816,13 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 /* Après-vente · garantie et SAV */
 .sav-etapes { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 8px; font-size: 12px; overflow-wrap: anywhere; }
 .liv-grille .exp-aside section > .btn { align-self: flex-start; }
+
+/* Logistique · conformité à l'import */
+.ref-grille.imp-grille { grid-template-columns: minmax(0, 1fr) 400px; }
+.imp-exps { display: flex; flex-wrap: wrap; gap: 6px; }
+.imp-exps .chip { border: 1px solid transparent; cursor: pointer; font: inherit; font-size: 13px; }
+.imp-exps .chip.actif { background: var(--ink); color: #fff; }
+.imp-ligne { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.imp-ligne > span:first-child { display: flex; flex-direction: column; gap: 2px; }
+.imp-depot { grid-column: 1 / -1; }
+@media (max-width: 1100px) { .ref-grille.imp-grille { grid-template-columns: 1fr; } }

@@ -32,6 +32,7 @@ import { NotesFrais, Rentabilite } from './screens/Couts';
 import { Alertes } from './screens/Alertes';
 import { Recherche } from './screens/Recherche';
 import { GarantieSav, StockPieces } from './screens/ApresVente';
+import { ConformiteImport } from './screens/ConformiteImport';
 import { ImprimerRapportOffres } from './screens/RapportOffres';
 import { Articles, Clients, FicheClient, FicheFournisseur, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, HistoriquePrix, MiseEnConcurrence } from './screens/Achats';
@@ -112,6 +113,7 @@ export function App() {
             <Route path="/stock" element={g('stock', <StockPieces />)} />
             <Route path="/sav" element={g('sav', <GarantieSav />)} />
             <Route path="/livraisons" element={g('livraisons', <Livraisons />)} />
+            <Route path="/conformite-import" element={g('conformite_import', <ConformiteImport />)} />
             <Route path="/reserves" element={g('reserves', <ReservesOuvertes />)} />
             <Route path="/expeditions/:id" element={g('expeditions', <FicheExpedition />)} />
             <Route path="/factures" element={g('factures', <Factures />)} />
