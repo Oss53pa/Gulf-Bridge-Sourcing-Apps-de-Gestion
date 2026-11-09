@@ -555,3 +555,27 @@ td.retard-txt { color: var(--err); }
 .pastille-l { display: inline-block; width: 10px; height: 10px; vertical-align: middle; }
 .pastille-l.attente { background: var(--nuit); } .pastille-l.impact { background: var(--bronze); }
 @media (max-width: 640px) { .retard { grid-template-columns: 1fr 56px; } .retard .piste { grid-column: 1 / -1; grid-row: 2; } }
+
+/* Prospection (maquette) */
+.bascule { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.h1-statut { font-family: var(--sans); font-size: 14px; vertical-align: middle; margin-left: 10px; }
+.etapes-pros { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; flex: none; }
+.etapes-pros li { border-top: 3px solid var(--border); padding-top: 6px; font-size: 13px; color: var(--sec); }
+.etapes-pros li span { color: var(--mute); }
+.etapes-pros li.faite { border-top-color: var(--ink); color: var(--ink); }
+.etapes-pros li.courante { border-top-color: var(--bronze); color: var(--ink); font-weight: 600; }
+.etapes-pros li.perdu { border-top-color: var(--err-bg); }
+.fiche-bloc { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+.pros-ajout { display: grid; grid-template-columns: 140px 150px minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+.pros-ajout select, .pros-ajout input, .pros-ajout textarea { height: 40px; border: 1px solid var(--strong); border-radius: var(--r); background: var(--white); padding: 0 10px; }
+.pros-ajout textarea { height: 56px; padding: 8px 10px; resize: vertical; }
+.pros-histo { display: grid; grid-template-columns: 96px 40px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--sable); font-size: 14px; }
+.relance-l { display: grid; grid-template-columns: 22px 96px minmax(0, 1fr); gap: 8px; align-items: center; padding: 6px 0; font-size: 14px; }
+.relance-l .tache-case.retard { border-color: var(--err); }
+.entonnoir { display: flex; flex-direction: column; gap: 14px; }
+.ent-l { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; align-items: center; }
+.ent-l .lib { display: flex; flex-direction: column; }
+.ent-l b { font-weight: 500; }
+.ent-piste { height: 34px; background: var(--sable); border-radius: 8px; overflow: hidden; }
+.ent-piste > span { display: flex; align-items: center; justify-content: flex-end; height: 100%; background: var(--ink); color: var(--bg); padding: 0 12px; min-width: 40px; border-radius: 8px; box-sizing: border-box; }
+@media (max-width: 760px) { .pros-ajout { grid-template-columns: 1fr 1fr; } .pros-ajout textarea { grid-column: 1 / -1; } .ent-l { grid-template-columns: 1fr; } }

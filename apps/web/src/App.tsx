@@ -4,7 +4,7 @@ import { Rapprochement } from './screens/Rapprochement';
 import { PageFournisseur } from './screens/PlisFournisseurs';
 import { PageDueDiligence } from './screens/PiecesDueDiligence';
 import { PageTransitaire } from './screens/Transitaires';
-import { Prospection } from './screens/Prospection';
+import { Entonnoir, FicheProspect, Prospection } from './screens/Prospection';
 import { NonConformites } from './screens/NonConformites';
 import { ReservesOuvertes } from './screens/Receptions';
 import { Interventions } from './screens/Interventions';
@@ -26,7 +26,7 @@ import { MesTaches } from './screens/Delais';
 import { PageSuivi } from './screens/Suivi';
 import { NotesFrais, Rentabilite } from './screens/Couts';
 import { ImprimerRapportOffres } from './screens/RapportOffres';
-import { Articles, Clients, Fournisseurs } from './screens/Tiers';
+import { Articles, Clients, FicheClient, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, MiseEnConcurrence } from './screens/Achats';
 import { Expeditions, FicheExpedition, Inspections, RapportInspection } from './screens/Operations';
 import { Factures, FicheFacture, Flux, Paiements } from './screens/Finance';
@@ -79,7 +79,10 @@ export function App() {
             <Route path="/notes-frais" element={g('notes_frais', <NotesFrais />)} />
             <Route path="/rentabilite" element={g('rentabilite', <Rentabilite />)} />
             <Route path="/prospection" element={g('prospection', <Prospection />)} />
+            <Route path="/prospection/entonnoir" element={g('prospection', <Entonnoir />)} />
+            <Route path="/prospection/:id" element={g('prospection', <FicheProspect />)} />
             <Route path="/clients" element={g('clients', <Clients />)} />
+            <Route path="/clients/:id" element={g('clients', <FicheClient />)} />
             <Route path="/fournisseurs" element={g('fournisseurs', <Fournisseurs />)} />
             <Route path="/articles" element={g('articles', <Articles />)} />
             <Route path="/mise-en-concurrence" element={g('consultations', <MiseEnConcurrence />)} />
