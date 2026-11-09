@@ -30,7 +30,7 @@ export const MODULES: Module[] = [
   { id: 'achats', metier: ['achats'], sections: ['fournisseurs', 'consultation', 'commandes'] },
   { id: 'qualite', metier: ['achats'], sections: ['controles', 'non_conformites'] },
   { id: 'logistique', metier: ['logistique'], sections: ['transport', 'import'] },
-  { id: 'apres_vente', metier: ['commercial'], sections: ['interventions'] },
+  { id: 'apres_vente', metier: ['commercial'], sections: ['garantie', 'interventions'] },
   { id: 'finance', metier: ['finance'], sections: ['facturation', 'tresorerie', 'partage'] },
   { id: 'echanges', metier: ['commercial', 'logistique'], sections: ['messagerie'] },
   { id: 'parametrage', metier: ['administration'], sections: ['referentiel'] },
@@ -70,6 +70,8 @@ export const ECRANS: Ecran[] = [
   { id: 'conformite_import', chemin: '', module: 'logistique', section: 'import', roles: ['admin', 'achats_chine'], lot: 2 },
   { id: 'livraisons', chemin: '/livraisons', module: 'logistique', section: 'import', roles: ['admin', 'hub_afrique', 'achats_chine'], lot: 1 },
   { id: 'reserves', chemin: '/reserves', module: 'logistique', section: 'import', roles: ['admin', 'hub_afrique', 'achats_chine'], lot: 1 },
+  { id: 'sav', chemin: '/sav', module: 'apres_vente', section: 'garantie', roles: ['admin', 'hub_afrique', 'achats_chine'], lot: 2 },
+  { id: 'stock', chemin: '/stock', module: 'apres_vente', section: 'interventions', roles: ['admin', 'hub_afrique', 'achats_chine'], lot: 2 },
   { id: 'interventions', chemin: '/interventions', module: 'apres_vente', section: 'interventions', roles: ['admin', 'hub_afrique', 'achats_chine', 'inspecteur'], lot: 1 },
   { id: 'factures', chemin: '/factures', module: 'finance', section: 'facturation', roles: ['admin', 'hub_afrique', 'comptable'], lot: 0 },
   { id: 'paiements', chemin: '/paiements', module: 'finance', section: 'facturation', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
@@ -110,7 +112,7 @@ export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacriti
 
 /** Codes d'écran (« T-codes ») : saisis dans la recherche du Sommaire, Entrée ouvre l'écran. */
 export const TCODES: Record<string, string> = {
-  tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
+  tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', sav: 'SAV', stock: 'STK', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
   appels_offres: 'AOF', fiches_reference: 'REF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
   articles: 'ART', consultations: 'MEC', historique_prix: 'PRX', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
   expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',

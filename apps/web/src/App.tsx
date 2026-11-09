@@ -31,6 +31,7 @@ import { PageSuivi } from './screens/Suivi';
 import { NotesFrais, Rentabilite } from './screens/Couts';
 import { Alertes } from './screens/Alertes';
 import { Recherche } from './screens/Recherche';
+import { GarantieSav, StockPieces } from './screens/ApresVente';
 import { ImprimerRapportOffres } from './screens/RapportOffres';
 import { Articles, Clients, FicheClient, FicheFournisseur, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, HistoriquePrix, MiseEnConcurrence } from './screens/Achats';
@@ -108,6 +109,8 @@ export function App() {
             <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
             <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
             <Route path="/interventions" element={g('interventions', <Interventions />)} />
+            <Route path="/stock" element={g('stock', <StockPieces />)} />
+            <Route path="/sav" element={g('sav', <GarantieSav />)} />
             <Route path="/livraisons" element={g('livraisons', <Livraisons />)} />
             <Route path="/reserves" element={g('reserves', <ReservesOuvertes />)} />
             <Route path="/expeditions/:id" element={g('expeditions', <FicheExpedition />)} />
