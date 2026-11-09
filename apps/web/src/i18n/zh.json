@@ -50,6 +50,7 @@
   "pay_titre": "{{ref}} · {{nature}} 已准备，待审批",
   "pb_titre": "已升级阻塞问题 · 项目 {{ref}}",
   "reference": "编号",
+  "sources_echec": "{{n}} 个数据源读取失败，列表可能不完整，请重试。",
   "titre": "{{n}} 条提醒，其中 {{c}} 条紧急",
   "toutes": "全部"
  },

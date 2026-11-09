@@ -49,17 +49,19 @@ export function Recherche() {
   const [saisie, setSaisie] = useState(q);
   useEffect(() => setSaisie(q), [q]);
   const l = useAsync(async () => {
-    if (q.length < 2) return [] as Resultat[];
+    if (q.length < 2) return { res: [] as Resultat[], echecs: 0 };
+    let echecs = 0;
     const motif = motifRecherche(q);
     // Une requête par colonne ; une table interdite au rôle revient vide sans bloquer les autres.
     const lots = await Promise.all(SOURCES.flatMap((src) => src.colonnes.map(async (col) => {
       const r = await supabase.from(src.table).select(src.select).ilike(col, motif).limit(8);
-      return r.error ? [] : (r.data as unknown as Rec[]).map((x) => ({ cle: `${src.table}-${x.id}`, module: src.module, titre: src.titre(x), sous: src.sous(x), lien: src.lien(x) }));
+      if (r.error) { if (r.error.code !== '42501') echecs += 1; return []; }
+      return (r.data as unknown as Rec[]).map((x) => ({ cle: `${src.table}-${x.id}`, module: src.module, titre: src.titre(x), sous: src.sous(x), lien: src.lien(x) }));
     })));
     const vus = new Set<string>();
-    return lots.flat().filter((x) => (vus.has(x.cle) ? false : (vus.add(x.cle), true)));
+    return { res: lots.flat().filter((x) => (vus.has(x.cle) ? false : (vus.add(x.cle), true))), echecs };
   }, [q]);
-  const res = l.data ?? [];
+  const res = l.data?.res ?? [];
   const modules = [...new Set(SOURCES.map((x) => x.module))].filter((m) => res.some((r) => r.module === m));
   const lancer = (v: string) => { const x = v.trim().slice(0, 80); if (x.length >= 2) setParams({ q: x }); };
   return (
@@ -70,7 +72,7 @@ export function Recherche() {
       </form>
       <div className="rch-essais"><span className="mute">{t('recherche.essayez')}</span>
         {ESSAIS.map((e) => <button key={e} type="button" className="chip" onClick={() => { setSaisie(e); lancer(e); }}>{e}</button>)}</div>
-      <Bandeau type="err">{l.erreur}</Bandeau>
+      <Bandeau type="err">{l.erreur ?? (l.data?.echecs ? t('alertes.sources_echec', { n: l.data.echecs }) : null)}</Bandeau>
       {q.length < 2 ? <p className="mute">{t('recherche.aide')}</p> : l.chargement && !l.data ? <Chargement /> : res.length === 0 ? <Vide>{t('recherche.aucun', { q })}</Vide> : <>
         <p className="sec">{t('recherche.resultats', { n: res.length, m: modules.length })}</p>
         <div className="rch-groupes">

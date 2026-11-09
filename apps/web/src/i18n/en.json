@@ -50,6 +50,7 @@
   "pay_titre": "{{ref}} · {{nature}} prepared, to approve",
   "pb_titre": "Escalated blocking issue · file {{ref}}",
   "reference": "Reference",
+  "sources_echec": "{{n}} source(s) could not be read: the list may be incomplete. Try again.",
   "titre": "{{n}} alert(s), {{c}} critical",
   "toutes": "All"
  },

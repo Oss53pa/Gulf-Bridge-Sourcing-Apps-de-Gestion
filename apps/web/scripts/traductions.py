@@ -1120,6 +1120,7 @@ T = {
  'alertes.aide': ("Les échéances de tous les modules et les saisies qui attendent une action, selon vos droits. Mêmes règles que le compteur de l'en-tête.", 'Deadlines from every module and entries awaiting action, within your rights. Same rules as the header counter.', '按您的权限汇总各模块的到期事项和待处理录入，与页头计数规则一致。'),
  'alertes.aucune': ('Aucune alerte.', 'No alert.', '暂无提醒。'),
  'alertes.toutes': ('Toutes', 'All', '全部'),
+ 'alertes.sources_echec': ('{{n}} source(s) n\'ont pas pu être lues : la liste peut être incomplète. Réessayez.', '{{n}} source(s) could not be read: the list may be incomplete. Try again.', '{{n}} 个数据源读取失败，列表可能不完整，请重试。'),
  'alertes.categories.point_bloquant': ('Point bloquant', 'Blocking issue', '阻塞问题'),
  'alertes.categories.retard_paiement': ('Retard de paiement', 'Late payment', '逾期付款'),
  'alertes.categories.fne': ('Facture à certifier', 'Invoice to certify', '待认证发票'),

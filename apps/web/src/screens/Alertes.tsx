@@ -24,7 +24,13 @@ export function Alertes() {
     const auj = jour();
     const dans60 = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
     // Chaque source est lue séparément : une source interdite au rôle revient vide, sans bloquer les autres.
-    const lire = async <T,>(q: PromiseLike<{ data: unknown; error: unknown }>) => { const r = await q; return r.error ? [] : (r.data as T[]); };
+    // Un refus de droits (42501) vide la source sans alerte ; toute autre erreur est comptée et signalée.
+    let echecs = 0;
+    const lire = async <T,>(q: PromiseLike<{ data: unknown; error: { code?: string } | null }>) => {
+      const r = await q;
+      if (r.error) { if (r.error.code !== '42501') echecs += 1; return [] as T[]; }
+      return r.data as T[];
+    };
     const [pb, fr, fne, pay, dd] = await Promise.all([
       lire<{ id: string; description: string; categorie: string; echeance: string; escalade_le: string; dossier_id: string; dossiers: { reference: string; societe_id: string } | null }>(
         supabase.from('points_bloquants').select('id, description, categorie, echeance, escalade_le, dossier_id, dossiers(reference, societe_id)').is('resolu_le', null).not('escalade_le', 'is', null).limit(200)),
@@ -55,11 +61,11 @@ export function Alertes() {
         detail: t('alertes.dd_detail', { ref: x.reference ?? '' }), echeance: x.valide_jusqu_au, module: 'achats', reference: x.reference ?? '', lien: `/fournisseurs/${x.fournisseur_id}` })),
     ];
     // Critiques d'abord, puis par échéance la plus ancienne.
-    return a.sort((x, y) => Number(y.critique) - Number(x.critique) || (x.echeance ?? '9').localeCompare(y.echeance ?? '9'));
+    return { alertes: a.sort((x, y) => Number(y.critique) - Number(x.critique) || (x.echeance ?? '9').localeCompare(y.echeance ?? '9')), echecs };
   }, [societeActive, langue]);
   const [cat, setCat] = useState<Categorie | 'toutes'>('toutes');
   const [sel, setSel] = useState<string | null>(null);
-  const tous = l.data ?? [];
+  const tous = l.data?.alertes ?? [];
   const liste = cat === 'toutes' ? tous : tous.filter((x) => x.categorie === cat);
   const x = liste.find((y) => y.id === sel) ?? liste[0] ?? null;
   const critiques = tous.filter((y) => y.critique).length;
@@ -68,7 +74,7 @@ export function Alertes() {
     <div className="screen">
       <Entete surtitre={t('modules.supervision')} titre={l.data ? t('alertes.titre', { n: tous.length, c: critiques }) : t('ecrans.alertes')} />
       <p className="sec" style={{ marginTop: -8 }}>{t('alertes.aide')}</p>
-      <Bandeau type="err">{l.erreur}</Bandeau>
+      <Bandeau type="err">{l.erreur ?? (l.data?.echecs ? t('alertes.sources_echec', { n: l.data.echecs }) : null)}</Bandeau>
       <Onglets actif={cat} onChange={(c) => { setCat(c); setSel(null); }} items={[{ id: 'toutes' as const, lib: `${t('alertes.toutes')} · ${tous.length}` },
         ...CATEGORIES.filter((c) => tous.some((y) => y.categorie === c)).map((c) => ({ id: c, lib: `${t(`alertes.categories.${c}`)} · ${tous.filter((y) => y.categorie === c).length}` }))]} />
       {l.chargement && !l.data ? <Chargement /> : tous.length === 0 ? <Vide>{t('alertes.aucune')}</Vide> : (

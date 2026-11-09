@@ -50,6 +50,7 @@
   "pay_titre": "{{ref}} · {{nature}} préparé, à valider",
   "pb_titre": "Point bloquant escaladé · dossier {{ref}}",
   "reference": "Référence",
+  "sources_echec": "{{n}} source(s) n'ont pas pu être lues : la liste peut être incomplète. Réessayez.",
   "titre": "{{n}} alerte(s), dont {{c}} critique(s)",
   "toutes": "Toutes"
  },
