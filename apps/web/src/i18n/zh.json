@@ -1852,11 +1852,14 @@
   "titre_valider": "{{n}} 项检验待确认"
  },
  "interventions": {
+  "a_facturer": "应开票",
+  "aide_cout": "实际成本 = 工时 × 费率 + 已批准的相关费用；按实际成本加成 {{p}} 开票（按日期参数），由数据库计算。",
   "ajouter_risque": "添加风险",
   "analyse_risques": "风险分析",
   "aucun_incident": "暂无事故或未遂事件。",
   "aucune": "暂无现场作业。",
   "aucune_habilitation_a_renouveler": "30天内无需更新资质。",
+  "client": "客户",
   "compte_rendu": "作业报告",
   "controles": {
    "analyse_risques": "风险分析为空",
@@ -1867,6 +1870,7 @@
   },
   "cout": "实际成本与开票",
   "cout_detail": "{{h}} 小时 · 实际成本 {{reel}} · 应开票（成本加成）{{facture}}",
+  "cout_reel": "实际成本",
   "danger": "危险源",
   "debut": "开始",
   "declarer": "上报",
@@ -1896,6 +1900,7 @@
   "heures": "小时",
   "hse": "健康、安全与环境",
   "hse_incomplet": "无法开工",
+  "interv": "作业",
   "libelle": "名称",
   "lieu": "地点",
   "mesure_prevention": "预防措施",
@@ -1907,6 +1912,7 @@
    "incident": "事件",
    "presque_accident": "未遂事件"
   },
+  "nb_heures": "{{n}} 小时",
   "nouvelle": "新现场作业",
   "nouvelle_habilitation": "新增资质或入场培训",
   "numero": "编号",
@@ -1924,6 +1930,7 @@
    "planifiee": "已计划",
    "terminee": "已完成"
   },
+  "surtitre": "现场作业",
   "taux": "小时费率（西非法郎）",
   "taux_correction": "修正小时费率（西非法郎，可选）",
   "technicien": "技术人员",
@@ -1931,6 +1938,7 @@
   "temps": "工时",
   "terminer": "完成作业",
   "titre": "现场作业",
+  "titre_synthese": "{{p}} 项作业待执行；{{f}} 项已完成待开票",
   "travaux": "完成工作",
   "type": "类型",
   "type_habilitation": "资质类型",

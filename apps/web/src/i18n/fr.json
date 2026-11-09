@@ -1852,11 +1852,14 @@
   "titre_valider": "{{n}} inspection à valider"
  },
  "interventions": {
+  "a_facturer": "À facturer",
+  "aide_cout": "Coût réel = temps passé × taux + frais validés rattachés ; facturé au coût réel majoré de {{p}} (paramètre daté), calcul en base.",
   "ajouter_risque": "Ajouter un risque",
   "analyse_risques": "Analyse de risques",
   "aucun_incident": "Aucun incident ni presque-accident déclaré.",
   "aucune": "Aucune intervention.",
   "aucune_habilitation_a_renouveler": "Aucune habilitation à renouveler dans les 30 jours.",
+  "client": "Client",
   "compte_rendu": "Compte rendu",
   "controles": {
    "analyse_risques": "analyse de risques vide",
@@ -1867,6 +1870,7 @@
   },
   "cout": "Coût réel et facturation",
   "cout_detail": "{{h}} h · coût réel {{reel}} · à facturer (coût + majoration) {{facture}}",
+  "cout_reel": "Coût réel",
   "danger": "Danger",
   "debut": "Début",
   "declarer": "Déclarer",
@@ -1896,6 +1900,7 @@
   "heures": "Heures",
   "hse": "Hygiène, sécurité, environnement",
   "hse_incomplet": "Démarrage impossible",
+  "interv": "Interv.",
   "libelle": "Libellé",
   "lieu": "Lieu",
   "mesure_prevention": "Mesure de prévention",
@@ -1907,6 +1912,7 @@
    "incident": "Incident",
    "presque_accident": "Presque-accident"
   },
+  "nb_heures": "{{n}} h",
   "nouvelle": "Nouvelle intervention",
   "nouvelle_habilitation": "Nouvelle habilitation ou formation d'accueil",
   "numero": "Numéro",
@@ -1924,6 +1930,7 @@
    "planifiee": "Planifiée",
    "terminee": "Terminée"
   },
+  "surtitre": "interventions sur site",
   "taux": "Taux horaire (FCFA)",
   "taux_correction": "Taux horaire corrigé (FCFA, facultatif)",
   "technicien": "Technicien",
@@ -1931,6 +1938,7 @@
   "temps": "Temps passé",
   "terminer": "Terminer l'intervention",
   "titre": "Interventions sur site",
+  "titre_synthese": "{{p}} intervention(s) à réaliser ; {{f}} terminée(s) à facturer",
   "travaux": "Travaux réalisés",
   "type": "Type",
   "type_habilitation": "Type d'habilitation",

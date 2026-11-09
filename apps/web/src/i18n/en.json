@@ -1852,11 +1852,14 @@
   "titre_valider": "{{n}} inspection to approve"
  },
  "interventions": {
+  "a_facturer": "To invoice",
+  "aide_cout": "Actual cost = time spent × rate + approved linked expenses; invoiced at actual cost plus {{p}} (dated setting), computed in the database.",
   "ajouter_risque": "Add a risk",
   "analyse_risques": "Risk assessment",
   "aucun_incident": "No incident or near miss reported.",
   "aucune": "No intervention.",
   "aucune_habilitation_a_renouveler": "No certification to renew within 30 days.",
+  "client": "Client",
   "compte_rendu": "Report",
   "controles": {
    "analyse_risques": "empty risk assessment",
@@ -1867,6 +1870,7 @@
   },
   "cout": "Actual cost and invoicing",
   "cout_detail": "{{h}} h · actual cost {{reel}} · to invoice (cost + markup) {{facture}}",
+  "cout_reel": "Actual cost",
   "danger": "Hazard",
   "debut": "Start",
   "declarer": "Report",
@@ -1896,6 +1900,7 @@
   "heures": "Hours",
   "hse": "Health, safety, environment",
   "hse_incomplet": "Cannot start",
+  "interv": "Job",
   "libelle": "Label",
   "lieu": "Location",
   "mesure_prevention": "Preventive measure",
@@ -1907,6 +1912,7 @@
    "incident": "Incident",
    "presque_accident": "Near miss"
   },
+  "nb_heures": "{{n}} h",
   "nouvelle": "New intervention",
   "nouvelle_habilitation": "New certification or site induction",
   "numero": "Number",
@@ -1924,6 +1930,7 @@
    "planifiee": "Planned",
    "terminee": "Completed"
   },
+  "surtitre": "site interventions",
   "taux": "Hourly rate (CFA francs)",
   "taux_correction": "Override hourly rate (CFA francs, optional)",
   "technicien": "Technician",
@@ -1931,6 +1938,7 @@
   "temps": "Time spent",
   "terminer": "Complete intervention",
   "titre": "Site interventions",
+  "titre_synthese": "{{p}} intervention(s) to carry out; {{f}} completed to invoice",
   "travaux": "Work done",
   "type": "Type",
   "type_habilitation": "Certification type",
