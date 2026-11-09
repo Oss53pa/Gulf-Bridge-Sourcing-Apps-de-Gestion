@@ -34,6 +34,7 @@ export function EspaceClient() {
   const e = useAsync(async () => ok(await supabase.rpc('espace_client')) as Espace, []);
   const [sel, setSel] = useState<string | null>(null);
   const [vue, setVue] = useState<Vue>('accueil');
+  const nonLus = useAsync(async () => ok(await supabase.rpc('messages_non_lus')) as number, [vue]);
   const d = (e.data?.dossiers ?? []).find((x) => x.id === sel) ?? e.data?.dossiers[0] ?? null;
   const c = useAsync(async () => (d ? ok(await supabase.rpc('espace_client_dossier', { p_dossier: d.id })) as Contenu : null), [d?.id]);
   const x = c.data;
@@ -52,7 +53,7 @@ export function EspaceClient() {
       </header>
       <nav className="ecl-nav" aria-label={t('portail.navigation')}>
         {VUES.map((v) => <button key={v} type="button" aria-current={vue === v ? 'page' : undefined} onClick={() => setVue(v)}>
-          {t(`portail.vues.${v}`)}{v === 'accueil' && actions.length > 0 && <span className="badge">{actions.length}</span>}</button>)}
+          {t(`portail.vues.${v}`)}{v === 'accueil' && actions.length > 0 && <span className="badge">{actions.length}</span>}{v === 'messagerie' && (nonLus.data ?? 0) > 0 && <span className="badge">{nonLus.data}</span>}</button>)}
       </nav>
       <main className="screen ecl-main">
         <Bandeau type="err">{e.erreur ?? c.erreur}</Bandeau>

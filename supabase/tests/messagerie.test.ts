@@ -66,4 +66,23 @@ describe('Messagerie', () => {
     await expectError(db, 'GBS_VALIDATION_RPC', `update gbs.messages set corps = 'Modifié' where id = $1`, [id]);
     await expectError(db, 'GBS_SUPPRESSION_INTERDITE', `delete from gbs.messages where id = $1`, [id]);
   }));
+
+  it('non lus : messages des autres depuis la dernière lecture ; ses propres messages comptent comme lus', () => withTx(async (db) => {
+    const m = await monde(db);
+    const d = await dossier(db, m);
+    await as(db, m.hub);
+    const f = await fil(db, { audience: 'interne', dossier_id: d });
+    expect((await one(db, `select gbs.messages_non_lus() n`)).n).toBe(0);
+    await as(db, m.admin);
+    expect((await one(db, `select gbs.messages_non_lus() n`)).n).toBe(1);
+    expect((await one(db, `select non_lus from gbs.mes_fils() where id = $1`, [f])).non_lus).toBe(1);
+    await db.query(`select gbs.marquer_fil_lu($1)`, [f]);
+    expect((await one(db, `select gbs.messages_non_lus() n`)).n).toBe(0);
+    await as(db, m.hub);
+    await db.query(`select gbs.envoyer_message($1, 'Relance')`, [f]);
+    await as(db, m.admin);
+    expect((await one(db, `select gbs.messages_non_lus() n`)).n).toBe(1);
+    // Aucune écriture directe des marques de lecture.
+    await expectError(db, '42501', `insert into gbs.lectures_fils (utilisateur_id, fil_id) values ($1, $2)`, [m.admin, f]);
+  }));
 });

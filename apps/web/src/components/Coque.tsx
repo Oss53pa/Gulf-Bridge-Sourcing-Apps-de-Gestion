@@ -58,6 +58,7 @@ export function Coque({ children }: { children: ReactNode }) {
   const [sommaire, setSommaire] = useState(false);
   const [q, setQ] = useState('');
   const [alertes, setAlertes] = useState<number | null>(null);
+  const [nonLus, setNonLus] = useState(0);
   const [synchro, setSynchro] = useState<string | null>(null);
   const [enLigne, setEnLigne] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
 
@@ -82,6 +83,8 @@ export function Coque({ children }: { children: ReactNode }) {
         setAlertes((d.points_bloquants_escalades ?? 0) + (d.fne_en_attente ?? 0) + (d.factures_en_retard ?? 0)
           + (d.paiements_a_valider ?? 0) + (d.dd_expirant_60j ?? 0));
         setSynchro(new Date().toISOString());
+        const m = await supabase.rpc('messages_non_lus');
+        if (actif && !m.error && typeof m.data === 'number') setNonLus(m.data);
       }
     };
     void charger();
@@ -137,6 +140,9 @@ export function Coque({ children }: { children: ReactNode }) {
             }}>{l === 'zh' ? '中文' : `${l.toUpperCase()} · 中文`}</button>
           ))}
         </div>
+        <button className="tb-btn" onClick={() => nav('/messagerie')} aria-label={t('msg.titre')}>
+          {t('msg.titre')} {nonLus > 0 && <span className="badge">{nonLus}</span>}
+        </button>
         <button className="tb-btn" onClick={() => nav('/alertes')} aria-label={t('coque.alertes')}>
           {t('coque.alertes')} {alertes !== null && alertes > 0 && <span className="badge">{alertes}</span>}
         </button>

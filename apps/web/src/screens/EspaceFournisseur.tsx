@@ -29,6 +29,7 @@ export function EspaceFournisseur() {
   const { langue, fuseau, deconnexion } = useAuth();
   const e = useAsync(async () => ok(await supabase.rpc('espace_fournisseur')) as Espace, []);
   const [vue, setVue] = useState<Vue>('accueil');
+  const nonLus = useAsync(async () => ok(await supabase.rpc('messages_non_lus')) as number, [vue]);
   const x = e.data;
   const maintenant = new Date().toISOString();
   const aCoter = (x?.consultations ?? []).filter((c) => c.statut === 'ouverte' && c.date_limite > maintenant && !c.pli_depose_le);
@@ -45,7 +46,7 @@ export function EspaceFournisseur() {
       </header>
       <nav className="ecl-nav" aria-label={t('portail.navigation')}>
         {VUES.map((v) => <button key={v} type="button" aria-current={vue === v ? 'page' : undefined} onClick={() => setVue(v)}>
-          {t(`portail_f.vues.${v}`)}{v === 'cotations' && aCoter.length > 0 && <span className="badge">{aCoter.length}</span>}</button>)}
+          {t(`portail_f.vues.${v}`)}{v === 'cotations' && aCoter.length > 0 && <span className="badge">{aCoter.length}</span>}{v === 'messagerie' && (nonLus.data ?? 0) > 0 && <span className="badge">{nonLus.data}</span>}</button>)}
       </nav>
       <main className="screen ecl-main">
         <Bandeau type="err">{e.erreur}</Bandeau>

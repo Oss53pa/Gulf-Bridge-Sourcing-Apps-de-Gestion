@@ -1,6 +1,6 @@
 // Échanges · messagerie (interne, client, fournisseur). Visibilité, création et limitation de débit
 // tenues par la base (migration 60) ; le texte des messages est affiché comme du texte (jamais du HTML).
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
@@ -9,7 +9,7 @@ import { useAuth } from '../lib/auth';
 import { dateHeure } from '../lib/format';
 import { Bandeau, Bouton, Champ, Chargement, Entete, Tiroir, Vide } from '../components/ui';
 
-interface Fil { id: string; audience: 'interne' | 'client' | 'fournisseur'; sujet: string; categorie: string; reference: string | null; dernier_message_le: string; dernier_auteur: string | null; dernier_extrait: string | null }
+interface Fil { id: string; audience: 'interne' | 'client' | 'fournisseur'; sujet: string; categorie: string; reference: string | null; dernier_message_le: string; dernier_auteur: string | null; dernier_extrait: string | null; non_lus: number }
 interface Message { id: string; auteur: string; moi: boolean; interne: boolean; corps: string; cree_le: string }
 export interface CibleFil { id: string; libelle: string }
 const CATS = ['technique', 'qualite', 'expedition', 'factures', 'autre'] as const;
@@ -23,6 +23,11 @@ export function MessagerieVue({ nouveau, avecEntete = true }: { nouveau?: { audi
   const [creer, setCreer] = useState(false);
   const x = (fils.data ?? []).find((f) => f.id === sel) ?? fils.data?.[0] ?? null;
   const msgs = useAsync(async () => (x ? ok(await supabase.rpc('messages_du_fil', { p_fil: x.id })) as Message[] : []), [x?.id, x?.dernier_message_le]);
+  // Ouvrir un fil le marque comme lu (marque tenue par la base).
+  useEffect(() => {
+    if (!x || !x.non_lus) return;
+    void supabase.rpc('marquer_fil_lu', { p_fil: x.id }).then((r) => { if (!r.error) void fils.recharger(); });
+  }, [x?.id, x?.non_lus]); // eslint-disable-line react-hooks/exhaustive-deps
   const a = useAction();
   const [texte, setTexte] = useState('');
   const envoyer = async () => {
@@ -41,7 +46,7 @@ export function MessagerieVue({ nouveau, avecEntete = true }: { nouveau?: { audi
         <div className="msg-grille">
           <ul className="msg-fils">{(fils.data ?? []).map((f) => (
             <li key={f.id}><button type="button" className={x?.id === f.id ? 'choisi' : ''} onClick={() => setSel(f.id)}>
-              <span className="liv-pv"><b>{f.sujet}</b><span className="mute">{dateHeure(f.dernier_message_le, langue, fuseau)}</span></span>
+              <span className="liv-pv"><b>{f.sujet}{f.non_lus > 0 && <span className="badge">{f.non_lus}</span>}</b><span className="mute">{dateHeure(f.dernier_message_le, langue, fuseau)}</span></span>
               <span className="msg-meta">{t(`msg.categories.${f.categorie}`)}{f.reference ? ` · ${f.reference}` : ''} · {t(`msg.audiences.${f.audience}`)}</span>
               <span className="sec msg-extrait">{f.dernier_auteur ? `${f.dernier_auteur} : ` : ''}{f.dernier_extrait}</span></button></li>))}</ul>
           {x && <section className="msg-conv">
