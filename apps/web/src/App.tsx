@@ -35,6 +35,7 @@ import { GarantieSav, StockPieces } from './screens/ApresVente';
 import { ConformiteImport } from './screens/ConformiteImport';
 import { Documents } from './screens/Documents';
 import { Garanties } from './screens/Garanties';
+import { Tresorerie } from './screens/Tresorerie';
 import { ImprimerRapportOffres } from './screens/RapportOffres';
 import { Articles, Clients, FicheClient, FicheFournisseur, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, HistoriquePrix, MiseEnConcurrence } from './screens/Achats';
@@ -124,6 +125,7 @@ export function App() {
             <Route path="/rapprochement" element={g('rapprochement', <Rapprochement />)} />
             <Route path="/paiements" element={g('paiements', <Paiements />)} />
             <Route path="/garanties" element={g('garanties', <Garanties />)} />
+            <Route path="/tresorerie" element={g('tresorerie', <Tresorerie />)} />
             <Route path="/journal" element={g('journal', <Journal />)} />
             <Route path="/documents" element={g('documents', <Documents />)} />
             <Route path="/alertes" element={g('alertes', <Alertes />)} />

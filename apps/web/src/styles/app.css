@@ -826,3 +826,14 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .imp-ligne > span:first-child { display: flex; flex-direction: column; gap: 2px; }
 .imp-depot { grid-column: 1 / -1; }
 @media (max-width: 1100px) { .ref-grille.imp-grille { grid-template-columns: 1fr; } }
+
+/* Finance · trésorerie prévisionnelle */
+.trc-sc { display: inline-flex; gap: 2px; padding: 4px; border-radius: var(--r); background: var(--sable); }
+.trc-sc button { border: 1px solid transparent; background: none; padding: 7px 10px; border-radius: var(--r); font: inherit; font-size: 14px; cursor: pointer; }
+.trc-sc button[aria-pressed="true"] { background: var(--white); border-color: var(--bronze); }
+.trc-barres { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px; align-items: end; height: 170px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.trc-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; font-size: 12px; height: 100%; }
+.trc-barre { width: 70%; background: var(--ink); border-radius: 2px 2px 0 0; }
+.trc-barre.bas { background: var(--bronze); }
+.trc-barre.neg { background: var(--err); }
+.trc-val { font-size: 12px; color: var(--sec); }
