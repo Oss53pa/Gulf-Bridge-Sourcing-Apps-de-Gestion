@@ -1461,6 +1461,11 @@ T = {
  'regles.contrat_agent': ('Contrat de l\'agent pays', 'Country agent contract', '国家代理合同'),
  # ------------------------------------------------------------------ non-conformités (M27, lot 1)
  'ecrans.non_conformites': ('Non-conformités', 'Non-conformities', '不合格项'),
+ 'nc.surtitre': ('non-conformités et actions correctives', 'non-conformities and corrective actions', '不合格项与纠正措施'),
+ 'nc.titre_ouvertes': ('{{n}} non-conformités ouvertes', '{{n}} open non-conformities', '{{n}} 项未关闭不合格'),
+ 'nc.titre_detail': ('{{c}} critique, {{r}} en contre-inspection', '{{c}} critical, {{r}} awaiting re-inspection', '{{c}} 项严重，{{r}} 项待复检'),
+ 'nc.defaut_fabricant': ('Défaut · fabricant', 'Defect · manufacturer', '缺陷 · 制造商'), 'nc.origine': ('Origine', 'Origin', '来源'),
+ 'nc.ouverte_le': ('Ouverte le', 'Opened on', '开立日期'), 'nc.corrigee_le': ('Corrigée le', 'Corrected on', '纠正日期'),
  'nc.titre': ('Non-conformités et actions correctives', 'Non-conformities and corrective actions', '不合格项与纠正措施'),
  'nc.registre': ('Registre', 'Register', '登记表'),
  'nc.qualite_fournisseurs': ('Qualité des fournisseurs', 'Supplier quality', '供应商质量'),
