@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { date, montant, pourcent } from '../lib/format';
+import { date, montant, nombre, pourcent } from '../lib/format';
 import type { Client, Dossier, Facture, LigneFacture, Paiement } from '../lib/types';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { useNoms } from '../lib/referentiels';
@@ -272,35 +272,76 @@ export function FicheFacture() {
   );
 }
 
+type PaiementFile = Paiement & {
+  commandes: { reference: string; fournisseur_id: string; contrat_valide_le: string | null } | null;
+  comptes_paiement: { verifie: boolean } | null;
+};
+const FILTRES_PAY = { a_traiter: ['prepare', 'valide'], emis: ['execute', 'confirme_client'], tous: [] as string[] };
+
+/** File de paiements fournisseurs (maquette PAY). Les conditions affichées sont indicatives : la base les impose à la validation. */
 export function Paiements() {
   const { t } = useTranslation();
   const nav = useNavigate();
   const { langue, profil } = useAuth();
   const profils = useNoms('profils');
   const fournisseurs = useNoms('fournisseurs');
-  const [filtre, setFiltre] = useState<'a_valider' | 'tous'>('a_valider');
-  const l = useAsync(async () => {
-    let r = supabase.from('paiements_fournisseurs').select('*, commandes(reference, fournisseur_id)').order('prepare_le', { ascending: false }).limit(500);
-    if (filtre === 'a_valider') r = r.in('statut', ['prepare', 'valide']);
-    return ok(await r) as (Paiement & { commandes: { reference: string; fournisseur_id: string } | null })[];
-  }, [filtre]);
+  const a = useAction();
+  const [filtre, setFiltre] = useState<keyof typeof FILTRES_PAY>('a_traiter');
+  const l = useAsync(async () => ok(await supabase.from('paiements_fournisseurs')
+    .select('*, commandes(reference, fournisseur_id, contrat_valide_le), comptes_paiement(verifie)').order('prepare_le', { ascending: false }).limit(500)) as unknown as PaiementFile[], []);
+  const ids = [...new Set((l.data ?? []).map((p) => p.commande_id))];
+  const ins = useAsync(async () => (ids.length ? ok(await supabase.from('inspections').select('commande_id, type, statut, decision').in('commande_id', ids)) as
+    { commande_id: string; type: string; statut: string; decision: string | null }[] : []), [ids.join(',')]);
+  const pl = useAsync(async () => ok(await supabase.from('parametres').select('valeur, date_effet').eq('cle', 'paiement.plafond_wallet_cny')
+    .lte('date_effet', new Date().toISOString().slice(0, 10)).order('date_effet', { ascending: false }).limit(1)) as { valeur: unknown }[], []);
+  const plafond = pl.data?.[0] ? Number(pl.data[0].valeur) : null;
+  const tous = l.data ?? [];
+  const liste = tous.filter((p) => filtre === 'tous' || FILTRES_PAY[filtre].includes(p.statut));
+  const inspectionOk = (c: string) => (ins.data ?? []).some((x) => x.commande_id === c && ['avant_expedition', 'contre_inspection'].includes(x.type) && x.statut === 'validee' && x.decision === 'liberation');
+  const conditions = (p: PaiementFile): [string, boolean | null][] => [
+    ['compte', p.comptes_paiement ? p.comptes_paiement.verifie : null],
+    ...(p.nature === 'acompte' ? [['contrat', Boolean(p.commandes?.contrat_valide_le)] as [string, boolean]] : []),
+    ...(p.nature === 'solde' ? [['inspection', inspectionOk(p.commande_id)] as [string, boolean]] : []),
+    ...(['wechat_pay', 'alipay'].includes(p.canal) && plafond !== null ? [['plafond', Number(p.montant) <= plafond] as [string, boolean]] : []),
+  ];
+  const bloque = (p: PaiementFile) => ['prepare', 'valide'].includes(p.statut) && conditions(p).some(([, v]) => v === false);
+  const aValider = tous.filter((p) => p.statut === 'prepare' && !bloque(p)).length;
+  const bloques = tous.filter(bloque).length;
+  const validateur = profil?.role === 'admin' || profil?.delegue_validation;
+  const valider = async (p: PaiementFile) => { if (await a.executer(async () => ok(await supabase.rpc('valider_paiement', { p_paiement: p.id })))) void l.recharger(); };
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.finance')} · M12`} titre={t('paiements.titre')} />
-      <p className="mute" style={{ flex: 'none' }}>{t('paiements.aide_quatre_yeux', { nom: profil?.nom ?? '' })}</p>
-      <Onglets actif={filtre} onChange={setFiltre} items={[{ id: 'a_valider', lib: t('paiements.a_traiter') }, { id: 'tous', lib: t('paiements.tous') }]} />
-      <Bandeau type="err">{l.erreur}</Bandeau>
-      <CadreTableau>
-        {(l.data ?? []).length === 0 ? <Vide>{t('paiements.aucun')}</Vide> : (
-          <table className="t"><thead><tr><th>{t('champs.reference')}</th><th>{t('champs.commande')}</th><th>{t('champs.fournisseur')}</th><th>{t('paiements.nature')}</th><th className="num">{t('champs.montant')}</th><th>{t('paiements.prepare')}</th><th>{t('paiements.valide')}</th><th>{t('champs.statut')}</th></tr></thead>
-            <tbody>{(l.data ?? []).map((p) => (
-              <tr key={p.id} className="cliquable" onClick={() => nav(`/commandes/${p.commande_id}`)}>
-                <td className="ref">{p.reference}</td><td className="ref">{p.commandes?.reference}</td><td>{p.commandes ? fournisseurs[p.commandes.fournisseur_id] : ''}</td>
-                <td>{t(`natures.${p.nature}`)}<div className="mute">{t(`flux_paiement.${p.flux}`)} · {t(`canaux_paiement.${p.canal}`)}</div></td>
-                <td className="num">{montant(p.montant, p.devise, langue)}</td><td className="sec">{profils[p.prepare_par]}</td><td className="sec">{p.valide_par ? profils[p.valide_par] : '—'}</td>
-                <td><Statut statut={p.statut} libelle={t(`statuts_paiement.${p.statut}`)} /></td></tr>))}</tbody></table>
+      <Entete surtitre={`${t('modules.finance')} · ${t('paiements.surtitre')} · PAY`}
+        titre={l.data ? t('paiements.titre_file', { n: aValider, b: bloques }) : t('ecrans.paiements')} />
+      <p className="mute" style={{ flex: 'none', margin: 0 }}>{t('paiements.aide_quatre_yeux', { nom: profil?.nom ?? '' })}</p>
+      <Onglets actif={filtre} onChange={setFiltre} items={[{ id: 'a_traiter', lib: t('paiements.a_traiter') }, { id: 'emis', lib: t('paiements.emis') }, { id: 'tous', lib: t('paiements.tous') }]} />
+      <Bandeau type="err">{l.erreur ?? ins.erreur ?? a.erreur}</Bandeau>
+      <div className="cadre">
+        {l.chargement && !l.data ? <Chargement /> : liste.length === 0 ? <Vide>{t('paiements.aucun')}</Vide> : (
+          <table className="t"><thead><tr><th>{t('champs.reference')}</th><th>{t('paiements.beneficiaire')}</th><th>{t('paiements.objet_mode')}</th><th>{t('paiements.moyen')}</th>
+            <th className="num">{t('champs.montant')}</th><th>{t('paiements.conditions')}</th><th>{t('champs.statut')}</th><th /></tr></thead>
+            <tbody>{liste.map((p) => {
+              const b = bloque(p);
+              return (
+                <tr key={p.id} className="cliquable" onClick={() => nav(`/commandes/${p.commande_id}`)}>
+                  <td className="ref">{p.reference}<div className="mute">{p.commandes?.reference}</div></td>
+                  <td>{p.commandes ? fournisseurs[p.commandes.fournisseur_id] : '—'}</td>
+                  <td>{t(`natures.${p.nature}`)}<div className="mute">{t(`flux_paiement.${p.flux}`)} · {t('paiements.prepare_par', { nom: profils[p.prepare_par] ?? '—' })}</div></td>
+                  <td className="sec">{t(`canaux_paiement.${p.canal}`)}</td>
+                  <td className="num">{montant(p.montant, p.devise, langue)}</td>
+                  <td><div className="pay-conds">{conditions(p).map(([k, v]) => (
+                    <span key={k} className={v === null ? 'mute' : v ? 'txt-ok' : 'txt-err'}>{v === null ? '·' : v ? '✓' : '×'} {t(`paiements.cond.${k}`, { m: plafond === null ? '' : nombre(plafond, langue) })}</span>))}</div></td>
+                  <td><Statut statut={b ? 'err' : p.statut} libelle={b ? t('paiements.bloque') : t(`statuts_paiement.${p.statut}`)} /></td>
+                  <td className="num" onClick={(e) => e.stopPropagation()}>
+                    {p.statut === 'prepare' && !b && validateur && p.prepare_par !== profil?.id &&
+                      <Bouton petit variante="primaire" disabled={a.enCours} onClick={() => void valider(p)}>{t('commun.valider')}</Bouton>}
+                    {p.statut === 'prepare' && p.prepare_par === profil?.id && <span className="mute">{t('paiements.attente_second')}</span>}
+                  </td>
+                </tr>);
+            })}</tbody></table>
         )}
-      </CadreTableau>
+        <p className="mute" style={{ margin: '10px 0 0' }}>{t('paiements.aide_conditions')}</p>
+      </div>
     </div>
   );
 }
