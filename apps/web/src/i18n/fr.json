@@ -2868,6 +2868,64 @@
    "factures": "Factures"
   }
  },
+ "portail_f": {
+  "a_coter": "À coter",
+  "agrement": "Agrément",
+  "aide_agrement": "Une due diligence expirée ou un engagement non signé suspend les nouvelles consultations.",
+  "aide_compte": "Pour changer de compte, contactez les achats : tout nouveau compte est vérifié avant le moindre paiement.",
+  "aide_cotations": "Votre pli reste scellé jusqu'à la date limite, puis toutes les offres sont ouvertes ensemble. Pour remettre une offre, utilisez le lien sécurisé reçu pour chaque consultation.",
+  "aide_paiements": "Le solde est payé quand toutes les conditions sont remplies ; Gulf Bridge Sourcing vérifie les documents et ne prélève rien sur les paiements à l'usine.",
+  "aucun_paiement": "Aucun paiement prévu.",
+  "aucune_commande": "Aucune commande.",
+  "aucune_consultation": "Aucune consultation.",
+  "close": "Close",
+  "commandes_cours": "Commandes en cours",
+  "comptes": "Comptes de paiement",
+  "conditions": "Quantité · incoterm",
+  "consultation": "Consultation",
+  "coter": "Cotation · {{o}}",
+  "date_limite": "Date limite",
+  "dd_valide": "Due diligence valable jusqu'au",
+  "engagement": "Engagement de non-commission",
+  "etats": {
+   "a_venir": "À venir",
+   "annule": "Annulé",
+   "recu": "Reçu"
+  },
+  "ethique": "Gulf Bridge Sourcing interdit toute commission ou rétrocession. Si un collaborateur en demande une, signalez-le à la direction.",
+  "limite": "Date limite {{d}}",
+  "natures": {
+   "acompte": "Acompte",
+   "echantillon": "Échantillon",
+   "frais": "Frais",
+   "solde": "Solde"
+  },
+  "non_signe": "Non signé",
+  "non_verifie": "Non vérifié",
+  "note": "Note",
+  "ouvrir": "Ouvrir",
+  "paiement_direct": "Le client paie l'usine directement",
+  "pli_depose": "Pli déposé le {{d}}",
+  "recu": "Reçu",
+  "recu_le": "Reçu le {{d}}",
+  "resume": " : {{c}} cotation(s) à remettre, {{o}} commande(s) en cours",
+  "scelle": "Pli scellé · prix confidentiels",
+  "signe_le": "Signé le {{d}}",
+  "sur_100": "sur 100",
+  "types_compte": {
+   "alipay": "Alipay",
+   "banque": "Banque",
+   "wechat_pay": "WeChat Pay"
+  },
+  "verifie": "Vérifié {{d}}",
+  "vues": {
+   "accueil": "Accueil",
+   "agrement": "Agrément",
+   "commandes": "Commandes",
+   "cotations": "Cotations",
+   "paiements": "Paiements"
+  }
+ },
  "portefeuille": {
   "chef": "chef",
   "colonnes": "Colonnes",

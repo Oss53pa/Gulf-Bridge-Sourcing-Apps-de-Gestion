@@ -2868,6 +2868,64 @@
    "factures": "Invoices"
   }
  },
+ "portail_f": {
+  "a_coter": "To quote",
+  "agrement": "Approval",
+  "aide_agrement": "An expired due diligence or an unsigned commitment suspends new requests for quotation.",
+  "aide_compte": "To change account, contact purchasing: any new account is verified before any payment.",
+  "aide_cotations": "Your bid stays sealed until the deadline, then all offers are opened together. To submit an offer, use the secure link received for each request.",
+  "aide_paiements": "The balance is paid once all conditions are met; Gulf Bridge Sourcing checks the documents and takes nothing from payments to the factory.",
+  "aucun_paiement": "No payment planned.",
+  "aucune_commande": "No order.",
+  "aucune_consultation": "No request for quotation.",
+  "close": "Closed",
+  "commandes_cours": "Orders in progress",
+  "comptes": "Payment accounts",
+  "conditions": "Quantity · incoterm",
+  "consultation": "Request",
+  "coter": "Quotation · {{o}}",
+  "date_limite": "Deadline",
+  "dd_valide": "Due diligence valid until",
+  "engagement": "No-commission commitment",
+  "etats": {
+   "a_venir": "Upcoming",
+   "annule": "Cancelled",
+   "recu": "Received"
+  },
+  "ethique": "Gulf Bridge Sourcing forbids any commission or kickback. If a staff member asks for one, report it to management.",
+  "limite": "Deadline {{d}}",
+  "natures": {
+   "acompte": "Deposit",
+   "echantillon": "Sample",
+   "frais": "Fees",
+   "solde": "Balance"
+  },
+  "non_signe": "Not signed",
+  "non_verifie": "Not verified",
+  "note": "Score",
+  "ouvrir": "Open",
+  "paiement_direct": "The client pays the factory directly",
+  "pli_depose": "Bid submitted on {{d}}",
+  "recu": "Received",
+  "recu_le": "Received on {{d}}",
+  "resume": ": {{c}} quotation(s) to submit, {{o}} order(s) in progress",
+  "scelle": "Sealed bid · confidential prices",
+  "signe_le": "Signed on {{d}}",
+  "sur_100": "out of 100",
+  "types_compte": {
+   "alipay": "Alipay",
+   "banque": "Bank",
+   "wechat_pay": "WeChat Pay"
+  },
+  "verifie": "Verified {{d}}",
+  "vues": {
+   "accueil": "Home",
+   "agrement": "Approval",
+   "commandes": "Orders",
+   "cotations": "Quotations",
+   "paiements": "Payments"
+  }
+ },
  "portefeuille": {
   "chef": "lead",
   "colonnes": "Columns",

@@ -861,3 +861,5 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .ecl-grille { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
 .ecl-bloc { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border); }
 @media (max-width: 900px) { .ecl-grille { grid-template-columns: 1fr; } .ecl-nav { padding: 8px 16px; } .ecl-titre { font-size: 26px; } }
+.ecl-chiffres.f4 { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: none; } .ecl-petit { font-size: 20px !important; }
+.ecl .grl-regle .statut { white-space: nowrap; flex: none; }

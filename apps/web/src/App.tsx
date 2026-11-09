@@ -80,6 +80,7 @@ const ImprimerDueDiligence = paresseux(() => import('./screens/Imprimes'), 'Impr
 const ImprimerFacture = paresseux(() => import('./screens/Imprimes'), 'ImprimerFacture');
 const ImprimerInspection = paresseux(() => import('./screens/Imprimes'), 'ImprimerInspection');
 const EspaceClient = paresseux(() => import('./screens/EspaceClient'), 'EspaceClient');
+const EspaceFournisseur = paresseux(() => import('./screens/EspaceFournisseur'), 'EspaceFournisseur');
 const attente = <div className="screen"><Chargement /></div>;
 
 function Garde({ ecran, children }: { ecran: string; children: ReactNode }) {
@@ -101,6 +102,7 @@ export function App() {
   if (!session || aal !== 'aal2') return <Connexion />;
   // Compte client : son espace seulement (contenu et droits tenus par la base).
   if (profil?.role === 'client' && profil.actif) return <Suspense fallback={attente}><EspaceClient /></Suspense>;
+  if (profil?.role === 'fournisseur' && profil.actif) return <Suspense fallback={attente}><EspaceFournisseur /></Suspense>;
   if (!profil?.role || !ROLES_INTERNES.includes(profil.role) || !profil.actif) return <SansRole />;
   const g = (ecran: string, el: ReactNode) => <Garde ecran={ecran}>{el}</Garde>;
   return (

@@ -13,7 +13,8 @@ alter table gbs.profils
   add column client_id uuid references gbs.clients(id),
   add column fournisseur_id uuid references gbs.fournisseurs(id),
   add constraint profils_client_lie check ((client_id is null or role = 'client') and (role is distinct from 'client' or client_id is not null)),
-  add constraint profils_fournisseur_lie check (fournisseur_id is null or role = 'fournisseur'),
+  add constraint profils_fournisseur_lie check ((fournisseur_id is null or role = 'fournisseur') and (role is distinct from 'fournisseur' or fournisseur_id is not null)),
+  add constraint profils_sous_role_fournisseur check (role <> 'fournisseur' or sous_role in ('commercial','qualite','logistique','finance')),
   add constraint profils_sous_role_client check (role <> 'client' or sous_role in ('demandeur','technique','valideur','finance'));
 
 -- Un profil ne modifie jamais lui-même son rôle, son rattachement externe ni son sous-rôle.
@@ -28,15 +29,14 @@ begin
   return new;
 end $$;
 
--- Rôles internes : le rôle client passe par admin_compte_client ; quitter le rôle efface le rattachement.
+-- Rôles internes : les comptes client et fournisseur passent par leurs fonctions dédiées ; quitter ces rôles efface le rattachement.
 create or replace function gbs.admin_definir_profil(p_user uuid, p_role text, p_societes uuid[],
   p_pays text default null, p_delegue boolean default false, p_actif boolean default true)
 returns gbs.profils language plpgsql security definer set search_path = '' as $$
 declare x gbs.profils;
 begin
   perform gbs_private.exiger(gbs_private.is_admin(), 'GBS_VALIDATION_ADMIN');
-  if p_role is not null and p_role not in ('admin','achats_chine','hub_afrique','agent_pays','inspecteur','comptable',
-                                           'fournisseur','transitaire') then
+  if p_role is not null and p_role not in ('admin','achats_chine','hub_afrique','agent_pays','inspecteur','comptable','transitaire') then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
   end if;
   if p_role = 'agent_pays' and p_pays is null then
@@ -44,8 +44,8 @@ begin
   end if;
   update gbs.profils set role = p_role, societes = coalesce(p_societes, '{}'), pays = p_pays,
          delegue_validation = coalesce(p_delegue, false), actif = coalesce(p_actif, true),
-         client_id = null, fournisseur_id = case when p_role = 'fournisseur' then fournisseur_id end,
-         sous_role = case when role = 'client' then null else sous_role end
+         client_id = null, fournisseur_id = null,
+         sous_role = case when role in ('client','fournisseur') then null else sous_role end
    where id = p_user returning * into x;
   if x.id is null then raise exception 'GBS_PROFIL_INCONNU' using errcode = 'P0002'; end if;
   return x;
