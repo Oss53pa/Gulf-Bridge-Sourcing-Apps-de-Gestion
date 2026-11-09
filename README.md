@@ -229,19 +229,14 @@ select cron.schedule('gbs-mensualites-cadre', '0 7 1 * *',
 
 ### Demandes du formulaire de contact du site
 
-Le formulaire de www.gulfbridgesourcing.com enregistre chaque demande dans le module « Sites clients » de la console Atlas Studio (`public.client_site_leads`, site `gulf-bridge-sourcing`), qui garde la notification par e-mail. L'application les reprend en prospects (source « site web ») par une importation périodique :
+Le formulaire de www.gulfbridgesourcing.com envoie ses demandes au Worker du site (`POST /api/demande`), qui les contrôle, les signe (HMAC-SHA256, secret `GBS_SITE_SECRET`, horodatage à ±5 minutes) et les relaie à la fonction `gbs-demande` : chaque demande devient directement un prospect (source « site web »), avec sa spécialité, son pays et sa page d'origine, et la tâche « premier contact sous 1 jour ouvré ». Rien ne passe plus par la console Atlas Studio.
 
-- lecture seule de la table d'Atlas Studio, aucun déclencheur posé dessus : une panne côté GBS ne bloque jamais l'envoi du formulaire ;
-- chaque demande n'est importée qu'une fois (`gbs.demandes_site_importees`) ; une demande inexploitable est consignée (`GBS_DEMANDE_INVALIDE`) sans être réessayée ;
-- pays déduit de l'indicatif du téléphone, sinon « ZZ » (à préciser, confié au Hub Afrique) ; un prospect « ZZ » ne se convertit pas en client tant que son pays n'est pas précisé sur sa fiche ;
-- spécialité déduite du service choisi, sinon « autre » ; même adresse e-mail sous 24 heures rattachée au prospect existant ;
-- la tâche « premier contact sous 1 jour ouvré » est créée comme pour tout prospect.
+- Pays : Côte d'Ivoire, Gabon, Cameroun ; « Autre pays » et la demande du modèle de rapport arrivent en « ZZ » (à préciser), confiées au Hub Afrique. Un prospect « ZZ » ne se convertit pas en client tant que son pays n'est pas précisé sur sa fiche (`GBS_PAYS_A_PRECISER`).
+- Le secret est posé à l'identique dans Supabase (secret de `gbs-demande`) et dans le Worker du site (`npx wrangler secret put GBS_SITE_SECRET`).
 
-```sql
-select cron.schedule('gbs-demandes-site', '*/5 * * * *', 'select gbs_private.importer_demandes_site()');
+```bash
+supabase functions deploy gbs-demande --no-verify-jwt
 ```
-
-La fonction `gbs-demande` (envoi signé HMAC depuis un serveur) reste disponible si le site envoie un jour ses demandes directement, avec pays, spécialité et fichiers.
 
 ### Taux de change automatiques (BCE)
 
