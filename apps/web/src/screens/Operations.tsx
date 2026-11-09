@@ -7,7 +7,7 @@ import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, dateHeure } from '../lib/format';
 import type { Commande, Constat, Dossier, Etape, Expedition, Inspection, NonConformite, Profil } from '../lib/types';
-import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
+import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
 import { useNoms } from '../lib/referentiels';
 import { Depot as Depotx } from '../components/Depot';
 import { FicheNc } from './NonConformites';
@@ -324,29 +324,58 @@ export function RapportInspection() {
 }
 
 // ============================================================================ Expéditions
+type ExpeditionListe = Expedition & { eta_initiale: string | null; dossiers: { reference: string; clients: { raison_sociale: string } | null } | null };
+
+/** Suivi des expéditions (maquette EXP) : arrivées reportées et jours de franchise dépassés au port. */
 export function Expeditions() {
   const { t } = useTranslation();
   const nav = useNavigate();
-  const { langue, profil } = useAuth();
-  const dossiers = useNoms('dossiers');
+  const { profil } = useAuth();
   const [creer, setCreer] = useState(false);
-  const l = useAsync(async () => ok(await supabase.from('expeditions').select('*').order('cree_le', { ascending: false }).limit(500)) as Expedition[], []);
+  const l = useAsync(async () => ok(await supabase.from('expeditions').select('*, dossiers(reference, clients(raison_sociale))')
+    .order('cree_le', { ascending: false }).limit(500)) as unknown as ExpeditionListe[], []);
+  const ids = (l.data ?? []).map((e) => e.id);
+  const arr = useAsync(async () => (ids.length ? ok(await supabase.from('expedition_etapes').select('expedition_id, survenue_le').eq('etape', 'arrivee_port').in('expedition_id', ids)) as
+    { expedition_id: string; survenue_le: string }[] : []), [ids.join(',')]);
   const ecrit = ['admin', 'achats_chine'].includes(profil?.role ?? '');
+  const tous = l.data ?? [];
+  const jour = new Date().toISOString().slice(0, 10);
+  const reportee = (e: ExpeditionListe) => Boolean(e.eta && e.eta_initiale && e.eta > e.eta_initiale) && ['preparation', 'remise_transporteur', 'expediee', 'en_transit'].includes(e.statut);
+  // Franchise : jours passés au port depuis l'arrivée réelle, au-delà des jours de franchise, tant que la marchandise n'est pas livrée.
+  const depassement = (e: ExpeditionListe) => {
+    const a = (arr.data ?? []).find((x) => x.expedition_id === e.id)?.survenue_le.slice(0, 10);
+    if (!a || e.jours_franchise === null || e.statut === 'livree') return null;
+    return Math.round((Date.parse(jour) - Date.parse(a)) / 86400000) - e.jours_franchise;
+  };
+  const reportees = tous.filter(reportee);
+  const franchises = tous.filter((e) => (depassement(e) ?? 0) > 0);
+  const alertes = [...new Set([...reportees.map((e) => t('expeditions.alerte_report', { port: e.port_arrivee ?? '—' })), ...franchises.map((e) => t('expeditions.alerte_franchise', { port: e.port_arrivee ?? '—' }))])];
+  const titre = t('expeditions.titre_suivies', { n: tous.filter((e) => e.statut !== 'livree').length }) + (alertes.length ? ` ; ${t('expeditions.titre_alertes', { n: alertes.length, liste: alertes.join(t('expeditions.et')) })}` : '');
+  const ddmm = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.logistique')} · M9`} titre={t('expeditions.titre', { n: (l.data ?? []).length })}
+      <Entete surtitre={`${t('modules.logistique')} · ${t('expeditions.surtitre')} · EXP`} titre={l.data ? titre : t('ecrans.expeditions')}
         actions={ecrit && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('expeditions.nouvelle')}</Bouton>} />
-      <Bandeau type="err">{l.erreur}</Bandeau>
-      <CadreTableau>
-        {l.chargement ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('expeditions.aucune')}</Vide> : (
-          <table className="t"><thead><tr><th>{t('champs.reference')}</th><th>{t('champs.dossier')}</th><th>{t('expeditions.mode')}</th><th>{t('expeditions.trajet')}</th><th>ETD</th><th>ETA</th><th>{t('expeditions.bordereau')}</th><th>{t('champs.statut')}</th></tr></thead>
-            <tbody>{(l.data ?? []).map((e) => (
-              <tr key={e.id} className="cliquable" onClick={() => nav(`/expeditions/${e.id}`)}>
-                <td className="ref">{e.reference}</td><td className="ref">{dossiers[e.dossier_id]}</td><td>{t(`modes_exp.${e.mode}`)}</td>
-                <td className="sec">{e.port_depart ?? '—'} → {e.port_arrivee ?? e.pays_destination}</td><td className="ref">{date(e.etd, langue)}</td><td className="ref">{date(e.eta, langue)}</td>
-                <td className="sec">{e.bordereau_reference ?? '—'}</td><td><Statut statut={e.statut} libelle={t(`statuts_exp.${e.statut}`)} /></td></tr>))}</tbody></table>
+      <Bandeau type="err">{l.erreur ?? arr.erreur}</Bandeau>
+      <div className="cadre">
+        {l.chargement && !l.data ? <Chargement /> : tous.length === 0 ? <Vide>{t('expeditions.aucune')}</Vide> : (
+          <table className="t"><thead><tr><th>{t('expeditions.expedition')}</th><th>{t('expeditions.client')}</th><th>{t('expeditions.conteneur')}</th>
+            <th>{t('expeditions.trajet')}</th><th>{t('expeditions.arrivee')}</th><th>{t('champs.statut')}</th><th>{t('expeditions.franchise_court')}</th></tr></thead>
+            <tbody>{tous.map((e) => {
+              const r = reportee(e), d = depassement(e);
+              return (
+                <tr key={e.id} className="cliquable" onClick={() => nav(`/expeditions/${e.id}`)}>
+                  <td className="ref">{e.reference}<div className="mute">{e.dossiers?.reference}</div></td>
+                  <td>{e.dossiers?.clients?.raison_sociale ?? '—'}</td>
+                  <td className="sec">{e.conteneurs.length ? e.conteneurs.join(', ') : <span className="mute">{t('expeditions.a_affecter')}</span>}</td>
+                  <td className="sec">{e.port_depart ?? '—'} → {e.port_arrivee ?? e.pays_destination}</td>
+                  <td className="ref"><span className={r ? 'txt-err' : ''}>{ddmm(e.eta)}</span>{r && <div className="mute">{t('expeditions.prevue', { d: ddmm(e.eta_initiale) })}</div>}</td>
+                  <td><Statut statut={r ? 'att' : e.statut} libelle={`${t(`statuts_exp.${e.statut}`)}${r ? ` · ${t('expeditions.retard')}` : ''}`} /></td>
+                  <td className={d !== null && d > 0 ? 'txt-err' : 'mute'}>{d === null ? '—' : d > 0 ? t('expeditions.jours_depasses', { n: d }) : t('expeditions.jours_restants', { n: -d })}</td>
+                </tr>);
+            })}</tbody></table>
         )}
-      </CadreTableau>
+      </div>
       {creer && <NouvelleExpedition onClose={() => setCreer(false)} onOk={(id) => nav(`/expeditions/${id}`)} />}
     </div>
   );
