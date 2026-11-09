@@ -2813,6 +2813,61 @@
   "titre_equipe": "Formulaire fournisseur et plis fermés",
   "votre_question": "Votre question"
  },
+ "portail": {
+  "actions": "Actions attendues",
+  "actions_attendent": ", {{n}} action(s) vous attendent",
+  "aide_documents": "Les documents validés de votre dossier, conservés et téléchargeables à tout moment.",
+  "aide_factures": "Nos honoraires sont facturés séparément de la facture du fabricant, que vous réglez directement à l'usine.",
+  "aucun_document": "Aucun document disponible.",
+  "aucun_dossier": "Aucun dossier en cours pour votre société.",
+  "aucune_action": "Rien ne vous est demandé pour le moment.",
+  "aucune_expedition": "Aucune expédition pour le moment.",
+  "aucune_facture": "Aucune facture émise.",
+  "avant_ouverture": "jours avant l'ouverture · {{d}}",
+  "bonjour": "Bonjour {{nom}}",
+  "chef": "Votre chef de dossier",
+  "debut": "Début",
+  "demandee_le": "Demandée le {{d}}",
+  "depart_arrivee": "Départ {{d}} · arrivée prévue {{a}}",
+  "derniers_documents": "Derniers documents",
+  "dossier": "Dossier",
+  "echeance": "Échéance",
+  "en_cours": "en cours",
+  "etape": "Étape",
+  "facture": "Facture",
+  "fin": "Fin",
+  "marge_planning": "jours ouvrés de marge sur le planning",
+  "montant": "Montant",
+  "navigation": "Navigation de l'espace client",
+  "ouverture_le": "ouverture du site le {{d}}",
+  "pieces": {
+   "expiree": "Expirée",
+   "manquante": "À transmettre",
+   "refusee": "À refaire"
+  },
+  "prevue": "prévue {{d}}",
+  "reste": "Reste à régler",
+  "statuts_facture": {
+   "emise": "À régler",
+   "partiellement_payee": "Partiellement réglée",
+   "payee": "Réglée"
+  },
+  "statuts_phase": {
+   "a_venir": "À venir",
+   "en_cours": "En cours",
+   "terminee": "Terminée"
+  },
+  "tous_documents": "Tous les documents",
+  "transmettre": "Transmettez ces documents à votre chef de dossier ; le dépôt en ligne arrive dans une prochaine version.",
+  "transparence": "Transparence totale",
+  "vues": {
+   "accueil": "Accueil",
+   "documents": "Documents",
+   "dossier": "Mon dossier",
+   "expedition": "Expédition",
+   "factures": "Factures"
+  }
+ },
  "portefeuille": {
   "chef": "chef",
   "colonnes": "Colonnes",

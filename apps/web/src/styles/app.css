@@ -847,3 +847,17 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .neg-grille { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; align-items: start; }
 @media (max-width: 1100px) { .neg-grille { grid-template-columns: 1fr; } }
 .exp-aside .grl-regle .statut { white-space: nowrap; }
+
+/* Portail client */
+.ecl .ecl-tete { justify-content: space-between; }
+.ecl-marque { font-size: 15px; }
+.ecl-nav { display: flex; gap: 4px; padding: 8px 48px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.ecl-nav button { border: 0; background: none; padding: 8px 12px; border-radius: var(--r); font: inherit; font-size: 14px; color: var(--sec); cursor: pointer; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.ecl-nav button[aria-current="page"] { background: var(--ink); color: #fff; }
+.ecl-main { max-width: 1200px; margin: 0 auto; width: 100%; }
+.ecl-titre { font-family: var(--serif); font-size: 32px; font-weight: 400; line-height: 1.2; margin: 4px 0 12px; }
+.ecl-chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 640px; }
+.ecl-frise { margin: 16px 0; }
+.ecl-grille { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+.ecl-bloc { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border); }
+@media (max-width: 900px) { .ecl-grille { grid-template-columns: 1fr; } .ecl-nav { padding: 8px 16px; } .ecl-titre { font-size: 26px; } }

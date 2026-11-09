@@ -2813,6 +2813,61 @@
   "titre_equipe": "供应商表单与密封报价",
   "votre_question": "您的问题"
  },
+ "portail": {
+  "actions": "待办事项",
+  "actions_attendent": "，有 {{n}} 项待办",
+  "aide_documents": "项目的已验证文件，随时可下载。",
+  "aide_factures": "我们的服务费与厂家发票分开开具，厂家发票由您直接支付给工厂。",
+  "aucun_document": "暂无文件。",
+  "aucun_dossier": "贵公司暂无进行中的项目。",
+  "aucune_action": "目前无需您处理。",
+  "aucune_expedition": "暂无发运。",
+  "aucune_facture": "暂无已开发票。",
+  "avant_ouverture": "距开业天数 · {{d}}",
+  "bonjour": "{{nom}}，您好",
+  "chef": "您的项目负责人",
+  "debut": "开始",
+  "demandee_le": "{{d}} 提出",
+  "depart_arrivee": "出发 {{d}} · 预计到达 {{a}}",
+  "derniers_documents": "最新文件",
+  "dossier": "项目",
+  "echeance": "到期日",
+  "en_cours": "进行中",
+  "etape": "阶段",
+  "facture": "发票",
+  "fin": "结束",
+  "marge_planning": "计划余量（工作日）",
+  "montant": "金额",
+  "navigation": "客户空间导航",
+  "ouverture_le": "开业日期 {{d}}",
+  "pieces": {
+   "expiree": "已过期",
+   "manquante": "待提交",
+   "refusee": "需重新提交"
+  },
+  "prevue": "计划 {{d}}",
+  "reste": "待付余额",
+  "statuts_facture": {
+   "emise": "待付",
+   "partiellement_payee": "部分已付",
+   "payee": "已付"
+  },
+  "statuts_phase": {
+   "a_venir": "待开始",
+   "en_cours": "进行中",
+   "terminee": "已完成"
+  },
+  "tous_documents": "全部文件",
+  "transmettre": "请将这些文件发送给您的项目负责人；在线上传将在后续版本提供。",
+  "transparence": "完全透明",
+  "vues": {
+   "accueil": "首页",
+   "documents": "文件",
+   "dossier": "我的项目",
+   "expedition": "发运",
+   "factures": "发票"
+  }
+ },
  "portefeuille": {
   "chef": "负责人",
   "colonnes": "分栏",

@@ -2813,6 +2813,61 @@
   "titre_equipe": "Supplier form and sealed bids",
   "votre_question": "Your question"
  },
+ "portail": {
+  "actions": "Actions awaited",
+  "actions_attendent": ", {{n}} action(s) awaiting you",
+  "aide_documents": "Your project's validated documents, kept and downloadable at any time.",
+  "aide_factures": "Our fees are invoiced separately from the manufacturer's invoice, which you pay directly to the factory.",
+  "aucun_document": "No document available.",
+  "aucun_dossier": "No project in progress for your company.",
+  "aucune_action": "Nothing is required from you right now.",
+  "aucune_expedition": "No shipment yet.",
+  "aucune_facture": "No invoice issued.",
+  "avant_ouverture": "days before opening · {{d}}",
+  "bonjour": "Hello {{nom}}",
+  "chef": "Your project manager",
+  "debut": "Start",
+  "demandee_le": "Requested on {{d}}",
+  "depart_arrivee": "Departure {{d}} · expected arrival {{a}}",
+  "derniers_documents": "Latest documents",
+  "dossier": "Project",
+  "echeance": "Due date",
+  "en_cours": "in progress",
+  "etape": "Step",
+  "facture": "Invoice",
+  "fin": "End",
+  "marge_planning": "working days of slack in the schedule",
+  "montant": "Amount",
+  "navigation": "Client area navigation",
+  "ouverture_le": "site opening on {{d}}",
+  "pieces": {
+   "expiree": "Expired",
+   "manquante": "To send",
+   "refusee": "To redo"
+  },
+  "prevue": "planned {{d}}",
+  "reste": "Balance due",
+  "statuts_facture": {
+   "emise": "To pay",
+   "partiellement_payee": "Partly paid",
+   "payee": "Paid"
+  },
+  "statuts_phase": {
+   "a_venir": "Upcoming",
+   "en_cours": "In progress",
+   "terminee": "Completed"
+  },
+  "tous_documents": "All documents",
+  "transmettre": "Send these documents to your project manager; online upload is coming in a later version.",
+  "transparence": "Full transparency",
+  "vues": {
+   "accueil": "Home",
+   "documents": "Documents",
+   "dossier": "My project",
+   "expedition": "Shipping",
+   "factures": "Invoices"
+  }
+ },
  "portefeuille": {
   "chef": "lead",
   "colonnes": "Columns",
