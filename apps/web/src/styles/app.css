@@ -863,3 +863,4 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 @media (max-width: 900px) { .ecl-grille { grid-template-columns: 1fr; } .ecl-nav { padding: 8px 16px; } .ecl-titre { font-size: 26px; } }
 .ecl-chiffres.f4 { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: none; } .ecl-petit { font-size: 20px !important; }
 .ecl .grl-regle .statut { white-space: nowrap; flex: none; }
+.cpt-ext { border: 0; border-top: 1px solid var(--border); padding: 12px 0 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; }

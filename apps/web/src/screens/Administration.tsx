@@ -364,6 +364,43 @@ function Taux() {
 }
 
 const ROLES = ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'inspecteur', 'comptable'] as const;
+const SOUS_ROLES = { client: ['demandeur', 'technique', 'valideur', 'finance'], fournisseur: ['commercial', 'qualite', 'logistique', 'finance'] } as const;
+
+/** Rattachement d'un compte à un client ou à un fournisseur (portails) ; la base contrôle droits et valeurs. */
+function CompteExterne({ p, onFait }: { p: Profil; onFait: () => void }) {
+  const { t } = useTranslation();
+  const a = useAction();
+  const [type, setType] = useState<'client' | 'fournisseur'>(p.role === 'fournisseur' ? 'fournisseur' : 'client');
+  const [cible, setCible] = useState(p.client_id ?? p.fournisseur_id ?? '');
+  const [sr, setSr] = useState(p.sous_role ?? '');
+  const l = useAsync(async () => (type === 'client'
+    ? (ok(await supabase.from('clients').select('id, raison_sociale').order('raison_sociale').limit(1000)) as { id: string; raison_sociale: string }[]).map((x) => ({ id: x.id, nom: x.raison_sociale }))
+    : (ok(await supabase.from('fournisseurs').select('id, raison_sociale_en').order('raison_sociale_en').limit(1000)) as { id: string; raison_sociale_en: string }[]).map((x) => ({ id: x.id, nom: x.raison_sociale_en }))), [type]);
+  const rattacher = async () => {
+    const v = z.object({ p_user: z.string().uuid(), cible: z.string().uuid(), p_sous_role: z.enum([...SOUS_ROLES.client, ...SOUS_ROLES.fournisseur] as [string, ...string[]]) }).strict()
+      .safeParse({ p_user: p.id, cible, p_sous_role: sr });
+    if (!v.success || !(SOUS_ROLES[type] as readonly string[]).includes(sr)) { a.setErreur(t('formulaire.invalide')); return; }
+    const fn = type === 'client' ? 'admin_compte_client' : 'admin_compte_fournisseur';
+    const args = type === 'client' ? { p_user: p.id, p_client: cible, p_sous_role: sr } : { p_user: p.id, p_fournisseur: cible, p_sous_role: sr };
+    if (await a.executer(async () => ok(await supabase.rpc(fn, args)))) onFait();
+  };
+  return (
+    <fieldset className="cpt-ext">
+      <legend className="section-titre">{t('parametrage.compte_externe')}</legend>
+      <p className="mute">{t('parametrage.aide_compte_externe')}</p>
+      <div className="grille2">
+        <Champ label={t('parametrage.type_compte')}><select value={type} onChange={(e) => { setType(e.target.value as 'client' | 'fournisseur'); setCible(''); setSr(''); }}>
+          <option value="client">{t('roles.client')}</option><option value="fournisseur">{t('roles.fournisseur')}</option></select></Champ>
+        <Champ label={t('parametrage.sous_role')}><select value={sr} onChange={(e) => setSr(e.target.value)}>
+          <option value="">—</option>{SOUS_ROLES[type].map((x) => <option key={x} value={x}>{t(`sous_roles.${x}`)}</option>)}</select></Champ>
+      </div>
+      <Champ label={type === 'client' ? t('roles.client') : t('roles.fournisseur')}><select value={cible} onChange={(e) => setCible(e.target.value)}>
+        <option value="">—</option>{(l.data ?? []).map((x) => <option key={x.id} value={x.id}>{x.nom}</option>)}</select></Champ>
+      <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
+      <Bouton disabled={a.enCours || !cible || !sr} onClick={() => void rattacher()}>{t('parametrage.rattacher')}</Bouton>
+    </fieldset>
+  );
+}
 
 function Utilisateurs() {
   const { t } = useTranslation();
@@ -384,7 +421,7 @@ function Utilisateurs() {
       <Bandeau type="err">{l.erreur}</Bandeau>
       <table className="t"><thead><tr><th>{t('champs.nom')}</th><th>E-mail</th><th>{t('parametrage.role')}</th><th>{t('parametrage.societes')}</th><th>{t('parametrage.delegue')}</th><th>{t('champs.statut')}</th></tr></thead>
         <tbody>{(l.data ?? []).map((p) => (
-          <tr key={p.id} className="cliquable" onClick={() => setSel({ ...p })}><td>{p.nom}</td><td className="sec">{p.email}</td><td>{p.role ? t(`roles.${p.role}`) : t('parametrage.sans_role')}</td>
+          <tr key={p.id} className="cliquable" onClick={() => setSel({ ...p })}><td>{p.nom}</td><td className="sec">{p.email}</td><td>{p.role ? t(`roles.${p.role}`) : t('parametrage.sans_role')}{p.sous_role && <div className="mute">{t(`sous_roles.${p.sous_role}`, { defaultValue: p.sous_role })}</div>}</td>
             <td className="sec">{p.societes.map((s) => societes.find((x) => x.id === s)?.code).filter(Boolean).join(', ')}</td><td>{p.delegue_validation ? t('commun.oui') : '—'}</td>
             <td><Statut statut={p.actif ? 'validee' : 'annulee'} libelle={p.actif ? t('parametrage.actif') : t('parametrage.inactif')} /></td></tr>))}</tbody></table>
       {sel && (
@@ -404,6 +441,7 @@ function Utilisateurs() {
           <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={sel.actif} onChange={(e) => setSel({ ...sel, actif: e.target.checked })} />{t('parametrage.actif')}</label>
           <Bandeau type="err">{a.erreur}</Bandeau>
           <Bouton variante="primaire" disabled={a.enCours} onClick={() => void enregistrer()}>{t('commun.enregistrer')}</Bouton>
+          <CompteExterne p={sel} onFait={() => { setSel(null); void l.recharger(); }} />
         </Tiroir>
       )}
     </div>

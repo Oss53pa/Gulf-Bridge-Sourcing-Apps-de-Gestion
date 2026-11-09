@@ -2566,6 +2566,7 @@
   "actif": "Active",
   "aide": "A setting is never edited: you create a new value with an effective date. A file keeps the rule in force when it was opened.",
   "aide_cle": "Only keys defined in the registry are accepted (e.g. cout_global.energie_xof_kwh.SN for a new country).",
+  "aide_compte_externe": "Links this account to a single client or supplier: it will only see that party's area. Only open after the portal rules are approved and a penetration test.",
   "aide_date": "The value will apply to files opened from the effective date.",
   "aide_rattachements": "Applied when a prospect becomes a client. A rule is never edited: add a new one with its effective date. “defaut” covers countries without a rule.",
   "aide_taux": "1 currency unit = n XOF. XOF and XAF share the same fixed euro peg but remain two distinct codes.",
@@ -2574,6 +2575,7 @@
   "bornes": "Allowed value: from {{min}} to {{max}}",
   "cle": "Key",
   "code_pays": "Country code or defaut",
+  "compte_externe": "External account (portal)",
   "comptes_aucun": "No account visible with your rights.",
   "comptes_bancaires": "Bank accounts",
   "creee_le": "Created on",
@@ -2615,12 +2617,15 @@
    "utilisateurs": "Users & roles"
   },
   "rattachements": "Contracting company by client country",
+  "rattacher": "Link the account",
   "role": "Role",
   "sans_role": "No role",
   "societes": "Visible companies",
   "source": "Source",
+  "sous_role": "Sub-role",
   "taux_xof": "Rate in XOF",
   "titre": "Dated settings, rates, users and companies",
+  "type_compte": "Account type",
   "valeur": "Value",
   "valeur_json": "Value (JSON)",
   "valeur_pourcent": "Value (in %)"
@@ -3527,7 +3532,9 @@
   "achats_chine": "China purchasing",
   "admin": "Administrator",
   "agent_pays": "Country agent",
+  "client": "Client",
   "comptable": "Accountant",
+  "fournisseur": "Supplier",
   "hub_afrique": "Africa hub",
   "inspecteur": "Partner inspector"
  },
@@ -3660,6 +3667,15 @@
   "trop_petit": "Screen too small for the mosaic",
   "volets": "Panels",
   "vue": "View"
+ },
+ "sous_roles": {
+  "commercial": "Sales",
+  "demandeur": "Requester",
+  "finance": "Finance",
+  "logistique": "Logistics",
+  "qualite": "Quality",
+  "technique": "Technical",
+  "valideur": "Approver"
  },
  "specialites": {
   "approvisionnement_industriel": "Industrial supply",

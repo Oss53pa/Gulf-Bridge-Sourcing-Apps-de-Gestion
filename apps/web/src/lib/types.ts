@@ -4,6 +4,7 @@ import type { Role } from './droits';
 export interface Profil {
   id: string; nom: string; email: string; langue: 'fr' | 'en' | 'zh'; fuseau: string; role: Role | null;
   societes: string[]; pays: string | null; delegue_validation: boolean; actif: boolean; telephone?: string | null;
+  client_id?: string | null; fournisseur_id?: string | null; sous_role?: string | null;
 }
 export interface Societe { id: string; code: 'GBS_CI' | 'GBS_CN'; raison_sociale: string; pays: string; devise: string; date_creation: string; fne: boolean; }
 export interface Client {

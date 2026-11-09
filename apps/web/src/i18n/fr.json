@@ -2566,6 +2566,7 @@
   "actif": "Actif",
   "aide": "Un paramètre ne se modifie pas : on crée une nouvelle valeur avec une date d'effet. Un dossier garde la règle en vigueur à son ouverture.",
   "aide_cle": "Seules les clés prévues par le registre sont acceptées (ex. cout_global.energie_xof_kwh.SN pour un nouveau pays).",
+  "aide_compte_externe": "Rattache ce compte à un seul client ou fournisseur : il ne verra que l'espace de ce tiers. À n'ouvrir qu'après validation des règles des portails et test d'intrusion.",
   "aide_date": "La valeur s'appliquera aux dossiers ouverts à partir de la date d'effet.",
   "aide_rattachements": "Appliqué à la conversion d'un prospect en client. Une règle ne se modifie pas : ajoutez-en une nouvelle avec sa date d'effet. « defaut » couvre les pays sans règle.",
   "aide_taux": "1 unité de devise = n XOF. XOF et XAF ont la même parité fixe avec l'euro mais restent deux codes distincts.",
@@ -2574,6 +2575,7 @@
   "bornes": "Valeur admise : de {{min}} à {{max}}",
   "cle": "Clé",
   "code_pays": "Code pays ou defaut",
+  "compte_externe": "Compte externe (portail)",
   "comptes_aucun": "Aucun compte visible avec vos droits.",
   "comptes_bancaires": "Comptes bancaires",
   "creee_le": "Créée le",
@@ -2615,12 +2617,15 @@
    "utilisateurs": "Utilisateurs et rôles"
   },
   "rattachements": "Société qui contracte selon le pays du client",
+  "rattacher": "Rattacher le compte",
   "role": "Rôle",
   "sans_role": "Sans rôle",
   "societes": "Sociétés visibles",
   "source": "Source",
+  "sous_role": "Sous-rôle",
   "taux_xof": "Taux en XOF",
   "titre": "Paramètres datés, taux, utilisateurs et sociétés",
+  "type_compte": "Type de compte",
   "valeur": "Valeur",
   "valeur_json": "Valeur (JSON)",
   "valeur_pourcent": "Valeur (en %)"
@@ -3527,7 +3532,9 @@
   "achats_chine": "Achats Chine",
   "admin": "Administratrice",
   "agent_pays": "Agent pays",
+  "client": "Client",
   "comptable": "Comptable",
+  "fournisseur": "Fournisseur",
   "hub_afrique": "Hub Afrique",
   "inspecteur": "Inspecteur partenaire"
  },
@@ -3660,6 +3667,15 @@
   "trop_petit": "Écran trop petit pour la mosaïque",
   "volets": "Volets",
   "vue": "Vue"
+ },
+ "sous_roles": {
+  "commercial": "Commercial",
+  "demandeur": "Demandeur",
+  "finance": "Finance",
+  "logistique": "Logistique",
+  "qualite": "Qualité",
+  "technique": "Technique",
+  "valideur": "Valideur"
  },
  "specialites": {
   "approvisionnement_industriel": "Approvisionnement industriel",

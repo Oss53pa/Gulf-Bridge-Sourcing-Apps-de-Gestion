@@ -2566,6 +2566,7 @@
   "actif": "启用",
   "aide": "参数不可修改：需新增一个带生效日期的值。项目沿用开立时有效的规则。",
   "aide_cle": "仅接受登记表中定义的键（例如新国家 cout_global.energie_xof_kwh.SN）。",
+  "aide_compte_externe": "将该账户关联到唯一的客户或供应商：仅可查看该方的空间。须在门户规则获批并完成渗透测试后开放。",
   "aide_date": "该值适用于生效日期之后开立的项目。",
   "aide_rattachements": "潜在客户转为客户时适用。规则不可修改：请新增并注明生效日期。“defaut”适用于无规则的国家。",
   "aide_taux": "1 单位外币 = n XOF。XOF 与 XAF 对欧元固定汇率相同，但为两个不同代码。",
@@ -2574,6 +2575,7 @@
   "bornes": "允许范围：{{min}} 至 {{max}}",
   "cle": "键",
   "code_pays": "国家代码或 defaut",
+  "compte_externe": "外部账户（门户）",
   "comptes_aucun": "以您的权限看不到账户。",
   "comptes_bancaires": "银行账户",
   "creee_le": "成立日期",
@@ -2615,12 +2617,15 @@
    "utilisateurs": "用户与角色"
   },
   "rattachements": "按客户国家确定签约公司",
+  "rattacher": "关联账户",
   "role": "角色",
   "sans_role": "无角色",
   "societes": "可见公司",
   "source": "来源",
+  "sous_role": "子角色",
   "taux_xof": "XOF 汇率",
   "titre": "带生效日期的参数、汇率、用户与公司",
+  "type_compte": "账户类型",
   "valeur": "值",
   "valeur_json": "值（JSON）",
   "valeur_pourcent": "值（%）"
@@ -3527,7 +3532,9 @@
   "achats_chine": "中国采购",
   "admin": "管理员",
   "agent_pays": "国家代理",
+  "client": "客户",
   "comptable": "会计",
+  "fournisseur": "供应商",
   "hub_afrique": "非洲中心",
   "inspecteur": "合作验货员"
  },
@@ -3660,6 +3667,15 @@
   "trop_petit": "屏幕过小，无法平铺",
   "volets": "分栏",
   "vue": "视图"
+ },
+ "sous_roles": {
+  "commercial": "销售",
+  "demandeur": "需求方",
+  "finance": "财务",
+  "logistique": "物流",
+  "qualite": "质量",
+  "technique": "技术",
+  "valideur": "审批人"
  },
  "specialites": {
   "approvisionnement_industriel": "工业供应",
