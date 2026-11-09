@@ -29,7 +29,7 @@ import { MesTaches } from './screens/Delais';
 import { PageSuivi } from './screens/Suivi';
 import { NotesFrais, Rentabilite } from './screens/Couts';
 import { ImprimerRapportOffres } from './screens/RapportOffres';
-import { Articles, Clients, FicheClient, Fournisseurs } from './screens/Tiers';
+import { Articles, Clients, FicheClient, FicheFournisseur, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, MiseEnConcurrence } from './screens/Achats';
 import { Expeditions, FicheExpedition, Inspections, RapportInspection } from './screens/Operations';
 import { Factures, FicheFacture, Flux, Paiements } from './screens/Finance';
@@ -93,6 +93,7 @@ export function App() {
             <Route path="/appels-offres/:id" element={g('appels_offres', <FicheAppelOffres />)} />
             <Route path="/fiches-reference" element={g('fiches_reference', <FichesReference />)} />
             <Route path="/fournisseurs" element={g('fournisseurs', <Fournisseurs />)} />
+            <Route path="/fournisseurs/:id" element={g('fournisseurs', <FicheFournisseur />)} />
             <Route path="/articles" element={g('articles', <Articles />)} />
             <Route path="/mise-en-concurrence" element={g('consultations', <MiseEnConcurrence />)} />
             <Route path="/commandes" element={g('commandes', <Commandes />)} />

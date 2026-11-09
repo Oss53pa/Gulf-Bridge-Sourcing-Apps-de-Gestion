@@ -563,6 +563,15 @@ td.retard-txt { color: var(--err); }
 .etapes-pros li { border-top: 3px solid var(--border); padding-top: 6px; font-size: 13px; color: var(--sec); }
 .etapes-pros li span { color: var(--mute); }
 .ao-cal { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.fou-grille { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
+.fou-nav { display: flex; flex-direction: column; gap: 16px; border-right: 1px solid var(--border); padding-right: 12px; }
+.fou-groupe { display: flex; flex-direction: column; gap: 2px; }
+.fou-groupe .surtitre { padding: 0 12px 4px; }
+.fou-lien { display: flex; justify-content: space-between; gap: 8px; text-align: left; background: none; border: 0; border-left: 2px solid transparent; padding: 8px 12px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+.fou-lien:hover { background: var(--white); }
+.fou-lien.actif { border-left-color: var(--bronze); background: var(--white); font-weight: 600; }
+.fou-lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: -2px; }
+@media (max-width: 900px) { .fou-grille { grid-template-columns: 1fr; } .fou-nav { border-right: 0; padding-right: 0; } }
 .ref-grille { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 24px; align-items: start; }
 .ref-detail { display: flex; flex-direction: column; gap: 12px; }
 .ref-carte { border: 1px solid var(--border); background: var(--white); border-radius: var(--r); padding: 20px; display: flex; flex-direction: column; gap: 12px; }
