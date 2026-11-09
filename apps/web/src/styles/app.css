@@ -188,6 +188,7 @@ button[data-gen]::after, [role="tab"][data-gen]::after { color: inherit; opacity
 .topbar button:not(.tb-retour)[data-gen]::after { display: none; }
 th[data-gen] { white-space: normal; }
 .statut[data-gen]::after { white-space: nowrap; }
+table.t .btn.petit[data-gen]::after { display: none; }
 .tb-titre .l1[data-gen]::after { white-space: nowrap; }
 @media (max-width: 1180px) { .topbar [data-gen]::after { display: none !important; } }
 @media print { [data-gen]::after { display: none !important; } }
@@ -424,3 +425,27 @@ td.alerte { color: var(--bronze-text); font-weight: 600; }
 .pf-carte-client { font-weight: 500; }
 @media (max-width: 1100px) { .liste-detail.pf { grid-template-columns: minmax(0, 1fr) 260px; } .liste-detail.pf > .liste { padding-right: 20px; } }
 @media (max-width: 760px) { .liste-detail.pf { grid-template-columns: 1fr; } .pf-droite { margin-left: 0; } }
+
+/* Fiche dossier (maquette) : frise des phases, tableau des pièces, panneau latéral. */
+.frise { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; flex: none; }
+.frise-ph { border-top: 3px solid var(--border); padding-top: 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; }
+.frise-ph .num { color: var(--sec); }
+.frise-ph .nom { color: var(--ink); line-height: 1.3; }
+.frise-ph .st { color: var(--mute); }
+.frise-ph.validee, .frise-ph.complete { border-top-color: var(--ok); }
+.frise-ph.validee .st, .frise-ph.complete .st { color: var(--ok); }
+.frise-ph.courante, .frise-ph.en_cours { border-top-color: var(--bronze); }
+.frise-ph.courante .st, .frise-ph.en_cours .st { color: var(--bronze-text); }
+.frise-ph.bloquee { border-top-color: var(--err); }
+.frise-ph.bloquee .st { color: var(--err); }
+.frise-ph.non_commencee { border-top-color: var(--strong); }
+.fiche-grille { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 44px; align-items: start; }
+.fiche-principal { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.fiche-phase-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+table.t tr.phase-courante td:first-child { color: var(--bronze-text); }
+.fiche-cote { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 0; }
+.fiche-cote section { border-top: 1px solid var(--ink); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.verrou { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+.ligne-montant { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.ligne-montant b { font-weight: 500; white-space: nowrap; }
+@media (max-width: 1100px) { .fiche-grille { grid-template-columns: 1fr; } .frise { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); } }

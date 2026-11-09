@@ -8,9 +8,8 @@ import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant, pourcent } from '../lib/format';
 import { deposer, FichierRefuse, urlSignee } from '../lib/fichiers';
 import type { Audit, Commande, Devis, Dossier, Phase, Piece, PointBloquant } from '../lib/types';
-import { Bandeau, Bouton, Champ, Chargement, Entete, Jauge, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
+import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { useNoms } from '../lib/referentiels';
-import { useCompletude } from './Dossiers';
 import { Depot } from '../components/Depot';
 import { DelaisDossier } from './Delais';
 import { AvenantsDossier, DemanderPiece } from './Avenants';
@@ -29,7 +28,7 @@ type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'echantillons' | '
 export function FicheDossier() {
   const { id = '' } = useParams();
   const { t } = useTranslation();
-  const { profil, langue } = useAuth();
+  const { profil } = useAuth();
   const role = profil?.role ?? null;
   const [onglet, setOnglet] = useState<Onglet>('phases');
   const [annulation, setAnnulation] = useState(false);
@@ -40,15 +39,19 @@ export function FicheDossier() {
   const dossier = useAsync(async () => ok(await supabase.from('dossiers').select('*').eq('id', id).maybeSingle()) as Dossier | null, [id]);
   const phases = useAsync(async () => ok(await supabase.from('dossier_phases').select('*').eq('dossier_id', id).order('ordre')) as Phase[], [id]);
   const pieces = useAsync(async () => ok(await supabase.from('pieces').select('*').eq('dossier_id', id).order('phase').order('libelle')) as Piece[], [id]);
-  const completude = useCompletude(pieces.data);
+  const planning = useAsync(async () => ok(await supabase.rpc('planning_ouverture', { p_dossier: id })) as { date_ouverture: string | null; marge_jours_ouvres: number | null; intenable?: boolean }, [id]);
+  const nbBlocages = useAsync(async () => {
+    const r = await supabase.from('points_bloquants').select('id', { count: 'exact', head: true }).eq('dossier_id', id).is('resolu_le', null);
+    return r.count ?? 0;
+  }, [id]);
   const d = dossier.data;
   if (dossier.chargement) return <div className="screen"><Chargement /></div>;
   if (!d) return <div className="screen"><Vide>{dossier.erreur ?? t('dossiers.introuvable')}</Vide></div>;
-  const recharger = () => { void dossier.recharger(); void phases.recharger(); void pieces.recharger(); };
+  const recharger = () => { void dossier.recharger(); void phases.recharger(); void pieces.recharger(); void planning.recharger(); void nbBlocages.recharger(); };
   const onglets: { id: Onglet; lib: string }[] = [
-    { id: 'phases', lib: t('fiche.phases_pieces') },
+    { id: 'phases', lib: `${t('fiche.pieces_exigees')} · ${(pieces.data ?? []).length}` },
+    { id: 'blocages', lib: `${t('fiche.points_bloquants')} · ${nbBlocages.data ?? 0}` },
     { id: 'delais', lib: t('fiche.delais_taches') },
-    { id: 'blocages', lib: t('fiche.points_bloquants') },
   ];
   if (['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role ?? '')) onglets.push({ id: 'rapports', lib: t('fiche.rapports_offres') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'echantillons', lib: t('fiche.echantillons') });
@@ -63,23 +66,37 @@ export function FicheDossier() {
   if (['admin', 'comptable'].includes(role ?? '')) onglets.push({ id: 'couts', lib: t('fiche.couts_marge') });
   if (['admin', 'comptable'].includes(role ?? '')) onglets.push({ id: 'journal', lib: t('fiche.journal') });
 
+  const ph = phases.data ?? [];
+  const rangCourant = ph.find((x) => x.phase === d.phase_courante)?.ordre ?? 0;
+  const marge = planning.data?.marge_jours_ouvres ?? null;
+  const titre = [
+    t('fiche.titre_phase', { n: rangCourant, total: ph.length || 11, phase: t(`phases.${d.phase_courante}`).toLowerCase() }),
+    d.statut !== 'ouvert' ? t(`statuts_dossier.${d.statut}`).toLowerCase()
+      : marge === null ? null : marge < 0 ? t('fiche.titre_intenable', { n: -marge }) : t('fiche.titre_marge', { n: marge }),
+  ].filter(Boolean).join(' ; ');
   return (
     <div className="screen">
-      <Entete surtitre={`${d.reference} · ${t(`modeles.${d.modele}`)} · ${t(`modes.${d.mode_financier}`)}`}
-        titre={`${clients[d.client_id] ?? ''} — ${d.intitule}`}
+      <Entete surtitre={`${t('fiche.dossier')} · ${d.reference} · ${clients[d.client_id] ?? ''} · ${t(`modes.${d.mode_financier}`)}`}
+        titre={titre}
         actions={<>
           <Statut statut={d.statut === 'ouvert' ? 'en_cours' : d.statut} libelle={t(`statuts_dossier.${d.statut}`)} />
+          {onglets.some((o) => o.id === 'journal') && <Bouton onClick={() => setOnglet('journal')}>{t('fiche.fil')}</Bouton>}
+          {onglets.some((o) => o.id === 'suivi') && <Bouton onClick={() => setOnglet('suivi')}>{t('fiche.page_client')}</Bouton>}
           {role === 'admin' && d.statut === 'ouvert' && <Bouton variante="danger" onClick={() => setAnnulation(true)}>{t('fiche.annuler_dossier')}</Bouton>}
         </>} />
-      <Kpis items={[
-        { lib: t('fiche.phase_courante'), texte: true, val: t(`phases.${d.phase_courante}`), sous: t('fiche.phases_validees', { n: (phases.data ?? []).filter((p) => p.statut === 'validee').length, total: (phases.data ?? []).length }) },
-        { lib: t('fiche.completude'), val: `${completude} %`, sous: <Jauge valeur={completude} /> },
-        { lib: t('champs.ouvert_le'), val: date(d.ouvert_le, langue), sous: t('fiche.regles_datees') },
-        { lib: t('champs.date_ouverture_site'), val: d.date_ouverture_site ? date(d.date_ouverture_site, langue) : '—', sous: d.lettre_credit ? t('champs.lettre_credit') : t('fiche.sans_lc') },
-      ]} />
+      <ol className="frise" aria-label={t('fiche.phases_pieces')}>
+        {ph.map((x) => (
+          <li key={x.id} className={'frise-ph ' + x.statut + (x.phase === d.phase_courante ? ' courante' : '')} aria-current={x.phase === d.phase_courante ? 'step' : undefined}>
+            <span className="num">{String(x.ordre).padStart(2, '0')}</span>
+            <span className="nom">{t(`phases.${x.phase}`)}</span>
+            <span className="st">{t(`statuts_phase.${x.statut}`)}</span>
+          </li>
+        ))}
+      </ol>
       <Onglets actif={onglet} onChange={setOnglet} items={onglets} />
       <div className="cadre">
-        {onglet === 'phases' && <PhasesPieces dossier={d} phases={phases.data ?? []} pieces={pieces.data ?? []} onChange={recharger} />}
+        {onglet === 'phases' && <PhasesPieces dossier={d} phases={phases.data ?? []} pieces={pieces.data ?? []} onChange={recharger}
+          planning={planning.data ?? null} />}
         {onglet === 'delais' && <DelaisDossier dossier={d} phases={phases.data ?? []} onChange={recharger} />}
         {onglet === 'blocages' && <Blocages dossierId={d.id} />}
         {onglet === 'rapports' && <ListeRapports dossierId={d.id} />}
@@ -119,11 +136,15 @@ export function FicheDossier() {
   );
 }
 
-function PhasesPieces({ dossier, phases, pieces, onChange }: { dossier: Dossier; phases: Phase[]; pieces: Piece[]; onChange: () => void }) {
+function PhasesPieces({ dossier, phases, pieces, onChange, planning }: {
+  dossier: Dossier; phases: Phase[]; pieces: Piece[]; onChange: () => void;
+  planning: { date_ouverture: string | null; marge_jours_ouvres: number | null } | null;
+}) {
   const { t } = useTranslation();
   const { profil, langue } = useAuth();
   const role = profil?.role ?? '';
   const a = useAction();
+  const profils = useNoms('profils');
   const [derog, setDerog] = useState(false);
   const [motif, setMotif] = useState('');
   const [info, setInfo] = useState<string | null>(null);
@@ -132,6 +153,10 @@ function PhasesPieces({ dossier, phases, pieces, onChange }: { dossier: Dossier;
   const [demande, setDemande] = useState<Piece | null>(null);
   const peutEcrire = ['admin', 'achats_chine', 'hub_afrique'].includes(role);
   const courante = dossier.phase_courante;
+  const voitFob = ['admin', 'hub_afrique'].includes(role);
+  const fob = useAsync(async () => (voitFob
+    ? ok(await supabase.rpc('dossier_fob', { p_dossier: dossier.id })) as { commande: string; devise: string; fob_montant: number; statut: string }[]
+    : []), [dossier.id, voitFob]);
 
   const avancer = async (m?: string) => {
     setInfo(null);
@@ -160,61 +185,94 @@ function PhasesPieces({ dossier, phases, pieces, onChange }: { dossier: Dossier;
   const statuer = async (p: Piece, statut: string) => { if (await a.executer(async () => ok(await supabase.rpc('statuer_piece', { p_piece: p.id, p_statut: statut, p_commentaire: null })))) onChange(); };
   const voir = async (p: Piece) => { if (p.document_chemin) { const u = await urlSignee(p.document_chemin); if (u) window.open(u, '_blank', 'noopener,noreferrer'); } };
 
+  // Pièces triées dans l'ordre des phases, puis par libellé.
+  const ordre = new Map(phases.map((x) => [x.phase, x.ordre]));
+  const lignes = [...pieces].sort((x, y) => (ordre.get(x.phase) ?? 99) - (ordre.get(y.phase) ?? 99) || x.libelle.localeCompare(y.libelle));
+  const auteur = (p: Piece) => {
+    const nom = p.statut_par ? profils[p.statut_par] : null;
+    const court = nom ? nom.split(/\s+/).map((x, i, arr) => (i < arr.length - 1 ? `${x[0]}.` : x)).join(' ') : (p.fournie_par ? t(`fournisseurs_piece.${p.fournie_par}`) : '—');
+    return p.statut_le ? `${court} · ${p.statut_le.slice(8, 10)}.${p.statut_le.slice(5, 7)}` : court;
+  };
+  const phaseValidee = (code: string) => phases.find((x) => x.phase === code)?.statut === 'validee';
+  const totaux = (fob.data ?? []).filter((c) => c.statut !== 'annulee').reduce<Record<string, number>>((acc, c) => ({ ...acc, [c.devise]: (acc[c.devise] ?? 0) + Number(c.fob_montant ?? 0) }), {});
+  const honoraires = dossier.forfait_projet_ht ?? dossier.forfait_consultation_ht;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <input ref={fichier} type="file" accept="application/pdf,image/png,image/jpeg,image/webp" hidden onChange={surFichier} />
-      <div className="phases">{phases.map((p) => <span key={p.id} className={'phase ' + p.statut}>{p.ordre}. {t(`phases.${p.phase}`)}</span>)}</div>
-      <Bandeau type="err">{a.erreur}</Bandeau>
-      <Bandeau>{info}</Bandeau>
-      {phases.map((ph) => {
-        const lst = pieces.filter((p) => p.phase === ph.phase);
-        if (!lst.length && ph.phase !== courante) return null;
-        return (
-          <section key={ph.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span className="section-titre">{t(`phases.${ph.phase}`)}</span>
-              <Statut statut={ph.statut} libelle={t(`statuts_phase.${ph.statut}`)} />
-              {ph.phase === courante && dossier.statut === 'ouvert' && peutEcrire && (
-                <span className="actions" style={{ marginLeft: 'auto' }}>
-                  <Bouton variante="primaire" petit disabled={a.enCours} onClick={() => void avancer()}>{t('fiche.avancer')}</Bouton>
-                  {role === 'admin' && <Bouton petit onClick={() => setDerog(true)}>{t('fiche.deroger')}</Bouton>}
-                </span>
-              )}
-            </div>
-            {lst.length === 0 ? <span className="mute">{t('fiche.aucune_piece')}</span> : (
-              <table className="t">
-                <thead><tr><th>{t('champs.piece')}</th><th>{t('champs.obligatoire')}</th><th>{t('champs.fournie_par')}</th><th>{t('champs.statut')}</th><th>{t('champs.date')}</th><th /></tr></thead>
-                <tbody>
-                  {lst.map((p) => (
-                    <tr key={p.id}>
-                      <td>{p.libelle}</td>
-                      <td className="sec">{p.obligatoire ? t('commun.oui') : t('fiche.facultative')}</td>
-                      <td className="sec">{p.fournie_par ? t(`fournisseurs_piece.${p.fournie_par}`) : '—'}</td>
-                      <td><Statut statut={p.statut} libelle={t(`statuts_piece.${p.statut}`)} />
-                        {p.demandee_le && ['manquante', 'refusee', 'expiree'].includes(p.statut) &&
-                          <div className="mute" style={{ fontSize: 12 }}>{t('pieces.demandee', { a: t(`pieces.destinataire.${p.demandee_a}`), le: date(p.demandee_le, langue), n: p.relances ?? 0 })}</div>}</td>
-                      <td className="ref">{p.statut_le ? dateHeure(p.statut_le, langue, profil?.fuseau ?? 'UTC') : '—'}</td>
-                      <td className="num">
-                        <span className="actions" style={{ justifyContent: 'flex-end' }}>
-                          {p.document_chemin && <Bouton petit onClick={() => void voir(p)}>{t('commun.voir')}</Bouton>}
-                          {peutEcrire && dossier.statut === 'ouvert' && ['manquante', 'refusee', 'expiree'].includes(p.statut) &&
-                            <Bouton petit onClick={() => setDemande(p)}>{t('pieces.demander')}</Bouton>}
-                          {['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role) && p.statut !== 'validee' &&
-                            <Bouton petit onClick={() => choisirFichier(p.id)}>{t('fiche.deposer')}</Bouton>}
-                          {peutEcrire && p.document_chemin && p.statut !== 'validee' && <>
-                            <Bouton petit onClick={() => void statuer(p, 'validee')}>{t('fiche.valider')}</Bouton>
-                            <Bouton petit variante="danger" onClick={() => void statuer(p, 'refusee')}>{t('fiche.refuser')}</Bouton>
-                          </>}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+    <div className="fiche-grille">
+      <div className="fiche-principal">
+        <input ref={fichier} type="file" accept="application/pdf,image/png,image/jpeg,image/webp" hidden onChange={surFichier} />
+        <Bandeau type="err">{a.erreur}</Bandeau>
+        <Bandeau>{info}</Bandeau>
+        {dossier.statut === 'ouvert' && peutEcrire && (
+          <div className="fiche-phase-actions">
+            <span className="sec">{t('fiche.phase_en_cours', { phase: t(`phases.${courante}`) })}</span>
+            <span className="actions">
+              <Bouton variante="primaire" petit disabled={a.enCours} onClick={() => void avancer()}>{t('fiche.avancer')}</Bouton>
+              {role === 'admin' && <Bouton petit onClick={() => setDerog(true)}>{t('fiche.deroger')}</Bouton>}
+            </span>
+          </div>
+        )}
+        {lignes.length === 0 ? <Vide>{t('fiche.aucune_piece')}</Vide> : (
+          <table className="t">
+            <thead><tr><th>{t('champs.phase')}</th><th>{t('champs.piece')}</th><th>{t('fiche.type')}</th><th>{t('fiche.etat')}</th>
+              <th>{t('fiche.auteur_date')}</th><th /></tr></thead>
+            <tbody>
+              {lignes.map((p) => (
+                <tr key={p.id} className={p.phase === courante ? 'phase-courante' : undefined}>
+                  <td className="sec">{t(`phases.${p.phase}`)}</td>
+                  <td>{p.libelle}</td>
+                  <td className="sec">{p.obligatoire ? t('fiche.oblig') : t('fiche.facult')}</td>
+                  <td><Statut statut={p.statut} libelle={t(`statuts_piece.${p.statut}`)} />
+                    {p.demandee_le && ['manquante', 'refusee', 'expiree'].includes(p.statut) &&
+                      <div className="mute" style={{ fontSize: 12 }}>{t('pieces.demandee', { a: t(`pieces.destinataire.${p.demandee_a}`), le: date(p.demandee_le, langue), n: p.relances ?? 0 })}</div>}</td>
+                  <td className="sec">{auteur(p)}</td>
+                  <td className="num">
+                    <span className="actions" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                      {p.document_chemin && <Bouton petit onClick={() => void voir(p)}>{t('commun.voir')}</Bouton>}
+                      {peutEcrire && dossier.statut === 'ouvert' && ['manquante', 'refusee', 'expiree'].includes(p.statut) &&
+                        <Bouton petit onClick={() => setDemande(p)}>{t('pieces.demander')}</Bouton>}
+                      {['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role) && p.statut !== 'validee' &&
+                        <Bouton petit onClick={() => choisirFichier(p.id)}>{t('fiche.deposer')}</Bouton>}
+                      {peutEcrire && p.document_chemin && p.statut !== 'validee' && <>
+                        <Bouton petit onClick={() => void statuer(p, 'validee')}>{t('fiche.valider')}</Bouton>
+                        <Bouton petit variante="danger" onClick={() => void statuer(p, 'refusee')}>{t('fiche.refuser')}</Bouton>
+                      </>}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <aside className="fiche-cote">
+        <section>
+          <div className="surtitre">{t('fiche.verrous')}</div>
+          <div className="verrou"><span>{t('fiche.verrou_contrat')}</span>
+            {phaseValidee('contrat') ? <Statut statut="ok" libelle={t('fiche.verrou_leve', { n: 1 })} /> : <Statut statut="err" libelle={t('fiche.verrou_actif', { n: 1 })} />}</div>
+          <div className="verrou"><span>{t('fiche.verrou_inspection')}</span>
+            {phaseValidee('inspection') ? <Statut statut="ok" libelle={t('fiche.verrou_leve', { n: 2 })} /> : <Statut statut="err" libelle={t('fiche.verrou_actif', { n: 2 })} />}</div>
+        </section>
+        {voitFob && (
+          <section>
+            <div className="surtitre">{t('fiche.transparence')}</div>
+            {Object.keys(totaux).length === 0 ? <span className="mute">{t('fiche.aucune_commande')}</span>
+              : Object.entries(totaux).map(([dev, v]) => (
+                <div key={dev} className="ligne-montant"><span>{t('fiche.facture_fabricant')} · {dev}</span><b>{montant(v, dev, langue)}</b></div>))}
+            {honoraires !== null && honoraires !== undefined &&
+              <div className="ligne-montant"><span>{t('fiche.honoraires')}</span><b>{montant(honoraires, 'XOF', langue)}</b></div>}
+            <p className="mute">{t('fiche.transparence_note')}</p>
           </section>
-        );
-      })}
+        )}
+        <section>
+          <div className="surtitre">{t('fiche.planning_rebours')}</div>
+          <div className="pf-champs" style={{ borderTop: 0, paddingTop: 0 }}>
+            <div><span>{t('portefeuille.ouverture_site')}</span><b>{dossier.date_ouverture_site ? date(dossier.date_ouverture_site, langue) : '—'}</b></div>
+            <div><span>{t('portefeuille.marge_restante')}</span><b>{planning?.marge_jours_ouvres === null || planning?.marge_jours_ouvres === undefined ? '—'
+              : t('fiche.jours_ouvres', { n: planning.marge_jours_ouvres })}</b></div>
+          </div>
+        </section>
+      </aside>
       {demande && <DemanderPiece piece={demande} onClose={() => setDemande(null)} onDone={() => { setDemande(null); onChange(); }} />}
       {derog && (
         <Tiroir titre={t('fiche.derogation_titre')} onClose={() => setDerog(false)}>

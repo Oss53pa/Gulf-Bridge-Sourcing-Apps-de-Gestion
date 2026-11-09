@@ -37,7 +37,7 @@ export interface Phase {
 export interface Piece {
   id: string; dossier_id: string; phase: string; code: string; libelle: string; obligatoire: boolean; statut: string;
   fournie_par: string | null; document_chemin: string | null; statut_le: string | null; commentaire: string | null;
-  demandee_a?: string | null; demandee_le?: string | null; relances?: number;
+  demandee_a?: string | null; demandee_le?: string | null; relances?: number; statut_par?: string | null;
 }
 export interface PointBloquant {
   id: string; dossier_id: string; description: string; categorie: string; impact_jours: number | null; echeance: string;
