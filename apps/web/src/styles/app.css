@@ -562,6 +562,8 @@ td.retard-txt { color: var(--err); }
 .etapes-pros { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; flex: none; }
 .etapes-pros li { border-top: 3px solid var(--border); padding-top: 6px; font-size: 13px; color: var(--sec); }
 .etapes-pros li span { color: var(--mute); }
+.cons-action { font-family: var(--serif); font-size: 22px; line-height: 1.25; color: var(--ink); }
+.etapes-pros.etapes-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .etapes-pros li.faite { border-top-color: var(--ink); color: var(--ink); }
 .etapes-pros li.courante { border-top-color: var(--bronze); color: var(--ink); font-weight: 600; }
 .etapes-pros li.perdu { border-top-color: var(--err-bg); }

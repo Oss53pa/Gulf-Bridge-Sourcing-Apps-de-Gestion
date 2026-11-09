@@ -418,9 +418,29 @@
   "valider": "验证"
  },
  "consultations": {
+  "a_faire": "待办",
+  "action_autre_profil": "此操作由开票人员处理。",
+  "actions": {
+   "deposer_cdc": "上传技术规格书",
+   "facturer": "开具费用发票",
+   "lancer_sourcing": "启动寻源",
+   "paiement": "登记费用付款",
+   "suivre": "跟进比价",
+   "valider_cdc": "确认技术规格书"
+  },
+  "actions_aide": {
+   "deposer_cdc": "客户签署的技术规格书为本阶段必备文件。",
+   "facturer": "费用须在任何寻源工作前预先开票。",
+   "lancer_sourcing": "条件均已满足，可确认本阶段。",
+   "paiement": "与银行收款核对。",
+   "suivre": "在案卷中跟进厂家报价。",
+   "valider_cdc": "核对收到的文件，并在案卷中确认。"
+  },
   "aide_forfait": "费用预先开票，如下单则从佣金中扣除。加强档：深度尽职调查或多批次需求。",
+  "ajouter_piece": "添加文件",
   "annuler": "取消",
   "aucune": "暂无咨询。",
+  "aucune_piece": "暂无文件。",
   "besoin": "需求说明",
   "besoin_exemple": "用途、现场限制、预期标准……",
   "categorie": "类别",
@@ -440,7 +460,17 @@
   "client": "客户",
   "client_a_verifier": "客户待核查",
   "client_selectionne": "已选客户",
+  "cond": {
+   "cdc_valide": "技术规格书已确认",
+   "forfait_facture": "费用已开票",
+   "forfait_regle": "费用已付",
+   "pieces": "附件",
+   "verification": "客户核查"
+  },
+  "conditions": "寻源条件",
   "creer": "创建咨询",
+  "deduction": "抵扣",
+  "deduction_texte": "如下单，费用从佣金中扣除",
   "etapes": {
    "cdc_redaction": "技术规格书撰写中",
    "cdc_valide": "技术规格书已确认",
@@ -454,8 +484,12 @@
   "f_redaction": "撰写中",
   "f_sourcing": "寻源",
   "f_toutes": "全部",
+  "facture": "发票",
+  "fait": "已完成",
+  "fiche": "咨询",
   "forfait": "费用",
   "forfait_projet": "项目包干费",
+  "introuvable": "未找到该咨询。",
   "k_a_facturer": "待开票",
   "k_a_facturer_sous": "费用尚未开票",
   "k_en_cours": "进行中",
@@ -467,9 +501,13 @@
   "nouvelle": "新建咨询",
   "objet": "事由",
   "ouverte": "开立",
+  "ouverte_le": "开立日期",
+  "ouvrir_dossier": "打开案卷",
   "pays_du_client": "客户所在国",
   "pays_livraison": "交货国家",
+  "pieces": "咨询文件",
   "pj": "附件",
+  "prochaine_action": "下一步",
   "quantite": "数量",
   "quantite_exemple": "例如：40 张床",
   "rechercher": "编号、客户或事由",
@@ -481,7 +519,8 @@
   "surtitre": "咨询",
   "surtitre_form": "需求表单",
   "titre_en_cours": "{{n}} 项咨询进行中",
-  "titre_non_regles": "{{n}} 笔预付费用未结清，寻源无法启动"
+  "titre_non_regles": "{{n}} 笔预付费用未结清，寻源无法启动",
+  "voir": "查看"
  },
  "coque": {
   "alertes": "提醒",

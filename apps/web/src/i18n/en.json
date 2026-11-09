@@ -418,9 +418,29 @@
   "valider": "Verify"
  },
  "consultations": {
+  "a_faire": "To do",
+  "action_autre_profil": "Action reserved for invoicing.",
+  "actions": {
+   "deposer_cdc": "Upload the specification",
+   "facturer": "Invoice the fee",
+   "lancer_sourcing": "Start sourcing",
+   "paiement": "Record the fee payment",
+   "suivre": "Follow the competitive bidding",
+   "valider_cdc": "Approve the specification"
+  },
+  "actions_aide": {
+   "deposer_cdc": "The client's signed specification is a mandatory document of the phase.",
+   "facturer": "The fee is invoiced upfront, before any sourcing work.",
+   "lancer_sourcing": "All conditions are met: the phase can be approved.",
+   "paiement": "Matched against the bank receipt.",
+   "suivre": "Manufacturers' offers are followed in the file.",
+   "valider_cdc": "Check the document received, then approve it on the file."
+  },
   "aide_forfait": "The fee is invoiced upfront and deducted from the commission if the order is placed. Enhanced fee: in-depth due diligence or multi-lot needs.",
+  "ajouter_piece": "Add a document",
   "annuler": "Cancel",
   "aucune": "No consultation.",
+  "aucune_piece": "No document.",
   "besoin": "Description of the need",
   "besoin_exemple": "Use, site constraints, expected standards…",
   "categorie": "Category",
@@ -440,7 +460,17 @@
   "client": "Client",
   "client_a_verifier": "Client to verify",
   "client_selectionne": "Selected client",
+  "cond": {
+   "cdc_valide": "Specification approved",
+   "forfait_facture": "Fee invoiced",
+   "forfait_regle": "Fee paid",
+   "pieces": "Attachments",
+   "verification": "Client verification"
+  },
+  "conditions": "Sourcing conditions",
   "creer": "Create the consultation",
+  "deduction": "Deduction",
+  "deduction_texte": "Fee deducted from the commission if an order follows",
   "etapes": {
    "cdc_redaction": "Specification being drafted",
    "cdc_valide": "Specification approved",
@@ -454,8 +484,12 @@
   "f_redaction": "Drafting",
   "f_sourcing": "Sourcing",
   "f_toutes": "All",
+  "facture": "Invoice",
+  "fait": "Done",
+  "fiche": "consultation",
   "forfait": "Fee",
   "forfait_projet": "Project fee",
+  "introuvable": "Consultation not found.",
   "k_a_facturer": "To invoice",
   "k_a_facturer_sous": "fee not yet invoiced",
   "k_en_cours": "In progress",
@@ -467,9 +501,13 @@
   "nouvelle": "New consultation",
   "objet": "Subject",
   "ouverte": "Opened",
+  "ouverte_le": "Opened on",
+  "ouvrir_dossier": "Open the file",
   "pays_du_client": "Client's country",
   "pays_livraison": "Delivery country",
+  "pieces": "Consultation documents",
   "pj": "Att.",
+  "prochaine_action": "Next action",
   "quantite": "Quantity",
   "quantite_exemple": "e.g. 40 beds",
   "rechercher": "Reference, client or subject",
@@ -481,7 +519,8 @@
   "surtitre": "consultations",
   "surtitre_form": "request form",
   "titre_en_cours": "{{n}} consultations in progress",
-  "titre_non_regles": "{{n}} unpaid upfront fees are blocking the start of sourcing"
+  "titre_non_regles": "{{n}} unpaid upfront fees are blocking the start of sourcing",
+  "voir": "View"
  },
  "coque": {
   "alertes": "Alerts",

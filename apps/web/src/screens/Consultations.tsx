@@ -3,20 +3,21 @@
 // qui déduit l'étape des faits enregistrés (facture du forfait, cahier des charges, phase validée).
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { nombre } from '../lib/format';
 import { normaliser } from '../lib/droits';
-import type { Client } from '../lib/types';
+import type { Client, Piece } from '../lib/types';
+import { urlSignee } from '../lib/fichiers';
 import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Onglets, Statut, Vide } from '../components/ui';
 
 interface Consultation {
   dossier_id: string; reference: string; intitule: string; client_id: string; client: string; client_verifie: boolean;
   modele: string; segment: string | null; pays: string; ouvert_le: string; forfait_ht: number | null; devise: string;
-  facture_numero: string | null; facture_statut: string | null; cdc_statut: string; pieces_jointes: number;
+  facture_id: string | null; facture_numero: string | null; facture_statut: string | null; cdc_statut: string; pieces_jointes: number;
   etape: string; rang: number; phase_courante: string | null;
 }
 
@@ -74,7 +75,7 @@ export function Consultations() {
             <th className="num">{t('consultations.forfait')}</th><th className="num">{t('consultations.pj')}</th><th>{t('consultations.statut')}</th>
             <th>{t('consultations.ouverte')}</th></tr></thead>
             <tbody>{liste.map((c) => (
-              <tr key={c.dossier_id} className="cliquable" onClick={() => nav(`/dossiers/${c.dossier_id}`)}>
+              <tr key={c.dossier_id} className="cliquable" onClick={() => nav(`/consultations/${c.dossier_id}`)}>
                 <td className="ref">{c.reference}</td>
                 <td><div style={{ fontWeight: 500 }}>{c.client}</div>{!c.client_verifie && <div className="txt-att" style={{ fontSize: 12 }}>{t('consultations.client_a_verifier')}</div>}</td>
                 <td>{c.intitule}{c.segment && <div className="mute">{c.segment}</div>}</td>
@@ -195,6 +196,101 @@ export function NouvelleConsultation() {
               <Statut statut={client.verification_statut === 'verifie' ? 'ok' : 'att'} libelle={t(`verification.${client.verification_statut}`)} />
             </> : <span className="mute">—</span>}
             <p className="mute" style={{ margin: 0 }}>{t('consultations.aide_forfait')}</p>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+const ETAPES = ['demande_recue', 'forfait_facture', 'forfait_regle', 'cdc_redaction', 'cdc_valide', 'sourcing_lance'] as const;
+
+/** Fiche consultation (maquette consFiche) : étapes, synthèse, pièces de la phase, prochaine action, conditions du sourcing. */
+export function FicheConsultation() {
+  const { id = '' } = useParams();
+  const { t } = useTranslation();
+  const nav = useNavigate();
+  const { profil, langue } = useAuth();
+  const role = profil?.role ?? '';
+  const l = useAsync(async () => ok(await supabase.rpc('consultations_clients')) as Consultation[], []);
+  const d = useAsync(async () => ok(await supabase.from('dossiers').select('besoin, quantite_besoin').eq('id', id).maybeSingle()) as
+    { besoin: string | null; quantite_besoin: string | null } | null, [id]);
+  const p = useAsync(async () => ok(await supabase.from('pieces').select('*').eq('dossier_id', id).eq('phase', 'consultation').order('libelle')) as Piece[], [id]);
+  const c = (l.data ?? []).find((x) => x.dossier_id === id);
+  if (!c) return <div className="screen">{l.chargement ? <Chargement /> : <Vide>{l.erreur ?? t('consultations.introuvable')}</Vide>}</div>;
+  const forfaitProjet = c.modele === 'equipement_site';
+  const regle = forfaitProjet || c.facture_statut === 'payee';
+  const facture = forfaitProjet || Boolean(c.facture_numero);
+  const conditions: [string, boolean][] = [
+    ['verification', c.client_verifie], ['forfait_facture', facture], ['forfait_regle', regle],
+    ['pieces', c.pieces_jointes > 0], ['cdc_valide', c.cdc_statut === 'validee'],
+  ];
+  // Prochaine action : écran où elle se fait, selon les droits du profil.
+  const finance = ['admin', 'hub_afrique', 'comptable'].includes(role);
+  const action: { cle: string; aller: (() => void) | null } = {
+    demande_recue: { cle: 'facturer', aller: finance ? () => nav('/factures') : null },
+    forfait_facture: { cle: 'paiement', aller: finance && c.facture_id ? () => nav(`/factures/${c.facture_id}`) : null },
+    forfait_regle: { cle: 'deposer_cdc', aller: () => nav(`/dossiers/${id}`) },
+    cdc_redaction: { cle: 'valider_cdc', aller: () => nav(`/dossiers/${id}`) },
+    cdc_valide: { cle: 'lancer_sourcing', aller: () => nav(`/dossiers/${id}`) },
+    sourcing_lance: { cle: 'suivre', aller: () => nav(`/dossiers/${id}`) },
+  }[c.etape] ?? { cle: 'suivre', aller: () => nav(`/dossiers/${id}`) };
+  const ouvrir = async (chemin: string) => { const u = await urlSignee(chemin); if (u) window.open(u, '_blank', 'noopener,noreferrer'); };
+  return (
+    <div className="screen">
+      <Entete surtitre={`${t('modules.commercial')} · ${t('consultations.fiche')} · ${c.reference} · CNS`}
+        titre={<>{c.intitule} <span className="h1-statut"><Statut statut={TON[c.etape] ?? 'neutre'} libelle={t(`consultations.etapes.${c.etape}`)} /></span></>}
+        actions={<Bouton onClick={() => nav(`/dossiers/${id}`)}>{t('consultations.ouvrir_dossier')}</Bouton>} />
+      <div className="sec" style={{ marginTop: -10 }}>{c.client}</div>
+      <ol className="etapes-pros etapes-6">
+        {ETAPES.map((e, i) => <li key={e} className={i + 1 < c.rang ? 'faite' : i + 1 === c.rang ? 'courante' : ''}><span>{i + 1}</span> {t(`consultations.etapes.${e}`)}</li>)}
+      </ol>
+      <Bandeau type="err">{d.erreur ?? p.erreur}</Bandeau>
+      <div className="fiche-grille">
+        <div className="cadre fiche-principal">
+          <div className="pf-champs" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+            <div><span>{t('consultations.client')}</span><b>{c.client}</b></div>
+            <div><span>{t('consultations.categorie')}</span><b>{c.segment ?? '—'}</b></div>
+            <div><span>{t('consultations.quantite')}</span><b>{d.data?.quantite_besoin ?? '—'}</b></div>
+            <div><span>{t('consultations.pays_livraison')}</span><b>{c.pays}</b></div>
+            <div><span>{t('consultations.forfait')}</span><b>{forfaitProjet ? t('consultations.forfait_projet') : c.forfait_ht === null ? '—' : `${nombre(c.forfait_ht, langue)} ${c.devise}`}</b></div>
+            <div><span>{t('consultations.facture')}</span><b>{c.facture_numero ?? '—'}</b></div>
+            <div><span>{t('consultations.ouverte_le')}</span><b>{ddmmyyyy(c.ouvert_le)}</b></div>
+            <div><span>{t('consultations.deduction')}</span><b>{forfaitProjet ? '—' : t('consultations.deduction_texte')}</b></div>
+          </div>
+          {d.data?.besoin && (
+            <section className="fiche-bloc">
+              <div className="surtitre">{t('consultations.besoin')}</div>
+              <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{d.data.besoin}</p>
+            </section>
+          )}
+          <section className="fiche-bloc">
+            <div className="surtitre" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{t('consultations.pieces')}</span>
+              <Bouton petit onClick={() => nav(`/dossiers/${id}`)}>{t('consultations.ajouter_piece')}</Bouton>
+            </div>
+            {(p.data ?? []).length === 0 ? <span className="mute">{t('consultations.aucune_piece')}</span> : (
+              <table className="t"><tbody>{(p.data ?? []).map((x) => (
+                <tr key={x.id}><td>{x.libelle}</td>
+                  <td><Statut statut={x.statut} libelle={t(`statuts_piece.${x.statut}`)} /></td>
+                  <td style={{ textAlign: 'right' }}>{x.document_chemin && <Bouton petit onClick={() => void ouvrir(x.document_chemin!)}>{t('consultations.voir')}</Bouton>}</td></tr>))}
+              </tbody></table>
+            )}
+          </section>
+        </div>
+        <aside className="fiche-cote">
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('consultations.prochaine_action')}</div>
+            <div className="cons-action">{t(`consultations.actions.${action.cle}`)}</div>
+            <p className="mute" style={{ margin: 0 }}>{t(`consultations.actions_aide.${action.cle}`)}</p>
+            {action.aller ? <Bouton variante="primaire" data-sans-glose style={{ width: '100%', justifyContent: 'center' }} onClick={action.aller}>{t(`consultations.actions.${action.cle}`)}</Bouton>
+              : <span className="mute">{t('consultations.action_autre_profil')}</span>}
+          </section>
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('consultations.conditions')}</div>
+            {conditions.map(([k, okc]) => (
+              <div key={k} className="ligne-montant"><span>{t(`consultations.cond.${k}`)}</span>
+                <Statut statut={okc ? 'ok' : 'neutre'} libelle={okc ? t('consultations.fait') : t('consultations.a_faire')} /></div>))}
           </section>
         </aside>
       </div>

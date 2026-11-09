@@ -418,9 +418,29 @@
   "valider": "Valider"
  },
  "consultations": {
+  "a_faire": "À faire",
+  "action_autre_profil": "Action réservée à la facturation.",
+  "actions": {
+   "deposer_cdc": "Déposer le cahier des charges",
+   "facturer": "Facturer le forfait",
+   "lancer_sourcing": "Lancer le sourcing",
+   "paiement": "Enregistrer le paiement du forfait",
+   "suivre": "Suivre la mise en concurrence",
+   "valider_cdc": "Valider le cahier des charges"
+  },
+  "actions_aide": {
+   "deposer_cdc": "Le cahier des charges signé du client est une pièce obligatoire de la phase.",
+   "facturer": "Le forfait est facturé d'avance, avant tout travail de sourcing.",
+   "lancer_sourcing": "Toutes les conditions sont réunies : la phase peut être validée.",
+   "paiement": "Rapprochement avec l'encaissement bancaire.",
+   "suivre": "Les offres des fabricants sont suivies dans le dossier.",
+   "valider_cdc": "Contrôler le document reçu puis le valider sur la fiche du dossier."
+  },
   "aide_forfait": "Le forfait est facturé d'avance et déduit de la commission si la commande est passée. Forfait renforcé : due diligence approfondie ou besoin multi-lots.",
+  "ajouter_piece": "Ajouter une pièce",
   "annuler": "Annuler",
   "aucune": "Aucune consultation.",
+  "aucune_piece": "Aucune pièce.",
   "besoin": "Description du besoin",
   "besoin_exemple": "Usage, contraintes du site, normes attendues…",
   "categorie": "Catégorie",
@@ -440,7 +460,17 @@
   "client": "Client",
   "client_a_verifier": "Client à vérifier",
   "client_selectionne": "Client sélectionné",
+  "cond": {
+   "cdc_valide": "Cahier des charges validé",
+   "forfait_facture": "Forfait facturé",
+   "forfait_regle": "Forfait réglé",
+   "pieces": "Pièces jointes",
+   "verification": "Vérification du client"
+  },
+  "conditions": "Conditions du sourcing",
   "creer": "Créer la consultation",
+  "deduction": "Déduction",
+  "deduction_texte": "Forfait déduit de la commission si commande",
   "etapes": {
    "cdc_redaction": "Cahier des charges en rédaction",
    "cdc_valide": "Cahier des charges validé",
@@ -454,8 +484,12 @@
   "f_redaction": "En rédaction",
   "f_sourcing": "Sourcing",
   "f_toutes": "Toutes",
+  "facture": "Facture",
+  "fait": "Fait",
+  "fiche": "consultation",
   "forfait": "Forfait",
   "forfait_projet": "Forfait au projet",
+  "introuvable": "Consultation introuvable.",
   "k_a_facturer": "À facturer",
   "k_a_facturer_sous": "forfait non encore facturé",
   "k_en_cours": "En cours",
@@ -467,9 +501,13 @@
   "nouvelle": "Nouvelle consultation",
   "objet": "Objet",
   "ouverte": "Ouverte",
+  "ouverte_le": "Ouverte le",
+  "ouvrir_dossier": "Ouvrir le dossier",
   "pays_du_client": "Pays du client",
   "pays_livraison": "Pays de livraison",
+  "pieces": "Pièces de la consultation",
   "pj": "PJ",
+  "prochaine_action": "Prochaine action",
   "quantite": "Quantité",
   "quantite_exemple": "ex. 40 lits",
   "rechercher": "Référence, client ou objet",
@@ -481,7 +519,8 @@
   "surtitre": "consultations",
   "surtitre_form": "formulaire de demande",
   "titre_en_cours": "{{n}} consultations en cours",
-  "titre_non_regles": "{{n}} forfaits d'avance non réglés bloquent le démarrage du sourcing"
+  "titre_non_regles": "{{n}} forfaits d'avance non réglés bloquent le démarrage du sourcing",
+  "voir": "Voir"
  },
  "coque": {
   "alertes": "Alertes",

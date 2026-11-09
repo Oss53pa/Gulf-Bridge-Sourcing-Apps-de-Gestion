@@ -16,7 +16,7 @@ alter table gbs.dossiers
 create or replace function gbs.consultations_clients()
 returns table (dossier_id uuid, reference text, intitule text, client_id uuid, client text, client_verifie boolean,
                modele text, segment text, pays text, ouvert_le date, forfait_ht numeric, devise text,
-               facture_numero text, facture_statut text, cdc_statut text, pieces_jointes int, etape text, rang int,
+               facture_id uuid, facture_numero text, facture_statut text, cdc_statut text, pieces_jointes int, etape text, rang int,
                phase_courante text)
 language plpgsql stable security definer set search_path = '' as $$
 begin
@@ -26,6 +26,8 @@ begin
     select d.id, d.reference, d.intitule, d.client_id, cl.raison_sociale, cl.verification_statut = 'verifie' as verifie,
            d.modele, d.segment, d.pays, d.ouvert_le, d.forfait_consultation_ht, s.devise, d.phase_courante,
            f.statut as phase_statut,
+           (select x.id from gbs.factures x where x.dossier_id = d.id and x.type = 'forfait_consultation'
+             and x.statut <> 'annulee' order by x.date_emission desc nulls last limit 1) as fac_id,
            (select x.numero from gbs.factures x where x.dossier_id = d.id and x.type = 'forfait_consultation'
              and x.statut <> 'annulee' order by x.date_emission desc nulls last limit 1) as fac_numero,
            (select x.statut from gbs.factures x where x.dossier_id = d.id and x.type = 'forfait_consultation'
@@ -46,7 +48,7 @@ begin
       from c
   )
   select e.id, e.reference, e.intitule, e.client_id, e.raison_sociale, e.verifie, e.modele, e.segment, e.pays::text, e.ouvert_le,
-         e.forfait_consultation_ht::numeric, e.devise::text, e.fac_numero, e.fac_statut, coalesce(e.cdc, 'manquante'), e.pj,
+         e.forfait_consultation_ht::numeric, e.devise::text, e.fac_id, e.fac_numero, e.fac_statut, coalesce(e.cdc, 'manquante'), e.pj,
          x.etape, x.rang, e.phase_courante
     from e cross join lateral (select
       case when e.phase_statut in ('complete','validee') then 'sourcing_lance'

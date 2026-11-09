@@ -44,7 +44,8 @@ export function Gloses() {
     }
     const appliquer = () => {
       document.querySelectorAll(CIBLES).forEach((el) => {
-        const brut = texteDirect(el);
+        // data-sans-glose : libellé long déjà explicite (bouton d'action pleine largeur) ; pas de glose.
+        const brut = el.closest('[data-sans-glose]') ? '' : texteDirect(el);
         const g = brut ? (table.get(cle(brut)) ?? table.get(cle(brut.replace(SUFFIXE, '')))) : undefined;
         if (g) { if (el.getAttribute('data-gen') !== g) el.setAttribute('data-gen', g); }
         else if (el.hasAttribute('data-gen')) el.removeAttribute('data-gen');
