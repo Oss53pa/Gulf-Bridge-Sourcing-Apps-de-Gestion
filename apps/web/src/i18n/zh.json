@@ -1004,6 +1004,7 @@
   "GBS_PARAMETRE_INVALIDE": "值被拒绝：类型、范围或格式不符合参数定义（比率 25% 写作 0.25）。",
   "GBS_PARAM_MANQUANT": "缺少参数：请联系管理员。",
   "GBS_PAYS_AGENT_REQUIS": "必须填写代理所在国家。",
+  "GBS_PAYS_A_PRECISER": "转为客户前请先确认潜在客户的国家。",
   "GBS_PENALITE_SUR_SOLDE": "罚款只能从尾款中扣除。",
   "GBS_PERIODE_INVALIDE": "期间无效（最长一年，结束日期须晚于开始日期）。",
   "GBS_PHOTOS_INVALIDES": "照片无效：仅限本项目已上传文件，最多20张。",
@@ -2077,6 +2078,7 @@
  },
  "prospects": {
   "actions": "行动与跟进",
+  "aide_pays_a_preciser": "网站询盘未注明国家：转为客户前请确认国家和业务类别。",
   "aide_premier_contact": "请先登记首次联系（一个工作日内），再确认需求或转化。",
   "alerte_sans_contact": "{{n}} 个潜在客户在一个工作日内未首次联系。",
   "aucun": "暂无潜在客户。",
@@ -2130,6 +2132,7 @@
   "passer_a": "进入“{{etape}}”",
   "passer_consultation": "转入咨询",
   "pays": "国家",
+  "pays_a_preciser": "待确认",
   "premier_contact": "首次联系",
   "premier_contact_le": "首次联系于 {{date}}",
   "prochaine_relance": "下次跟进",

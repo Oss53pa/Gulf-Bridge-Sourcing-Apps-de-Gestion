@@ -32,6 +32,7 @@ const ddmm = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}.${d.slice
 
 export function Prospection() {
   const { t } = useTranslation();
+  const paysLib = (c: string) => (c === 'ZZ' ? t('prospects.pays_a_preciser') : c);
   const nav = useNavigate();
   const { profil, langue } = useAuth();
   const profils = useNoms('profils');
@@ -80,7 +81,7 @@ export function Prospection() {
       ]} />
       <div className="pf-barre">
         <input className="pf-recherche" placeholder={t('prospects.rechercher')} value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} aria-label={t('prospects.rechercher')} />
-        <Onglets actif={pays} onChange={setPays} items={[{ id: 'tous', lib: t('dossiers.tous') }, ...paysListe.map((x) => ({ id: x, lib: x }))]} />
+        <Onglets actif={pays} onChange={setPays} items={[{ id: 'tous', lib: t('dossiers.tous') }, ...paysListe.map((x) => ({ id: x, lib: paysLib(x) }))]} />
         <select className="pf-statut" value={etape} onChange={(e) => setEtape(e.target.value)} aria-label={t('prospects.etape')}>
           <option value="actifs">{t('prospects.toutes_etapes')}</option><option value="tous">{t('prospects.y_compris_clos')}</option>
           {[...ETAPES, 'perdu'].map((x) => <option key={x} value={x}>{t(`prospects.statuts.${x}`)}</option>)}
@@ -96,7 +97,7 @@ export function Prospection() {
             <tbody>{liste.map((p) => (
               <tr key={p.id} className="cliquable" onClick={() => nav(`/prospection/${p.id}`)}>
                 <td><div style={{ fontWeight: 500 }}>{p.raison_sociale}</div><div className="mute">{[p.contact_nom, p.contact_fonction].filter(Boolean).join(' · ')}</div></td>
-                <td className="sec">{p.pays}</td><td className="sec">{p.segment ?? '—'}</td>
+                <td className="sec">{paysLib(p.pays)}</td><td className="sec">{p.segment ?? '—'}</td>
                 <td>{t(`prospects.sources.${p.source}`)}</td>
                 <td><Statut statut={TON[p.statut] ?? 'neutre'} libelle={t(`prospects.statuts.${p.statut}`)} />
                   {sansContact.has(p.id) && <div className="txt-err" style={{ fontSize: 12 }}>{t('prospects.sans_contact')}</div>}</td>
@@ -212,6 +213,7 @@ function NouveauProspect({ onClose, onSaved }: { onClose: () => void; onSaved: (
 export function FicheProspect() {
   const { id = '' } = useParams();
   const { t } = useTranslation();
+  const paysLib = (c: string) => (c === 'ZZ' ? t('prospects.pays_a_preciser') : c);
   const { langue } = useAuth();
   const nav = useNavigate();
   const profils = useNoms('profils');
@@ -221,6 +223,7 @@ export function FicheProspect() {
   const [f, setF] = useState({ type: 'appel', date: aujourdhui(), compte_rendu: '', relance: '' });
   const [perdu, setPerdu] = useState(false);
   const [motif, setMotif] = useState('');
+  const [precis, setPrecis] = useState({ pays: '', specialite: 'autre' });
   const x = p.data;
   const ouvert = x && !['converti', 'perdu'].includes(x.statut);
   const apres = () => { void p.recharger(); void ac.recharger(); };
@@ -234,6 +237,12 @@ export function FicheProspect() {
   const statut = async (s: 'qualifie' | 'consultation' | 'perdu') => {
     if (s === 'perdu' && motif.trim().length < 5) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.rpc('changer_statut_prospect', { p_prospect: id, p_statut: s, p_motif: s === 'perdu' ? motif.trim().slice(0, 1000) : null })))) { setPerdu(false); apres(); }
+  };
+  const preciser = async () => {
+    const v = z.object({ pays: z.string().regex(/^[A-Z]{2}$/).refine((c) => c !== 'ZZ'), specialite: z.enum(SPECIALITES) }).strict()
+      .safeParse({ pays: precis.pays.trim().toUpperCase(), specialite: precis.specialite });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.from('prospects').update(v.data).eq('id', id)))) apres();
   };
   const convertir = async () => {
     if (await a.executer(async () => ok(await supabase.rpc('convertir_prospect', { p_prospect: id })))) nav('/clients');
@@ -259,10 +268,19 @@ export function FicheProspect() {
       </ol>
       <Bandeau type="err">{ac.erreur ?? a.erreur}</Bandeau>
       {!x.premier_contact_le && ouvert && <Bandeau>{t('prospects.aide_premier_contact')}</Bandeau>}
+      {x.pays === 'ZZ' && ouvert && (
+        <div className="pros-preciser">
+          <span>{t('prospects.aide_pays_a_preciser')}</span>
+          <input value={precis.pays} maxLength={2} placeholder="CI" aria-label={t('prospects.pays')} onChange={(e) => setPrecis({ ...precis, pays: e.target.value })} />
+          <select value={precis.specialite} aria-label={t('prospects.specialite')} onChange={(e) => setPrecis({ ...precis, specialite: e.target.value })}>
+            {SPECIALITES.map((s) => <option key={s} value={s}>{t(`prospects.specialites.${s}`)}</option>)}</select>
+          <Bouton disabled={a.enCours} onClick={() => void preciser()}>{t('commun.enregistrer')}</Bouton>
+        </div>
+      )}
       <div className="fiche-grille">
         <div className="cadre fiche-principal">
           <div className="pf-champs" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-            <div><span>{t('prospects.pays')}</span><b>{x.pays}</b></div>
+            <div><span>{t('prospects.pays')}</span><b>{paysLib(x.pays)}</b></div>
             <div><span>{t('prospects.segment')}</span><b>{x.segment ?? '—'}</b></div>
             <div><span>{t('prospects.source')}</span><b>{t(`prospects.sources.${x.source}`)}</b></div>
             <div><span>{t('prospects.responsable')}</span><b>{x.responsable_id ? profils[x.responsable_id] ?? '—' : '—'}</b></div>

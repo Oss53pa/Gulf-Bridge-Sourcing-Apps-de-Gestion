@@ -567,7 +567,10 @@ td.retard-txt { color: var(--err); }
 .etapes-pros li.perdu { border-top-color: var(--err-bg); }
 .fiche-bloc { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
 .pros-ajout { display: grid; grid-template-columns: 140px 150px minmax(0, 1fr) auto; gap: 8px; align-items: start; }
-.pros-ajout select, .pros-ajout input, .pros-ajout textarea { height: 40px; border: 1px solid var(--strong); border-radius: var(--r); background: var(--white); padding: 0 10px; }
+.pros-preciser { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; margin: 0 0 14px; border-top: 1px solid var(--bronze); border-bottom: 1px solid var(--bronze); color: var(--bronze-text); }
+.pros-preciser > span { flex: 1 1 320px; }
+.pros-preciser input { width: 64px; text-transform: uppercase; } .pros-preciser select { width: 220px; }
+.pros-ajout select, .pros-ajout input, .pros-ajout textarea, .pros-preciser select, .pros-preciser input { height: 40px; border: 1px solid var(--strong); border-radius: var(--r); background: var(--white); padding: 0 10px; }
 .pros-ajout textarea { height: 56px; padding: 8px 10px; resize: vertical; }
 .pros-histo { display: grid; grid-template-columns: 96px 40px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--sable); font-size: 14px; }
 .relance-l { display: grid; grid-template-columns: 22px 96px minmax(0, 1fr); gap: 8px; align-items: center; padding: 6px 0; font-size: 14px; }

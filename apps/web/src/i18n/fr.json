@@ -1004,6 +1004,7 @@
   "GBS_PARAMETRE_INVALIDE": "Valeur refusée : type, bornes ou format non conformes à la définition du paramètre (un taux s'écrit 0,25 pour 25 %).",
   "GBS_PARAM_MANQUANT": "Paramètre manquant : prévenez l'administratrice.",
   "GBS_PAYS_AGENT_REQUIS": "Le pays de l'agent est obligatoire.",
+  "GBS_PAYS_A_PRECISER": "Précisez le pays du prospect avant de le convertir en client.",
   "GBS_PENALITE_SUR_SOLDE": "Une pénalité ne se retient que sur le solde.",
   "GBS_PERIODE_INVALIDE": "Période invalide (au plus un an, fin après début).",
   "GBS_PHOTOS_INVALIDES": "Photos invalides : uniquement des fichiers déposés dans ce dossier, 20 au plus.",
@@ -2077,6 +2078,7 @@
  },
  "prospects": {
   "actions": "Actions et relances",
+  "aide_pays_a_preciser": "Demande du site sans pays : précisez le pays et la spécialité avant toute conversion en client.",
   "aide_premier_contact": "Enregistrez le premier contact (dans un jour ouvré) avant de qualifier ou de convertir.",
   "alerte_sans_contact": "{{n}} prospect(s) sans premier contact dans le délai d'un jour ouvré.",
   "aucun": "Aucun prospect.",
@@ -2130,6 +2132,7 @@
   "passer_a": "Passer à « {{etape}} »",
   "passer_consultation": "Passer en consultation",
   "pays": "Pays",
+  "pays_a_preciser": "À préciser",
   "premier_contact": "Premier contact",
   "premier_contact_le": "premier contact le {{date}}",
   "prochaine_relance": "Prochaine relance",

@@ -1004,6 +1004,7 @@
   "GBS_PARAMETRE_INVALIDE": "Value rejected: type, bounds or format do not match the setting definition (a rate is written 0.25 for 25%).",
   "GBS_PARAM_MANQUANT": "Missing setting: tell the administrator.",
   "GBS_PAYS_AGENT_REQUIS": "The agent's country is mandatory.",
+  "GBS_PAYS_A_PRECISER": "Specify the prospect's country before converting it to a client.",
   "GBS_PENALITE_SUR_SOLDE": "A penalty is withheld only from the balance.",
   "GBS_PERIODE_INVALIDE": "Invalid period (at most one year, end after start).",
   "GBS_PHOTOS_INVALIDES": "Invalid photos: only files uploaded to this file, at most 20.",
@@ -2077,6 +2078,7 @@
  },
  "prospects": {
   "actions": "Actions and follow-ups",
+  "aide_pays_a_preciser": "Website request without a country: specify the country and speciality before converting to a client.",
   "aide_premier_contact": "Record the first contact (within one working day) before qualifying or converting.",
   "alerte_sans_contact": "{{n}} prospect(s) without first contact within one working day.",
   "aucun": "No prospect.",
@@ -2130,6 +2132,7 @@
   "passer_a": "Move to “{{etape}}”",
   "passer_consultation": "Move to consultation",
   "pays": "Country",
+  "pays_a_preciser": "To be specified",
   "premier_contact": "First contact",
   "premier_contact_le": "first contact on {{date}}",
   "prochaine_relance": "Next follow-up",

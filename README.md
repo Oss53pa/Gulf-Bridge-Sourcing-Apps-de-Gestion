@@ -227,6 +227,22 @@ select cron.schedule('gbs-mensualites-cadre', '0 7 1 * *',
   perform gbs.facturer_mensualites_cadre(current_date); end $$$c$);
 ```
 
+### Demandes du formulaire de contact du site
+
+Le formulaire de www.gulfbridgesourcing.com enregistre chaque demande dans le module « Sites clients » de la console Atlas Studio (`public.client_site_leads`, site `gulf-bridge-sourcing`), qui garde la notification par e-mail. L'application les reprend en prospects (source « site web ») par une importation périodique :
+
+- lecture seule de la table d'Atlas Studio, aucun déclencheur posé dessus : une panne côté GBS ne bloque jamais l'envoi du formulaire ;
+- chaque demande n'est importée qu'une fois (`gbs.demandes_site_importees`) ; une demande inexploitable est consignée (`GBS_DEMANDE_INVALIDE`) sans être réessayée ;
+- pays déduit de l'indicatif du téléphone, sinon « ZZ » (à préciser, confié au Hub Afrique) ; un prospect « ZZ » ne se convertit pas en client tant que son pays n'est pas précisé sur sa fiche ;
+- spécialité déduite du service choisi, sinon « autre » ; même adresse e-mail sous 24 heures rattachée au prospect existant ;
+- la tâche « premier contact sous 1 jour ouvré » est créée comme pour tout prospect.
+
+```sql
+select cron.schedule('gbs-demandes-site', '*/5 * * * *', 'select gbs_private.importer_demandes_site()');
+```
+
+La fonction `gbs-demande` (envoi signé HMAC depuis un serveur) reste disponible si le site envoie un jour ses demandes directement, avec pays, spécialité et fichiers.
+
 ### Taux de change automatiques (BCE)
 
 Les taux USD et CNY sont importés chaque jour ouvré depuis les taux de référence de la Banque centrale européenne. Le XOF ayant une parité fixe avec l'euro (655,957), 1 USD = 655,957 ÷ (USD pour 1 EUR publié par la BCE), et de même pour le CNY. L'import passe par `pg_net`, sans clé ni service tiers, et contrôle chaque réponse avant toute écriture :
