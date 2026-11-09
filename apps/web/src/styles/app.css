@@ -793,3 +793,13 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .grl-version { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 8px; font-size: 14px; padding: 4px 0; }
 .grl-version > span { display: flex; flex-direction: column; gap: 2px; }
 @media (max-width: 1100px) { .grl-grille { grid-template-columns: 1fr; } }
+
+/* Paramétrage · sociétés */
+.soc-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.soc-carte { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 16px; border: 1px solid var(--border); border-radius: var(--r); background: var(--white); font: inherit; color: var(--ink); cursor: pointer; }
+.soc-carte.choisi { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.soc-carte:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
+.soc-grille { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; border-top: 1px solid var(--ink); padding-top: 12px; }
+.soc-bloc { display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 900px) { .soc-grille { grid-template-columns: 1fr; } }
+.grl-regle .statut { white-space: nowrap; flex: none; }

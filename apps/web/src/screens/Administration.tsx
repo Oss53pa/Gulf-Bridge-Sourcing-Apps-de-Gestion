@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
@@ -417,6 +417,15 @@ function Societes() {
   const r = useAsync(async () => ok(await supabase.from('rattachements_pays').select('*').order('pays').order('date_effet', { ascending: false })) as
     { id: string; pays: string; societe_id: string; date_effet: string; commentaire: string | null }[], []);
   const a = useAction();
+  // Fiche complète (forme, identifiants fiscaux), séries de factures et comptes bancaires : lecture filtrée par la base selon le rôle.
+  const fiches = useAsync(async () => ok(await supabase.from('societes').select('id, code, raison_sociale, pays, devise, forme, date_creation, identifiants_fiscaux, fne').order('code')) as
+    { id: string; code: string; raison_sociale: string; pays: string; devise: string; forme: string | null; date_creation: string; identifiants_fiscaux: Record<string, unknown>; fne: boolean }[], []);
+  const series = useAsync(async () => { const x = await supabase.from('series_factures').select('societe_id, serie, annee, dernier, largeur').order('annee', { ascending: false });
+    return x.error ? [] : x.data as { societe_id: string; serie: string; annee: number; dernier: number; largeur: number }[]; }, []);
+  const comptes = useAsync(async () => { const x = await supabase.from('comptes_bancaires').select('id, societe_id, libelle, banque, numero, devise, actif').order('libelle');
+    return x.error ? [] : x.data as { id: string; societe_id: string; libelle: string; banque: string; numero: string; devise: string; actif: boolean }[]; }, []);
+  const [sel, setSel] = useState<string | null>(null);
+  const soc = (fiches.data ?? []).find((x) => x.id === sel) ?? fiches.data?.[0] ?? null;
   const [f, setF] = useState({ pays: '', societe_id: '', date_effet: new Date().toISOString().slice(0, 10), commentaire: '' });
   const ajouter = async () => {
     const v = z.object({ pays: z.string().regex(/^([A-Z]{2}|defaut)$/), societe_id: z.string().uuid(), date_effet: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -427,8 +436,40 @@ function Societes() {
   };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <table className="t"><thead><tr><th>{t('champs.raison_sociale')}</th><th>{t('champs.pays')}</th><th>{t('champs.devise')}</th><th>{t('parametrage.creee_le')}</th><th>FNE</th></tr></thead>
-        <tbody>{societes.map((s) => <tr key={s.id}><td>{s.raison_sociale}</td><td>{s.pays}</td><td>{s.devise}</td><td className="ref">{date(s.date_creation, langue)}</td><td>{s.fne ? t('commun.oui') : '—'}</td></tr>)}</tbody></table>
+      <Bandeau type="err">{fiches.erreur}</Bandeau>
+      <div className="soc-cartes">
+        {(fiches.data ?? []).map((x) => (
+          <button key={x.id} type="button" className={'soc-carte' + (soc?.id === x.id ? ' choisi' : '')} onClick={() => setSel(x.id)}>
+            <b>{x.raison_sociale}</b><span className="sec">{[x.pays, x.devise, x.forme].filter(Boolean).join(' · ')}</span></button>))}
+      </div>
+      {soc && (
+        <div className="soc-grille">
+          <section className="soc-bloc">
+            <div className="surtitre">{t('parametrage.fiche')}</div>
+            <dl className="dl">
+              <dt>{t('parametrage.forme')}</dt><dd>{soc.forme ?? '—'}</dd>
+              <dt>{t('champs.pays')}</dt><dd>{soc.pays}</dd>
+              <dt>{t('champs.devise')}</dt><dd>{soc.devise}</dd>
+              <dt>{t('parametrage.creee_le')}</dt><dd>{date(soc.date_creation, langue)}</dd>
+              {Object.entries(soc.identifiants_fiscaux ?? {}).map(([k, v]) => <Fragment key={k}><dt>{k.toUpperCase()}</dt><dd className="ref">{String(v)}</dd></Fragment>)}
+              {Object.keys(soc.identifiants_fiscaux ?? {}).length === 0 && <><dt>{t('parametrage.identifiants')}</dt><dd className="txt-att">{t('parametrage.identifiants_manquants')}</dd></>}
+              <dt>FNE</dt><dd>{soc.fne ? t('parametrage.fne_oui') : '—'}</dd>
+            </dl>
+          </section>
+          <section className="soc-bloc">
+            <div className="surtitre">{t('parametrage.numerotation')}</div>
+            {(series.data ?? []).filter((x) => x.societe_id === soc.id).length === 0 ? <span className="mute">—</span>
+              : (series.data ?? []).filter((x) => x.societe_id === soc.id).map((x) => (
+                <div key={`${x.serie}-${x.annee}`} className="grl-regle"><span className="ref">{`${x.serie}-${x.annee}-${'N'.repeat(x.largeur)}`}</span>
+                  <span className="mute">{t('parametrage.dernier_numero', { n: x.dernier })}</span></div>))}
+            <div className="surtitre" style={{ marginTop: 12 }}>{t('parametrage.comptes_bancaires')}</div>
+            {(comptes.data ?? []).filter((x) => x.societe_id === soc.id).length === 0 ? <span className="mute">{t('parametrage.comptes_aucun')}</span>
+              : (comptes.data ?? []).filter((x) => x.societe_id === soc.id).map((x) => (
+                <div key={x.id} className="grl-regle"><span><b>{x.banque}</b><span className="mute">{x.libelle} · •••• {x.numero.slice(-4)} · {x.devise}</span></span>
+                  <Statut statut={x.actif ? 'ok' : 'neutre'} libelle={t(x.actif ? 'parametrage.actif' : 'parametrage.inactif')} /></div>))}
+          </section>
+        </div>
+      )}
       <div className="section-titre">{t('parametrage.rattachements')}</div>
       <p className="mute">{t('parametrage.aide_rattachements')}</p>
       <Bandeau type="err">{r.erreur ?? a.erreur}</Bandeau>
