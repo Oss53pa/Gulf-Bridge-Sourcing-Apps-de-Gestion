@@ -10,9 +10,13 @@
 -- * L'engagement de non-commission des fournisseurs existe déjà (fournisseurs.engagement_non_commission_le).
 
 insert into gbs.parametres_definitions (cle, type, minimum, maximum, validateur, module, libelle) values
-  ('ethique.seuil_cadeau_cny', 'nombre', 0, 100000, null, 'qualite', 'Seuil des cadeaux et invitations acceptés d''office (CNY)');
+  ('ethique.seuil_cadeau_cny', 'nombre', 0, 100000, null, 'qualite', 'Seuil des cadeaux et invitations acceptés d''office (CNY)'),
+  ('alertes.retard_critique_jours', 'entier', 1, 365, null, 'supervision', 'Facture impayée : alerte critique au-delà de ce retard (jours)'),
+  ('alertes.dd_critique_jours', 'entier', 1, 90, null, 'supervision', 'Due diligence : alerte critique à moins de ce délai avant expiration (jours)');
 insert into gbs.parametres (cle, valeur, date_effet, commentaire) values
-  ('ethique.seuil_cadeau_cny', '500', date '2026-01-01', 'Valeur de la maquette : à confirmer par la direction');
+  ('ethique.seuil_cadeau_cny', '500', date '2026-01-01', 'Validé par la direction le 09.11.2026'),
+  ('alertes.retard_critique_jours', '30', date '2026-01-01', 'Validé par la direction le 09.11.2026'),
+  ('alertes.dd_critique_jours', '15', date '2026-01-01', 'Validé par la direction le 09.11.2026');
 
 create table gbs.declarations_ethique (
   id             uuid primary key default gen_random_uuid(),

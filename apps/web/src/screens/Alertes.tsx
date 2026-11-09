@@ -31,6 +31,11 @@ export function Alertes() {
       if (r.error) { if (r.error.code !== '42501') echecs += 1; return [] as T[]; }
       return r.data as T[];
     };
+    // Seuils « critique » : paramètres datés (validés par la direction), lus avec les autres sources.
+    const prm = await lire<{ cle: string; valeur: unknown; date_effet: string }>(supabase.from('parametres').select('cle, valeur, date_effet')
+      .in('cle', ['alertes.retard_critique_jours', 'alertes.dd_critique_jours']).lte('date_effet', auj).order('date_effet', { ascending: false }));
+    const prmNum = (cle: string, defaut: number) => { const v = prm.find((x) => x.cle === cle)?.valeur; return typeof v === 'number' ? v : defaut; };
+    const seuilRetard = prmNum('alertes.retard_critique_jours', 30), seuilDd = prmNum('alertes.dd_critique_jours', 15);
     const [pb, fr, fne, pay, dd] = await Promise.all([
       lire<{ id: string; description: string; categorie: string; echeance: string; escalade_le: string; dossier_id: string; dossiers: { reference: string; societe_id: string } | null }>(
         supabase.from('points_bloquants').select('id, description, categorie, echeance, escalade_le, dossier_id, dossiers(reference, societe_id)').is('resolu_le', null).not('escalade_le', 'is', null).limit(200)),
@@ -48,7 +53,7 @@ export function Alertes() {
         id: `pb-${x.id}`, categorie: 'point_bloquant' as const, critique: true, titre: t('alertes.pb_titre', { ref: x.dossiers?.reference ?? '' }),
         detail: x.description, echeance: x.echeance, module: 'dossiers', reference: x.dossiers?.reference ?? '', lien: '/points-bloquants' })),
       ...fr.filter((x) => !societeActive || x.societe_id === societeActive).map((x) => ({
-        id: `fr-${x.id}`, categorie: 'retard_paiement' as const, critique: (ecart(x.echeance) ?? 0) < -30, titre: t('alertes.fr_titre', { ref: x.numero ?? '—', d: date(x.echeance, langue) }),
+        id: `fr-${x.id}`, categorie: 'retard_paiement' as const, critique: (ecart(x.echeance) ?? 0) < -seuilRetard, titre: t('alertes.fr_titre', { ref: x.numero ?? '—', d: date(x.echeance, langue) }),
         detail: `${x.clients?.raison_sociale ?? '—'} · ${montant(Number(x.net_a_payer) - Number(x.encaisse), x.devise, langue)}`, echeance: x.echeance, module: 'finance', reference: x.numero ?? '', lien: `/factures/${x.id}` })),
       ...fne.filter((x) => !societeActive || x.societe_id === societeActive).map((x) => ({
         id: `fne-${x.id}`, categorie: 'fne' as const, critique: false, titre: t('alertes.fne_titre', { ref: x.numero ?? '—' }),
@@ -57,7 +62,7 @@ export function Alertes() {
         id: `pay-${x.id}`, categorie: 'paiement_a_valider' as const, critique: false, titre: t('alertes.pay_titre', { ref: x.reference ?? '—', nature: t(`alertes.natures.${x.nature}`) }),
         detail: `${x.dossiers?.reference ?? ''} · ${montant(Number(x.montant), x.devise, langue)}`, echeance: x.cree_le?.slice(0, 10) ?? null, module: 'finance', reference: x.reference ?? '', lien: '/paiements' })),
       ...dd.map((x) => ({
-        id: `dd-${x.id}`, categorie: 'due_diligence' as const, critique: (ecart(x.valide_jusqu_au) ?? 99) <= 15, titre: t('alertes.dd_titre', { f: x.fournisseurs?.raison_sociale_en ?? '—', d: date(x.valide_jusqu_au, langue) }),
+        id: `dd-${x.id}`, categorie: 'due_diligence' as const, critique: (ecart(x.valide_jusqu_au) ?? 9999) <= seuilDd, titre: t('alertes.dd_titre', { f: x.fournisseurs?.raison_sociale_en ?? '—', d: date(x.valide_jusqu_au, langue) }),
         detail: t('alertes.dd_detail', { ref: x.reference ?? '' }), echeance: x.valide_jusqu_au, module: 'achats', reference: x.reference ?? '', lien: `/fournisseurs/${x.fournisseur_id}` })),
     ];
     // Critiques d'abord, puis par échéance la plus ancienne.
