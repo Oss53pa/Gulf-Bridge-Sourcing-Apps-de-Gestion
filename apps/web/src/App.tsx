@@ -23,6 +23,7 @@ import { TableauDeBord } from './screens/TableauDeBord';
 import { NouveauDossier, Portefeuille } from './screens/Dossiers';
 import { Consultations, FicheConsultation, NouvelleConsultation } from './screens/Consultations';
 import { AppelsOffres, FicheAppelOffres } from './screens/AppelsOffres';
+import { ApprobationsTechniques } from './screens/ApprobationEssais';
 import { FichesReference } from './screens/FichesReference';
 import { FicheDossier } from './screens/FicheDossier';
 import { MesTaches } from './screens/Delais';
@@ -97,6 +98,7 @@ export function App() {
             <Route path="/articles" element={g('articles', <Articles />)} />
             <Route path="/mise-en-concurrence" element={g('consultations', <MiseEnConcurrence />)} />
             <Route path="/historique-prix" element={g('historique_prix', <HistoriquePrix />)} />
+            <Route path="/approbation-technique" element={g('approbation', <ApprobationsTechniques />)} />
             <Route path="/commandes" element={g('commandes', <Commandes />)} />
             <Route path="/commandes/:id" element={g('commandes', <FicheCommande />)} />
             <Route path="/inspections" element={g('inspections', <Inspections />)} />

@@ -102,6 +102,7 @@
   "aide": "A custom order cannot go into production without an approved, signed version. A new version submitted before production cancels the existing approval; afterwards, drawings change by amendment.",
   "aide_decision": "Attach the document signed by the client; a rejection requires their reservations.",
   "aide_version": "Documents can no longer be changed once the version is submitted.",
+  "aucun_circuit": "No approval circuit: they are created from the order record.",
   "aucune": "No version submitted.",
   "date_decision": "Decision date",
   "decision": "Client decision",
@@ -130,7 +131,9 @@
    "remplacee": "Superseded",
    "soumise": "Submitted to client"
   },
+  "surtitre": "technical approval and factory tests",
   "titre": "Technical approval",
+  "titre_circuits": "{{n}} approval circuits; {{a}} approved and signed, {{r}} under revision, {{s}} with the client",
   "version": "Version"
  },
  "articles": {

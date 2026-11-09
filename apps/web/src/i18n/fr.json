@@ -102,6 +102,7 @@
   "aide": "Une commande sur mesure ne passe pas en production sans version approuvée et signée. Une nouvelle version soumise avant la production annule l'approbation acquise ; après, les plans changent par avenant.",
   "aide_decision": "Joignez le document signé par le client ; un refus exige ses réserves.",
   "aide_version": "Les pièces ne se modifient plus une fois la version soumise.",
+  "aucun_circuit": "Aucun circuit d'approbation : ils se créent depuis la fiche commande.",
   "aucune": "Aucune version soumise.",
   "date_decision": "Date de la décision",
   "decision": "Décision du client",
@@ -130,7 +131,9 @@
    "remplacee": "Remplacée",
    "soumise": "Soumise au client"
   },
+  "surtitre": "approbation technique et essais en usine",
   "titre": "Approbation technique",
+  "titre_circuits": "{{n}} circuits d'approbation ; {{a}} approuvés et signés, {{r}} en révision, {{s}} chez le client",
   "version": "Version"
  },
  "articles": {

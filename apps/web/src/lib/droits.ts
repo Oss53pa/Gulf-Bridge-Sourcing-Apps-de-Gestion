@@ -61,7 +61,7 @@ export const ECRANS: Ecran[] = [
   { id: 'consultations', chemin: '/mise-en-concurrence', module: 'achats', section: 'consultation', roles: ['admin', 'achats_chine'], lot: 0 },
   { id: 'historique_prix', chemin: '/historique-prix', module: 'achats', section: 'consultation', roles: ['admin', 'achats_chine'], lot: 0 },
   { id: 'commandes', chemin: '/commandes', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
-  { id: 'approbation', chemin: '', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine'], lot: 1 },
+  { id: 'approbation', chemin: '/approbation-technique', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine'], lot: 1 },
   { id: 'inspections', chemin: '/inspections', module: 'qualite', section: 'controles', roles: ['admin', 'achats_chine', 'inspecteur'], lot: 0 },
   { id: 'non_conformites', chemin: '/non-conformites', module: 'qualite', section: 'non_conformites', roles: ['admin', 'achats_chine'], lot: 1 },
   { id: 'expeditions', chemin: '/expeditions', module: 'logistique', section: 'transport', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays'], lot: 0 },
