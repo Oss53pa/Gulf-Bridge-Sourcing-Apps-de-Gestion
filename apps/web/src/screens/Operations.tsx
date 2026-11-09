@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -417,23 +417,30 @@ function NouvelleExpedition({ onClose, onOk }: { onClose: () => void; onOk: (id:
 
 const ORDRE_EXP = ['preparation', 'remise_transporteur', 'expediee', 'en_transit', 'arrivee', 'mise_a_disposition', 'livree'];
 
+const FRISE_EXP = ['remise_transporteur', 'depart_port', 'transbordement', 'arrivee_port', 'mise_a_disposition', 'livraison'];
+
+/** Fiche d'une expédition (maquette EXP) : infos de transport, frise des étapes, franchise au port comptée depuis l'arrivée réelle. */
 export function FicheExpedition() {
   const { id = '' } = useParams();
   const { t } = useTranslation();
   const { profil, langue, fuseau } = useAuth();
   const role = profil?.role ?? '';
-  const e = useAsync(async () => ok(await supabase.from('expeditions').select('*').eq('id', id).maybeSingle()) as Expedition | null, [id]);
+  const e = useAsync(async () => ok(await supabase.from('expeditions').select('*, dossiers(reference, clients(raison_sociale))').eq('id', id).maybeSingle()) as unknown as ExpeditionListe | null, [id]);
   const etapes = useAsync(async () => ok(await supabase.from('expedition_etapes').select('*').eq('expedition_id', id).order('survenue_le')) as Etape[], [id]);
   const liees = useAsync(async () => (['admin', 'achats_chine'].includes(role) ? ok(await supabase.from('expedition_commandes').select('commande_id').eq('expedition_id', id)) as { commande_id: string }[] : []), [id, role]);
   const cmds = useAsync(async () => (e.data && ['admin', 'achats_chine'].includes(role) ? ok(await supabase.from('commandes').select('id, reference, statut').eq('dossier_id', e.data.dossier_id).neq('statut', 'annulee')) as Commande[] : []), [e.data?.dossier_id, role]);
   const a = useAction();
   const [docs, setDocs] = useState<Partial<Expedition> | null>(null);
+  const [retard, setRetard] = useState<string | null>(null);
   const [etape, setEtape] = useState({ etape: 'depart_port', lieu: '', survenue_le: '', commentaire: '' });
   const x = e.data;
-  if (e.chargement) return <div className="screen"><Chargement /></div>;
+  if (e.chargement && !x) return <div className="screen"><Chargement /></div>;
   if (!x) return <div className="screen"><Vide>{e.erreur ?? t('expeditions.introuvable')}</Vide></div>;
   const ecrit = ['admin', 'achats_chine'].includes(role);
   const suivant = ORDRE_EXP[ORDRE_EXP.indexOf(x.statut) + 1];
+  const enRoute = ['preparation', 'remise_transporteur', 'expediee', 'en_transit'].includes(x.statut);
+  const reportee = Boolean(x.eta && x.eta_initiale && x.eta > x.eta_initiale) && enRoute;
+  const liste = etapes.data ?? [];
   const recharger = () => { void e.recharger(); void etapes.recharger(); void liees.recharger(); };
   const avancer = async () => { if (suivant && await a.executer(async () => ok(await supabase.rpc('changer_statut_expedition', { p_expedition: x.id, p_statut: suivant })))) recharger(); };
   const lier = async (cid: string) => { if (await a.executer(async () => ok(await supabase.from('expedition_commandes').insert({ expedition_id: x.id, commande_id: cid })))) recharger(); };
@@ -447,6 +454,12 @@ export function FicheExpedition() {
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.from('expeditions').update(v.data).eq('id', x.id)))) { setDocs(null); recharger(); }
   };
+  // Retard : nouvelle arrivée prévue ; l'arrivée initiale reste conservée par la base.
+  const signalerRetard = async () => {
+    const v = z.object({ eta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).strict().safeParse({ eta: retard ?? '' });
+    if (!v.success || (x.eta && v.data.eta <= x.eta)) { a.setErreur(t('expeditions.retard_date')); return; }
+    if (await a.executer(async () => ok(await supabase.from('expeditions').update(v.data).eq('id', x.id)))) { setRetard(null); recharger(); }
+  };
   const ajouterEtape = async () => {
     const v = z.object({ etape: z.enum(['remise_transporteur', 'depart_port', 'transbordement', 'arrivee_port', 'dechargement', 'mise_a_disposition', 'livraison', 'autre']),
       lieu: z.string().max(120).nullable(), survenue_le: z.string().min(10), commentaire: z.string().max(1000).nullable() }).strict()
@@ -454,57 +467,107 @@ export function FicheExpedition() {
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.from('expedition_etapes').insert({ ...v.data, expedition_id: x.id })))) { setEtape({ etape: 'depart_port', lieu: '', survenue_le: '', commentaire: '' }); recharger(); }
   };
-  const franchiseFin = x.eta && x.jours_franchise !== null ? new Date(new Date(x.eta).getTime() + x.jours_franchise * 86400000).toISOString() : null;
+  // Frise : première occurrence de chaque étape ; le transbordement n'apparaît que s'il a eu lieu.
+  const premiere = (k: string) => liste.find((s) => s.etape === k) ?? null;
+  const frise = FRISE_EXP.filter((k) => k !== 'transbordement' || premiere(k));
+  const derniere = Math.max(-1, ...frise.map((k, i) => (premiere(k) ? i : -1)));
+  // Franchise : démarre à l'arrivée réelle au port (étape saisie), jamais à l'arrivée prévue.
+  const arrivee = premiere('arrivee_port')?.survenue_le.slice(0, 10) ?? null;
+  const finFranchise = arrivee && x.jours_franchise !== null ? new Date(Date.parse(arrivee) + x.jours_franchise * 86400000).toISOString().slice(0, 10) : null;
+  const reste = finFranchise && x.statut !== 'livree' ? Math.round((Date.parse(finFranchise) - Date.parse(new Date().toISOString().slice(0, 10))) / 86400000) : null;
+  const pays = x.pays_destination === 'CI' ? 'BSC' : x.pays_destination === 'CM' ? 'BESC' : x.pays_destination === 'GA' ? 'BIETC' : null;
+  const info = (lib: string, val: ReactNode) => <div><span>{lib}</span><b>{val}</b></div>;
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.logistique')} · ${t(`modes_exp.${x.mode}`)} · ${x.pays_destination}`} titre={`${x.reference} — ${x.port_depart ?? '?'} → ${x.port_arrivee ?? x.pays_destination}`}
+      <Entete surtitre={`${t('modules.logistique')} · ${t('expeditions.surtitre_fiche')} · ${x.reference} · EXP`}
+        titre={<span className="exp-titre">{x.dossiers?.clients?.raison_sociale ?? x.reference}
+          <Statut statut={reportee ? 'att' : x.statut} libelle={`${t(`statuts_exp.${x.statut}`)}${reportee ? ` · ${t('expeditions.retard')}` : ''}`} /></span>}
         actions={<>
-          <Statut statut={x.statut} libelle={t(`statuts_exp.${x.statut}`)} />
-          {suivant && (ecrit || (role === 'hub_afrique' && ['arrivee', 'mise_a_disposition', 'livree'].includes(suivant))) &&
-            <Bouton variante="primaire" onClick={() => void avancer()}>{t('expeditions.passer', { s: t(`statuts_exp.${suivant}`) })}</Bouton>}
+          {ecrit && enRoute && <Bouton onClick={() => setRetard(x.eta ?? '')}>{t('expeditions.signaler_retard')}</Bouton>}
           {ecrit && <Bouton onClick={() => setDocs({ bordereau_reference: x.bordereau_reference, numero_connaissement: x.numero_connaissement, type_connaissement: x.type_connaissement as Expedition['type_connaissement'], navire: x.navire, eta: x.eta, conteneurs: x.conteneurs, plombs: x.plombs })}>{t('expeditions.documents')}</Bouton>}
+          {suivant && (ecrit || (role === 'hub_afrique' && ['arrivee', 'mise_a_disposition', 'livree'].includes(suivant))) &&
+            <Bouton variante="primaire" disabled={a.enCours} onClick={() => void avancer()}>{t('expeditions.confirmer', { s: t(`statuts_exp.${suivant}`) })}</Bouton>}
         </>} />
-      <Kpis items={[
-        { lib: 'ETA', val: date(x.eta, langue), sous: x.navire ?? '—' },
-        { lib: t('expeditions.bordereau'), texte: true, val: x.bordereau_reference ?? t('expeditions.manquant'), sous: x.pays_destination === 'CI' ? 'BSC' : x.pays_destination === 'CM' ? 'BESC' : x.pays_destination === 'GA' ? 'BIETC' : '—' },
-        { lib: t('expeditions.connaissement'), texte: true, val: x.numero_connaissement ?? '—', sous: x.type_connaissement ? t(`connaissements.${x.type_connaissement}`) : '—' },
-        { lib: t('expeditions.fin_franchise'), val: franchiseFin ? date(franchiseFin, langue) : '—', sous: t('expeditions.franchise_jours', { n: x.jours_franchise ?? 0 }) },
-      ]} />
-      <Bandeau type="err">{a.erreur}</Bandeau>
-      <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {ecrit && (
-          <section>
-            <div className="section-titre">{t('expeditions.commandes')}</div>
-            <div className="actions">
-              {(cmds.data ?? []).map((c) => {
-                const lie = (liees.data ?? []).some((l) => l.commande_id === c.id);
-                return lie ? <span key={c.id} className="chip info">{c.reference}</span>
-                  : x.statut === 'preparation' ? <Bouton key={c.id} petit onClick={() => void lier(c.id)}>+ {c.reference}</Bouton> : null;
-              })}
-            </div>
-          </section>
-        )}
-        {['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role) && <PackDocumentaire expeditionId={x.id} dossierId={x.dossier_id} />}
-        {['admin', 'achats_chine', 'hub_afrique'].includes(role) && x.statut !== 'livree' && <TransitaireExpedition expeditionId={x.id} transitaire={x.transitaire} onChange={recharger} />}
-        <section>
-          <div className="section-titre">{t('expeditions.etapes')}</div>
-          {(etapes.data ?? []).length === 0 ? <span className="mute">{t('expeditions.aucune_etape')}</span> : (
-            <table className="t"><tbody>{(etapes.data ?? []).map((s) => (
-              <tr key={s.id}><td className="ref">{dateHeure(s.survenue_le, langue, fuseau)}</td><td>{t(`etapes.${s.etape}`)}</td><td className="sec">{s.lieu ?? ''}</td><td className="sec">{s.commentaire ?? ''}</td></tr>))}</tbody></table>
+      <p className="exp-sous">{[x.dossiers?.reference, x.conteneurs.join(', ') || null, t(`modes_exp.${x.mode}`)].filter(Boolean).join(' · ')}</p>
+      <Bandeau type="err">{a.erreur ?? e.erreur ?? etapes.erreur}</Bandeau>
+      <div className="fiche-grille">
+        <div className="exp-principal">
+          <div className="exp-infos">
+            {info(t('expeditions.connaissement'), <>{x.numero_connaissement ?? '—'}{x.type_connaissement && <small> · {t(`connaissements.${x.type_connaissement}`)}</small>}</>)}
+            {info(t('expeditions.navire'), x.navire ?? '—')}
+            {info(t('expeditions.port_chargement'), x.port_depart ?? '—')}
+            {info(t('expeditions.port_destination'), `${x.port_arrivee ?? '—'} · ${x.pays_destination}`)}
+            {info(t('expeditions.arrivee_prevue'), <span className={reportee ? 'txt-err' : ''}>{date(x.eta, langue)}{reportee && <small> ({t('expeditions.initiale', { d: date(x.eta_initiale, langue) })})</small>}</span>)}
+            {info(t('expeditions.bordereau'), x.bordereau_reference ? `${x.bordereau_reference}${pays ? ` · ${pays}` : ''}` : <span className="txt-err">{t('expeditions.manquant')}</span>)}
+          </div>
+          <ol className="exp-frise">
+            {frise.map((k, i) => {
+              const s = premiere(k);
+              return (
+                <li key={k} className={s ? (i === derniere && x.statut !== 'livree' ? 'courante' : 'faite') : ''}>
+                  <span className="pt" /><span className="nom">{t(`etapes.${k}`)}</span><span className="dt">{s ? date(s.survenue_le, langue) : k === 'arrivee_port' && x.eta ? t('expeditions.prevue', { d: date(x.eta, langue) }) : '—'}</span>
+                </li>);
+            })}
+          </ol>
+          {ecrit && (
+            <section>
+              <div className="section-titre">{t('expeditions.commandes')}</div>
+              <div className="actions">
+                {(cmds.data ?? []).map((c) => {
+                  const lie = (liees.data ?? []).some((l) => l.commande_id === c.id);
+                  return lie ? <span key={c.id} className="chip info">{c.reference}</span>
+                    : x.statut === 'preparation' ? <Bouton key={c.id} petit onClick={() => void lier(c.id)}>+ {c.reference}</Bouton> : null;
+                })}
+                {(cmds.data ?? []).length === 0 && <span className="mute">—</span>}
+              </div>
+            </section>
           )}
+          {['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role) && <PackDocumentaire expeditionId={x.id} dossierId={x.dossier_id} />}
           {(ecrit || role === 'hub_afrique') && (
-            <div className="grille3" style={{ alignItems: 'end', marginTop: 8, gridTemplateColumns: '1fr 1fr 1fr 2fr auto' }}>
-              <Champ label={t('expeditions.etape')}><select value={etape.etape} onChange={(ev) => setEtape({ ...etape, etape: ev.target.value })}>
-                {['remise_transporteur', 'depart_port', 'transbordement', 'arrivee_port', 'dechargement', 'mise_a_disposition', 'livraison', 'autre'].map((s) => <option key={s} value={s}>{t(`etapes.${s}`)}</option>)}</select></Champ>
-              <Champ label={t('inspections.lieu')}><input value={etape.lieu} maxLength={120} onChange={(ev) => setEtape({ ...etape, lieu: ev.target.value })} /></Champ>
-              <Champ label={t('champs.date')}><input type="datetime-local" value={etape.survenue_le} onChange={(ev) => setEtape({ ...etape, survenue_le: ev.target.value })} /></Champ>
-              <Champ label={t('champs.commentaire')}><input value={etape.commentaire} maxLength={1000} onChange={(ev) => setEtape({ ...etape, commentaire: ev.target.value })} /></Champ>
-              <Bouton onClick={() => void ajouterEtape()}>{t('commun.ajouter')}</Bouton>
-            </div>
+            <section>
+              <div className="section-titre">{t('expeditions.ajouter_etape')}</div>
+              <div className="grille3" style={{ alignItems: 'end', gridTemplateColumns: '1fr 1fr 1fr 2fr auto' }}>
+                <Champ label={t('expeditions.etape')}><select value={etape.etape} onChange={(ev) => setEtape({ ...etape, etape: ev.target.value })}>
+                  {['remise_transporteur', 'depart_port', 'transbordement', 'arrivee_port', 'dechargement', 'mise_a_disposition', 'livraison', 'autre'].map((s) => <option key={s} value={s}>{t(`etapes.${s}`)}</option>)}</select></Champ>
+                <Champ label={t('inspections.lieu')}><input value={etape.lieu} maxLength={120} onChange={(ev) => setEtape({ ...etape, lieu: ev.target.value })} /></Champ>
+                <Champ label={t('champs.date')}><input type="datetime-local" value={etape.survenue_le} onChange={(ev) => setEtape({ ...etape, survenue_le: ev.target.value })} /></Champ>
+                <Champ label={t('champs.commentaire')}><input value={etape.commentaire} maxLength={1000} onChange={(ev) => setEtape({ ...etape, commentaire: ev.target.value })} /></Champ>
+                <Bouton disabled={a.enCours} onClick={() => void ajouterEtape()}>{t('commun.ajouter')}</Bouton>
+              </div>
+            </section>
           )}
-        </section>
-        <p className="mute">{t('expeditions.aide_verrous')}</p>
+          {['admin', 'achats_chine', 'hub_afrique'].includes(role) && x.statut !== 'livree' && <TransitaireExpedition expeditionId={x.id} transitaire={x.transitaire} onChange={recharger} />}
+          <p className="mute">{t('expeditions.aide_verrous')}</p>
+        </div>
+        <aside className="exp-aside">
+          <section>
+            <div className="surtitre">{t('expeditions.franchise_titre')}</div>
+            {x.jours_franchise === null ? <p className="mute">{t('expeditions.franchise_inconnue')}</p>
+              : !arrivee ? <p>{t('expeditions.franchise_demarre', { n: x.jours_franchise })}</p>
+                : <>
+                  <p>{t('expeditions.franchise_fin', { d: date(finFranchise, langue), n: x.jours_franchise })}</p>
+                  {reste !== null && <b className={'exp-reste' + (reste < 0 ? ' txt-err' : reste <= 2 ? ' txt-att' : '')}>{reste < 0 ? t('expeditions.jours_depasses', { n: -reste }) : t('expeditions.jours_restants', { n: reste })}</b>}
+                </>}
+          </section>
+          <section>
+            <div className="surtitre">{t('expeditions.journal')}</div>
+            {liste.length === 0 ? <p className="mute">{t('expeditions.aucune_etape')}</p> : [...liste].reverse().map((s) => (
+              <div key={s.id} className="exp-jrn">
+                <span className="mute">{dateHeure(s.survenue_le, langue, fuseau)}</span>
+                <span>{t(`etapes.${s.etape}`)}{s.lieu ? ` · ${s.lieu}` : ''}</span>
+                {s.commentaire && <span className="sec">{s.commentaire}</span>}
+              </div>))}
+          </section>
+        </aside>
       </div>
+      {retard !== null && (
+        <Tiroir titre={t('expeditions.signaler_retard')} onClose={() => setRetard(null)}>
+          <p className="sec">{t('expeditions.aide_retard', { d: date(x.eta_initiale ?? x.eta, langue) })}</p>
+          <Champ label={t('expeditions.nouvelle_arrivee')}><input type="date" value={retard} min={x.eta ?? undefined} onChange={(ev) => setRetard(ev.target.value)} /></Champ>
+          <Bandeau type="err">{a.erreur}</Bandeau>
+          <Bouton variante="primaire" disabled={a.enCours} onClick={() => void signalerRetard()}>{t('commun.enregistrer')}</Bouton>
+        </Tiroir>
+      )}
       {docs && (
         <Tiroir titre={t('expeditions.documents')} onClose={() => setDocs(null)}>
           <div className="grille2">
