@@ -9,6 +9,7 @@ import { date, montant, pourcent } from '../lib/format';
 import type { Client, Dossier, Facture, LigneFacture, Paiement } from '../lib/types';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { useNoms } from '../lib/referentiels';
+import { Qr } from './Imprimes';
 
 type Filtre = 'toutes' | 'a_encaisser' | 'retard' | 'fne' | 'reglees';
 const TYPES = ['forfait_consultation', 'forfait_projet', 'commission', 'accord_cadre', 'installation', 'due_diligence', 'controle_qualite',
@@ -162,44 +163,41 @@ export function FicheFacture() {
     if (await a.executer(async () => ok(await supabase.from('encaissements').insert({ ...v.data, facture_id: x.id, devise: x.devise })))) { setEnc(null); recharger(); }
   };
   const recap = x.recapitulatif;
+  const emettrice = societes.find((s) => s.id === x.societe_id);
+  const destinataire = x.client_id ? clients[x.client_id] : societes.find((s) => s.id === x.societe_dest_id)?.raison_sociale;
+  const reste = Math.max(0, Number(x.net_a_payer) - Number(x.encaisse));
+  const enRetard = ['emise', 'partiellement_payee'].includes(x.statut) && Boolean(x.echeance) && x.echeance! < new Date().toISOString().slice(0, 10);
+  const certif = x.fne_requise ? (x.fne_numero ? ['ok', t('factures.certifiee_dgi')] : x.statut === 'en_attente_fne' ? ['att', t('factures.attente_dgi')] : ['neutre', t('factures.non_certifiee')])
+    : ['neutre', t('factures.facture_export')];
+  const paiement = x.statut === 'payee' ? ['ok', t('factures.reglee')] : enRetard ? ['err', t('factures.en_retard')]
+    : ['emise', 'partiellement_payee'].includes(x.statut) ? ['info', t('factures.a_echoir')] : ['neutre', t(`statuts_facture.${x.statut}`)];
+  const m = (v: number) => montant(v, x.devise, langue);
   return (
-    <div className="screen">
-      <Entete surtitre={`${societes.find((s) => s.id === x.societe_id)?.raison_sociale ?? ''} · ${t(`types_facture.${x.type}`)}${x.tranche ? ` ${x.tranche}/2` : ''}`}
-        titre={`${x.numero ?? t('factures.brouillon')} — ${x.client_id ? clients[x.client_id] : societes.find((s) => s.id === x.societe_dest_id)?.raison_sociale}`}
-        actions={<>
-          <Statut statut={x.statut} libelle={t(`statuts_facture.${x.statut}`)} />
-          {x.statut !== 'brouillon' && <Link className="btn" to={`/imprimer/facture/${x.id}`}>{t('commun.imprimer')}</Link>}
-          {peut && x.statut === 'brouillon' && <Bouton variante="primaire" disabled={a.enCours} onClick={() => void emettre()}>{t('factures.emettre')}</Bouton>}
-          {peut && x.statut === 'en_attente_fne' && <Bouton variante="primaire" onClick={() => setFne({ num: '', qr: '' })}>{t('factures.certifier')}</Bouton>}
-          {peut && ['emise', 'partiellement_payee'].includes(x.statut) && <Bouton variante="primaire" onClick={() => setEnc({ montant: String(Number(x.net_a_payer) - Number(x.encaisse)), recu_le: new Date().toISOString().slice(0, 10), mode: 'virement', reference: '' })}>{t('factures.encaisser')}</Bouton>}
-        </>} />
-      <Kpis items={[
-        { lib: t('factures.ht'), val: montant(x.montant_ht, x.devise, langue), sous: x.dossier_id ? dossiers[x.dossier_id] : '—' },
-        { lib: `TVA ${pourcent(x.tva_taux, langue)}`, val: montant(x.tva, x.devise, langue), sous: `TTC ${montant(x.ttc, x.devise, langue)}` },
-        { lib: `${t('factures.retenue')} ${pourcent(x.retenue_taux, langue)}`, val: montant(x.retenue, x.devise, langue), sous: x.retenue_taux > 0 ? t('factures.attestation') : t('factures.sans_retenue') },
-        { lib: t('factures.net_a_payer'), val: montant(x.net_a_payer, x.devise, langue), sous: t('factures.encaisse', { m: montant(x.encaisse, x.devise, langue) }) },
-      ]} />
+    <div className="screen" style={{ overflow: 'auto' }}>
       {x.statut === 'en_attente_fne' && <Bandeau>{t('factures.bandeau_attente')}</Bandeau>}
       <Bandeau type="err">{a.erreur}</Bandeau>
-      <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {recap && (
-          <section><div className="section-titre">{t('factures.recap_projet')}</div>
-            <dl className="dl">
-              <dt>{t('factures.forfait_total')}</dt><dd>{montant(recap.forfait_total_xof, 'XOF', langue)}</dd>
-              <dt>{t('factures.deja_facture')}</dt><dd>{montant(recap.versements_factures_xof, 'XOF', langue)}</dd>
-              <dt>{t('factures.deja_encaisse')}</dt><dd>{montant(recap.versements_encaisses_xof, 'XOF', langue)}</dd>
-              <dt>{t('factures.ce_versement')}</dt><dd>{montant(recap.ce_versement_xof, 'XOF', langue)}</dd>
-              <dt>{t('factures.reste_du_projet')}</dt><dd>{montant(recap.reste_du_xof, 'XOF', langue)}</dd>
-            </dl></section>
-        )}
-        <section>
-          <div className="section-titre">{t('factures.lignes')}</div>
-          <table className="t"><thead><tr><th>{t('champs.designation')}</th><th>{t('factures.service')}</th><th className="num">{t('champs.quantite')}</th><th className="num">{t('commandes.pu')}</th><th className="num">{t('champs.montant')}</th><th /></tr></thead>
-            <tbody>{(lignes.data ?? []).map((l) => (
-              <tr key={l.id}><td>{l.libelle}</td><td className="sec">{l.service ?? '—'}</td><td className="num">{l.quantite}</td><td className="num">{montant(l.prix_unitaire, x.devise, langue)}</td><td className="num">{montant(l.montant, x.devise, langue)}</td>
+      <div className="fac-grille">
+        <article className="fac-doc">
+          <header className="fac-tete">
+            <div><b>{emettrice?.raison_sociale}</b><div className="mute">{t('doc.bureau_achat')}</div></div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="surtitre">{x.type === 'avoir' ? t('doc.avoir') : t('doc.facture')}</div>
+              <b className="fac-numero">{x.numero ?? t('factures.brouillon')}</b>
+              <div className="mute">{x.date_emission ? t('factures.emise_le', { d: date(x.date_emission, langue) }) : t('factures.non_emise')}
+                {x.echeance ? ` · ${t('factures.echeance_le', { d: date(x.echeance, langue) })}` : ''}</div>
+            </div>
+          </header>
+          <div className="fac-parties">
+            <div><span>{t('factures.facture_a')}</span><b>{destinataire ?? '—'}</b></div>
+            <div><span>{t('factures.dossier_objet')}</span><b>{x.dossier_id ? `${dossiers[x.dossier_id]} · ` : ''}{x.objet}</b></div>
+          </div>
+          <table className="t fac-lignes"><thead><tr><th>{t('champs.designation')}</th><th className="num">{t('champs.quantite')}</th><th className="num">{t('commandes.pu')}</th><th className="num">{t('champs.montant')}</th><th /></tr></thead>
+            <tbody>{(lignes.data ?? []).length === 0 ? <tr><td colSpan={5} className="mute">{t('factures.aucune_ligne')}</td></tr> : (lignes.data ?? []).map((l) => (
+              <tr key={l.id}><td>{l.libelle}{l.service && <div className="mute">{l.service} · {t(`services.${l.service}`)}</div>}</td><td className="num">{l.quantite}</td>
+                <td className="num">{m(l.prix_unitaire)}</td><td className="num">{m(l.montant)}</td>
                 <td className="num">{peut && x.statut === 'brouillon' && <Bouton petit variante="danger" onClick={() => void a.executer(async () => { ok(await supabase.from('lignes_facture').delete().eq('id', l.id)); recharger(); })}>{t('commun.retirer')}</Bouton>}</td></tr>))}</tbody></table>
           {peut && x.statut === 'brouillon' && (
-            <div className="grille3" style={{ alignItems: 'end', marginTop: 8, gridTemplateColumns: '3fr 1fr 1fr 1fr auto' }}>
+            <div className="grille3" style={{ alignItems: 'end', gridTemplateColumns: '3fr 1fr 1fr 1fr auto' }}>
               <Champ label={t('champs.designation')}><input value={ligne.libelle} maxLength={300} onChange={(e) => setLigne({ ...ligne, libelle: e.target.value })} /></Champ>
               <Champ label={t('factures.service')}><select value={ligne.service} onChange={(e) => setLigne({ ...ligne, service: e.target.value })}>
                 <option value="">—</option>{['S1', 'S2', 'S2bis', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10'].map((s) => <option key={s} value={s}>{s} · {t(`services.${s}`)}</option>)}</select></Champ>
@@ -208,15 +206,45 @@ export function FicheFacture() {
               <Bouton onClick={() => void ajouter()}>{t('commun.ajouter')}</Bouton>
             </div>
           )}
-        </section>
-        {x.fne_numero && <p className="sec">{t('factures.fne_numero', { n: x.fne_numero })}</p>}
-        <section>
-          <div className="section-titre">{t('factures.encaissements')}</div>
-          {(encs.data ?? []).length === 0 ? <span className="mute">{t('factures.aucun_encaissement')}</span> : (
-            <table className="t"><tbody>{(encs.data ?? []).map((e) => (
-              <tr key={e.id}><td className="ref">{date(e.recu_le, langue)}</td><td>{montant(e.montant, e.devise, langue)}</td><td className="sec">{t(`modes_enc.${e.mode}`)}</td><td className="sec">{e.reference ?? ''}</td></tr>))}</tbody></table>
+          <div className="fac-pied">
+            <div className="fac-qr">{x.fne_qr ? <Qr texte={x.fne_qr} /> : <span className="mute">{x.fne_requise ? t('factures.qr_attendu') : t('factures.sans_fne')}</span>}
+              {x.fne_numero && <div className="mute">{t('factures.fne_numero', { n: x.fne_numero })}</div>}</div>
+            <table className="fac-totaux"><tbody>
+              <tr><td>{t('doc.total_ht')}</td><td className="num">{m(x.montant_ht)}</td></tr>
+              <tr><td>{t('doc.tva')} {pourcent(x.tva_taux, langue)}</td><td className="num">{m(x.tva)}</td></tr>
+              <tr className="fort"><td>{t('doc.total_ttc')} · {x.devise}</td><td className="num">{m(x.ttc)}</td></tr>
+              {x.retenue_taux > 0 && <tr><td>{t('doc.retenue')} {pourcent(x.retenue_taux, langue)}</td><td className="num">− {m(x.retenue)}</td></tr>}
+              {x.retenue_taux > 0 && <tr className="fort"><td>{t('doc.net_a_payer')}</td><td className="num">{m(x.net_a_payer)}</td></tr>}
+            </tbody></table>
+          </div>
+        </article>
+        <aside className="fac-cote">
+          <div className="actions"><Statut statut={certif[0]} libelle={certif[1]} /><Statut statut={paiement[0]} libelle={paiement[1]} /></div>
+          <div className="fac-chiffres">
+            <div><span>{t('factures.encaisse_court')}</span><b>{m(x.encaisse)}</b></div>
+            <div><span>{t('factures.reste_du')}</span><b className={enRetard ? 'txt-err' : ''}>{m(reste)}</b></div>
+          </div>
+          {peut && x.statut === 'brouillon' && <Bouton variante="primaire" data-sans-glose style={{ width: '100%', justifyContent: 'center' }} disabled={a.enCours} onClick={() => void emettre()}>{t('factures.emettre')}</Bouton>}
+          {peut && x.statut === 'en_attente_fne' && <Bouton variante="primaire" data-sans-glose style={{ width: '100%', justifyContent: 'center' }} onClick={() => setFne({ num: '', qr: '' })}>{t('factures.certifier')}</Bouton>}
+          {peut && ['emise', 'partiellement_payee'].includes(x.statut) && <Bouton variante="primaire" data-sans-glose style={{ width: '100%', justifyContent: 'center' }}
+            onClick={() => setEnc({ montant: String(reste), recu_le: new Date().toISOString().slice(0, 10), mode: 'virement', reference: '' })}>{t('factures.rapprocher')}</Bouton>}
+          {x.statut !== 'brouillon' && <Link className="btn" style={{ justifyContent: 'center' }} to={`/imprimer/facture/${x.id}`}>{t('commun.imprimer')}</Link>}
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('factures.encaissements')}</div>
+            {(encs.data ?? []).length === 0 ? <span className="mute">{t('factures.aucun_encaissement')}</span> : (encs.data ?? []).map((e) => (
+              <div key={e.id} className="ligne-montant"><span>{date(e.recu_le, langue)} · {t(`modes_enc.${e.mode}`)}{e.reference ? <span className="mute"> · {e.reference}</span> : ''}</span><b>{montant(e.montant, e.devise, langue)}</b></div>))}
+          </section>
+          {recap && (
+            <section className="fiche-bloc">
+              <div className="surtitre">{t('factures.recap_projet')}</div>
+              <div className="ligne-montant"><span>{t('factures.forfait_total')}</span><b>{montant(recap.forfait_total_xof, 'XOF', langue)}</b></div>
+              <div className="ligne-montant"><span>{t('factures.deja_facture')}</span><b>{montant(recap.versements_factures_xof, 'XOF', langue)}</b></div>
+              <div className="ligne-montant"><span>{t('factures.deja_encaisse')}</span><b>{montant(recap.versements_encaisses_xof, 'XOF', langue)}</b></div>
+              <div className="ligne-montant"><span>{t('factures.reste_du_projet')}</span><b>{montant(recap.reste_du_xof, 'XOF', langue)}</b></div>
+            </section>
           )}
-        </section>
+          <p className="mute" style={{ margin: 0 }}>{t('factures.aide_partage')}</p>
+        </aside>
       </div>
       {fne && (
         <Tiroir titre={t('factures.certifier')} onClose={() => setFne(null)}>
