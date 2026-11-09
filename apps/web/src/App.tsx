@@ -21,6 +21,7 @@ import { AccesReserve, Chargement } from './components/ui';
 import { ConfigurationManquante, Connexion, SansRole } from './screens/Connexion';
 import { TableauDeBord } from './screens/TableauDeBord';
 import { NouveauDossier, Portefeuille } from './screens/Dossiers';
+import { Consultations, NouvelleConsultation } from './screens/Consultations';
 import { FicheDossier } from './screens/FicheDossier';
 import { MesTaches } from './screens/Delais';
 import { PageSuivi } from './screens/Suivi';
@@ -83,6 +84,8 @@ export function App() {
             <Route path="/prospection/:id" element={g('prospection', <FicheProspect />)} />
             <Route path="/clients" element={g('clients', <Clients />)} />
             <Route path="/clients/:id" element={g('clients', <FicheClient />)} />
+            <Route path="/consultations" element={g('consultations_clients', <Consultations />)} />
+            <Route path="/consultations/nouvelle" element={g('nouvelle_consultation', <NouvelleConsultation />)} />
             <Route path="/fournisseurs" element={g('fournisseurs', <Fournisseurs />)} />
             <Route path="/articles" element={g('articles', <Articles />)} />
             <Route path="/mise-en-concurrence" element={g('consultations', <MiseEnConcurrence />)} />

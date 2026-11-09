@@ -129,7 +129,10 @@ export function FicheClient() {
     <div className="screen">
       <Entete surtitre={`${t('modules.commercial')} · ${t('clients.fiche')}${x.reference ? ` · ${x.reference}` : ''}`}
         titre={<>{x.raison_sociale} <span className="h1-statut"><Statut statut={TON_VERIF[x.verification_statut] ?? 'neutre'} libelle={t(`verification.${x.verification_statut}`)} /></span></>}
-        actions={peutDossier && <Bouton variante="primaire" onClick={() => nav('/dossiers/nouveau')}>{t('clients.ouvrir_dossier')}</Bouton>} />
+        actions={peutDossier && <>
+          <Bouton onClick={() => nav(`/consultations/nouvelle?client=${x.id}`)}>{t('consultations.nouvelle')}</Bouton>
+          <Bouton variante="primaire" onClick={() => nav('/dossiers/nouveau')}>{t('clients.ouvrir_dossier')}</Bouton>
+        </>} />
       <div className="sec" style={{ marginTop: -10 }}>{[x.segment, x.pays, x.devise].filter(Boolean).join(' · ')}</div>
       <Onglets actif={onglet} onChange={setOnglet} items={[
         { id: 'synthese', lib: t('clients.o_synthese') }, { id: 'verification', lib: t('clients.o_verification') },

@@ -29,6 +29,7 @@ export interface Dossier {
   specialite: string | null; pays: string; priorite: string; ouvert_le: string; date_ouverture_site: string | null;
   statut: string; phase_courante: string; chef_id: string | null; lettre_credit: boolean; reference_domiciliation: string | null;
   forfait_consultation_ht: number | null; forfait_projet_ht: number | null; taux_commission_projet: number | null; cadre_id: string | null;
+  besoin?: string | null; quantite_besoin?: string | null;
 }
 export interface Phase {
   id: string; dossier_id: string; phase: string; ordre: number; statut: string; reelle_debut: string | null; reelle_fin: string | null;

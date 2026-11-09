@@ -264,6 +264,13 @@ function PhasesPieces({ dossier, phases, pieces, onChange, planning }: {
             <p className="mute">{t('fiche.transparence_note')}</p>
           </section>
         )}
+        {(dossier.besoin || dossier.quantite_besoin) && (
+          <section>
+            <div className="surtitre">{t('consultations.besoin')}</div>
+            {dossier.quantite_besoin && <div className="ligne-montant"><span>{t('consultations.quantite')}</span><b>{dossier.quantite_besoin}</b></div>}
+            {dossier.besoin && <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{dossier.besoin}</p>}
+          </section>
+        )}
         <section>
           <div className="surtitre">{t('fiche.planning_rebours')}</div>
           <div className="pf-champs" style={{ borderTop: 0, paddingTop: 0 }}>
