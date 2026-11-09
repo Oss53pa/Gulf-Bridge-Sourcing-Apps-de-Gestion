@@ -112,3 +112,12 @@ export function lireDemande(corps: unknown): Demande | null {
   }
   return null;
 }
+
+/** Dépôt depuis le compte fournisseur (session) : { action: 'repondre_compte', consultation, offre } seulement. */
+export function lireDemandeCompte(corps: unknown): { consultation: string; offre: unknown } | null {
+  if (typeof corps !== 'object' || corps === null || Array.isArray(corps)) return null;
+  const o = corps as Record<string, unknown>;
+  if (o.action !== 'repondre_compte' || Object.keys(o).sort().join(',') !== 'action,consultation,offre') return null;
+  if (typeof o.consultation !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(o.consultation)) return null;
+  return { consultation: o.consultation, offre: o.offre };
+}

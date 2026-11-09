@@ -18,6 +18,7 @@ interface Formulaire {
     date_limite: string; fuseau: string; ouverte: boolean };
   fournisseur: string;
   pli: { depose_le: string; empreinte: string; complet: boolean } | null;
+  peut_deposer?: boolean;
   questions: { question: string; reponse: string | null; repondu_le: string | null; mienne: boolean }[];
 }
 
@@ -30,12 +31,17 @@ async function codeFonction(e: unknown): Promise<string> {
   } catch { return 'GBS_ERREUR'; }
 }
 
+/** Code GBS_* d'une erreur (fonction serveur ou base), sinon générique. */
+const codeErreur = (e: unknown) => (String((e as Error)?.message ?? '').match(/GBS_[A-Z_]+/)?.[0] ?? 'GBS_ERREUR');
+
 const nombre = (s: string) => (s.trim() === '' ? undefined : Number(s.replace(/\s/g, '').replace(',', '.')));
 
-/** Page publique du fournisseur : consultation, questions, dépôt de l'offre sous pli fermé. */
-export function PageFournisseur() {
+/** Page publique du fournisseur (lien par jeton) ou, avec `consultation`, la même réponse depuis le compte
+ * fournisseur : lecture et questions par la base, dépôt chiffré par la fonction serveur. */
+export function PageFournisseur({ consultation, onRetour }: { consultation?: string; onRetour?: () => void } = {}) {
   const { t, i18n } = useTranslation();
-  const jeton = window.location.hash.replace(/^#/, '');
+  const compte = !!consultation;
+  const jeton = compte ? '' : window.location.hash.replace(/^#/, '');
   const [d, setD] = useState<Formulaire | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -45,19 +51,27 @@ export function PageFournisseur() {
   const [question, setQuestion] = useState('');
 
   const appeler = async (body: Record<string, unknown>) => {
+    if (compte) {
+      if (body.action === 'lire') return ok(await supabase.rpc('formulaire_fournisseur_compte', { p_consultation: consultation }));
+      if (body.action === 'question') return ok(await supabase.rpc('poser_question_compte', { p_consultation: consultation, p_question: body.question }));
+      const r = await supabase.functions.invoke('gbs-fournisseur', { body: { action: 'repondre_compte', consultation, offre: body.offre } });
+      if (r.error) throw new Error(await codeFonction(r.error));
+      return r.data;
+    }
     const r = await supabase.functions.invoke('gbs-fournisseur', { body: { jeton, ...body } });
     if (r.error) throw new Error(await codeFonction(r.error));
     return r.data;
   };
   const charger = async () => {
-    try { setD(await appeler({ action: 'lire' }) as Formulaire); setErreur(null); } catch (e) { setErreur((e as Error).message); }
+    try { setD(await appeler({ action: 'lire' }) as Formulaire); setErreur(null); } catch (e) { setErreur(codeErreur(e)); }
   };
   useEffect(() => {
+    if (compte) { void charger(); return; }
     if (!['zh', 'en', 'fr'].includes(i18n.language) || i18n.language === 'fr') void i18n.changeLanguage('zh');
     if (!/^[A-Za-z0-9_-]{43}$/.test(jeton)) { setErreur('GBS_LIEN_INVALIDE'); return; }
     void charger();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jeton]);
+  }, [jeton, consultation]);
 
   const deposer = async () => {
     setMessage(null);
@@ -74,28 +88,28 @@ export function PageFournisseur() {
     if (!v.success) { setErreur('GBS_OFFRE_INVALIDE'); return; }
     setEnvoi(true);
     try { await appeler({ action: 'repondre', offre: JSON.parse(JSON.stringify(v.data)) }); setErreur(null); setMessage(t('plis.depose_ok')); await charger(); }
-    catch (e) { setErreur((e as Error).message); } finally { setEnvoi(false); }
+    catch (e) { setErreur(codeErreur(e)); } finally { setEnvoi(false); }
   };
   const poser = async () => {
     if (question.trim().length < 5) return;
     try { await appeler({ action: 'question', question: question.trim() }); setQuestion(''); setMessage(t('plis.question_ok')); await charger(); }
-    catch (e) { setErreur((e as Error).message); }
+    catch (e) { setErreur(codeErreur(e)); }
   };
 
-  const langues = (
+  const langues = compte ? (onRetour ? <div><Bouton petit onClick={onRetour}>{t('portail_f.retour_cotations')}</Bouton></div> : null) : (
     <div className="actions" style={{ justifyContent: 'flex-end' }}>
       {(['zh', 'en', 'fr'] as const).map((l) => <Bouton key={l} petit variante={i18n.language === l ? 'primaire' : undefined} onClick={() => void i18n.changeLanguage(l)}>{l.toUpperCase()}</Bouton>)}
     </div>
   );
   if (!d) {
-    return <main className="screen" style={{ maxWidth: 760, margin: '0 auto' }}>{langues}
+    return <main className={compte ? '' : 'screen'} style={{ maxWidth: 760, margin: '0 auto' }}>{langues}
       {erreur ? <><h1>{t('plis.titre')}</h1><Bandeau type="err">{t(`erreurs.${erreur}`, { defaultValue: t('erreurs.generique') })}</Bandeau></> : <Chargement />}</main>;
   }
   const c = d.consultation;
   const champ = (k: string, lib: string, props: Record<string, unknown> = {}) => (
     <Champ label={lib}><input value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} {...props} /></Champ>);
   return (
-    <main className="screen" style={{ maxWidth: 860, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <main className={compte ? '' : 'screen'} style={{ maxWidth: 860, margin: compte ? undefined : '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
       {langues}
       <header>
         <div className="surtitre">{c.reference} · {d.fournisseur}</div>
@@ -121,7 +135,7 @@ export function PageFournisseur() {
           <p className="mute" style={{ wordBreak: 'break-all' }}>{t('plis.empreinte')} : {d.pli.empreinte}</p>
         </section>
       )}
-      {c.ouverte ? (
+      {c.ouverte && d.peut_deposer === false ? <Bandeau>{t('portail_f.depot_commercial')}</Bandeau> : c.ouverte ? (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="section-titre">{d.pli ? t('plis.remplacer') : t('plis.offre')}</div>
           <div className="grille3">

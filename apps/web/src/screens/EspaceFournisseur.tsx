@@ -9,6 +9,7 @@ import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant } from '../lib/format';
 import { Bandeau, Bouton, Chargement, Statut, Vide } from '../components/ui';
 import { MessagerieVue } from './Messagerie';
+import { PageFournisseur } from './PlisFournisseurs';
 
 interface Paiement { nature: string; montant: number; devise: string; etat: 'recu' | 'a_venir' | 'annule'; date: string | null }
 interface Commande { id: string; reference: string; statut: string; incoterm: string; lieu: string | null; devise: string; fob_montant: number | null;
@@ -17,7 +18,7 @@ interface Espace {
   utilisateur: { nom: string; sous_role: string };
   fournisseur: { reference: string | null; raison_sociale_en: string; raison_sociale_zh: string | null; statut_agrement: string; note: number | null;
     engagement_non_commission_le: string | null; due_diligence_jusqu_au: string | null };
-  consultations: { reference: string; objet: string; quantite: number | null; incoterm: string; lieu: string | null; date_limite: string; fuseau: string; statut: string; pli_depose_le: string | null }[];
+  consultations: { id: string; reference: string; objet: string; quantite: number | null; incoterm: string; lieu: string | null; date_limite: string; fuseau: string; statut: string; pli_depose_le: string | null }[];
   commandes: Commande[];
   comptes: { type: string; banque: string | null; fin_numero: string; verifie: boolean; verifie_le: string | null }[];
 }
@@ -29,6 +30,7 @@ export function EspaceFournisseur() {
   const { langue, fuseau, deconnexion } = useAuth();
   const e = useAsync(async () => ok(await supabase.rpc('espace_fournisseur')) as Espace, []);
   const [vue, setVue] = useState<Vue>('accueil');
+  const [rfq, setRfq] = useState<string | null>(null);
   const nonLus = useAsync(async () => ok(await supabase.rpc('messages_non_lus')) as number, [vue]);
   const x = e.data;
   const maintenant = new Date().toISOString();
@@ -45,7 +47,7 @@ export function EspaceFournisseur() {
         <Bouton petit onClick={() => void deconnexion()}>{t('coque.deconnexion')}</Bouton>
       </header>
       <nav className="ecl-nav" aria-label={t('portail.navigation')}>
-        {VUES.map((v) => <button key={v} type="button" aria-current={vue === v ? 'page' : undefined} onClick={() => setVue(v)}>
+        {VUES.map((v) => <button key={v} type="button" aria-current={vue === v ? 'page' : undefined} onClick={() => { setVue(v); setRfq(null); }}>
           {t(`portail_f.vues.${v}`)}{v === 'cotations' && aCoter.length > 0 && <span className="badge">{aCoter.length}</span>}{v === 'messagerie' && (nonLus.data ?? 0) > 0 && <span className="badge">{nonLus.data}</span>}</button>)}
       </nav>
       <main className="screen ecl-main">
@@ -64,22 +66,24 @@ export function EspaceFournisseur() {
               {aCoter.length === 0 && <span className="mute">{t('portail.aucune_action')}</span>}
               {aCoter.map((c) => <div key={c.reference} className="grl-regle"><span><b>{t('portail_f.coter', { o: c.objet })}</b>
                 <span className="mute">{t('portail_f.limite', { d: dateHeure(c.date_limite, langue, c.fuseau || fuseau) })}</span></span>
-                <Bouton petit onClick={() => setVue('cotations')}>{t('portail_f.ouvrir')}</Bouton></div>)}
+                <Bouton petit onClick={() => { setVue('cotations'); setRfq(c.id); }}>{t('portail_f.ouvrir')}</Bouton></div>)}
             </section>
             <Bandeau>{t('portail_f.ethique')}</Bandeau>
           </>}
-          {vue === 'cotations' && <>
+          {vue === 'cotations' && rfq && <PageFournisseur consultation={rfq} onRetour={() => { setRfq(null); void e.recharger(); }} />}
+          {vue === 'cotations' && !rfq && <>
             <div className="surtitre">{t('portail_f.scelle')}</div>
             <h1 className="ecl-titre">{t('portail_f.vues.cotations')}</h1>
             <p className="sec">{t('portail_f.aide_cotations')}</p>
             {x.consultations.length === 0 ? <Vide>{t('portail_f.aucune_consultation')}</Vide> : (
-              <table className="t"><thead><tr><th>{t('portail_f.consultation')}</th><th>{t('portail_f.conditions')}</th><th>{t('portail_f.date_limite')}</th><th>{t('champs.statut')}</th></tr></thead>
+              <table className="t"><thead><tr><th>{t('portail_f.consultation')}</th><th>{t('portail_f.conditions')}</th><th>{t('portail_f.date_limite')}</th><th>{t('champs.statut')}</th><th></th></tr></thead>
                 <tbody>{x.consultations.map((c) => {
                   const fermee = c.statut !== 'ouverte' || c.date_limite <= maintenant;
                   return (<tr key={c.reference}><td className="ref">{c.reference}<div>{c.objet}</div></td>
                     <td className="sec">{[c.quantite ? `${Number(c.quantite)}` : null, `${c.incoterm}${c.lieu ? ` ${c.lieu}` : ''}`].filter(Boolean).join(' · ')}</td>
                     <td className="ref">{dateHeure(c.date_limite, langue, c.fuseau || fuseau)}</td>
-                    <td><Statut statut={c.pli_depose_le ? 'ok' : fermee ? 'neutre' : 'att'} libelle={c.pli_depose_le ? t('portail_f.pli_depose', { d: date(c.pli_depose_le, langue) }) : fermee ? t('portail_f.close') : t('portail_f.a_coter')} /></td></tr>);
+                    <td><Statut statut={c.pli_depose_le ? 'ok' : fermee ? 'neutre' : 'att'} libelle={c.pli_depose_le ? t('portail_f.pli_depose', { d: date(c.pli_depose_le, langue) }) : fermee ? t('portail_f.close') : t('portail_f.a_coter')} /></td>
+                    <td className="num"><Bouton petit variante={!fermee && !c.pli_depose_le ? 'primaire' : undefined} onClick={() => setRfq(c.id)}>{fermee ? t('portail_f.consulter') : c.pli_depose_le ? t('portail_f.modifier') : t('portail_f.repondre')}</Bouton></td></tr>);
                 })}</tbody></table>)}
           </>}
           {vue === 'commandes' && <>
