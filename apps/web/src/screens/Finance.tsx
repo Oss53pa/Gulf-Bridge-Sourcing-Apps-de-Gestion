@@ -348,6 +348,7 @@ export function Paiements() {
 
 interface LigneReleve { mois: string; du_par: string; du_a: string; agent_id: string | null; dossier_id: string | null; dossier_reference: string | null; facture_numero: string | null; recu_le: string; base_xof: number; taux: number; montant_xof: number; regle: string; regle_date_effet: string; }
 
+/** Partage de la valeur et commissions (maquette COM) : relevé du mois, une ligne par encaissement, règles datées appliquées. */
 export function Flux() {
   const { t } = useTranslation();
   const { langue, profil } = useAuth();
@@ -357,36 +358,68 @@ export function Flux() {
   const l = useAsync(async () => ok(await supabase.from('v_releve_flux').select('*').eq('mois', debut).order('recu_le')) as LigneReleve[], [debut]);
   const val = useAsync(async () => ok(await supabase.from('releves_valides').select('*').eq('mois', debut).maybeSingle()) as { valide_le: string } | null, [debut]);
   const a = useAction();
-  const tot = (p: (x: LigneReleve) => boolean) => (l.data ?? []).filter(p).reduce((s, x) => s + Number(x.montant_xof), 0);
-  const ciCn = tot((x) => x.du_par === 'GBS_CI' && x.du_a === 'GBS_CN');
-  const cnCi = tot((x) => x.du_par === 'GBS_CN' && x.du_a === 'GBS_CI');
-  const ag = tot((x) => x.du_a === 'agent');
+  const lignes = l.data ?? [];
+  // Un encaissement = une facture encaissée à une date ; ses lignes de partage y sont regroupées.
+  const enc = Object.values(lignes.reduce<Record<string, { cle: string; dossier: string | null; facture: string | null; recu_le: string; base: number; ciCn: number; cnCi: number;
+    agents: { id: string | null; taux: number; montant: number }[] }>>((acc, x) => {
+    const cle = `${x.facture_numero ?? ''}|${x.recu_le}`;
+    const e = acc[cle] ?? (acc[cle] = { cle, dossier: x.dossier_reference, facture: x.facture_numero, recu_le: x.recu_le, base: Number(x.base_xof), ciCn: 0, cnCi: 0, agents: [] });
+    e.base = Math.max(e.base, Number(x.base_xof));
+    if (x.du_par === 'GBS_CI' && x.du_a === 'GBS_CN') e.ciCn += Number(x.montant_xof);
+    else if (x.du_par === 'GBS_CN' && x.du_a === 'GBS_CI') e.cnCi += Number(x.montant_xof);
+    else if (x.du_a === 'agent') e.agents.push({ id: x.agent_id, taux: Number(x.taux), montant: Number(x.montant_xof) });
+    return acc;
+  }, {}));
+  const somme = (f: (e: (typeof enc)[number]) => number) => enc.reduce((s, e) => s + f(e), 0);
+  const agentsTotal = somme((e) => e.agents.reduce((s, x) => s + x.montant, 0));
+  const nAgents = new Set(lignes.filter((x) => x.du_a === 'agent').map((x) => x.agent_id)).size;
+  const regles = Object.values(lignes.reduce<Record<string, { regle: string; taux: number; effet: string }>>((acc, x) => {
+    acc[`${x.regle}|${x.taux}|${x.regle_date_effet}`] = { regle: x.regle, taux: Number(x.taux), effet: x.regle_date_effet };
+    return acc;
+  }, {})).sort((x, y) => x.regle.localeCompare(y.regle));
+  const libMois = new Date(`${debut}T12:00:00Z`).toLocaleDateString(langue === 'zh' ? 'zh-CN' : langue === 'en' ? 'en-GB' : 'fr-FR', { month: 'long', year: 'numeric' });
+  const m = (v: number) => (v ? nombre(v, langue) : '—');
   const admin = profil?.role === 'admin';
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.pilotage')} · M21 · M36`} titre={t('flux.titre')}
+      <Entete surtitre={`${t('modules.finance')} · ${t('flux.surtitre')} · ${libMois} · COM`}
+        titre={l.data ? t('flux.titre_releve', { mois: libMois.split(' ')[0], n: enc.length, c: nombre(agentsTotal, langue) }) + (val.data ? ` ; ${t('flux.releve_valide')}` : ` ; ${t('flux.releve_a_valider')}`) : t('flux.titre')}
         actions={<>
           <input type="month" className="search" style={{ width: 170 }} value={mois} onChange={(e) => setMois(e.target.value)} aria-label={t('flux.mois')} />
-          {admin && !val.data && <Bouton variante="primaire" onClick={() => void a.executer(async () => { ok(await supabase.rpc('valider_releve', { p_mois: debut })); void val.recharger(); })}>{t('flux.valider')}</Bouton>}
           {admin && val.data && <Bouton onClick={() => void a.executer(async () => ok(await supabase.rpc('generer_factures_intragroupe', { p_mois: debut })))}>{t('flux.generer')}</Bouton>}
+          {admin && !val.data && <Bouton variante="primaire" onClick={() => void a.executer(async () => { ok(await supabase.rpc('valider_releve', { p_mois: debut })); void val.recharger(); })}>{t('flux.valider')}</Bouton>}
         </>} />
       <Kpis items={[
-        { lib: t('flux.ci_vers_cn'), val: montant(ciCn, 'XOF', langue), sous: t('flux.ci_vers_cn_sous') },
-        { lib: t('flux.cn_vers_ci'), val: montant(cnCi, 'XOF', langue), sous: t('flux.cn_vers_ci_sous') },
-        { lib: t('flux.agents'), val: montant(ag, 'XOF', langue), sous: t('flux.agents_sous') },
-        { lib: t('flux.statut'), texte: true, val: val.data ? t('flux.valide') : t('flux.a_valider'), sous: val.data ? date(val.data.valide_le, langue) : t('flux.avant_factures') },
+        { lib: t('flux.k_encaissements'), val: m(somme((e) => e.base)), sous: 'XOF' },
+        { lib: t('flux.ci_vers_cn'), val: m(somme((e) => e.ciCn)), sous: t('flux.ci_vers_cn_sous') },
+        { lib: t('flux.cn_vers_ci'), val: m(somme((e) => e.cnCi)), sous: t('flux.cn_vers_ci_sous') },
+        { lib: t('flux.agents'), val: m(agentsTotal), sous: t('flux.n_agents', { n: nAgents }) },
       ]} />
       <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
-      <CadreTableau titre={t('flux.releve')}>
-        {(l.data ?? []).length === 0 ? <Vide>{t('flux.aucun')}</Vide> : (
-          <table className="t"><thead><tr><th>{t('champs.dossier')}</th><th>{t('flux.facture')}</th><th>{t('flux.encaisse_le')}</th><th>{t('flux.sens')}</th><th className="num">{t('flux.base')}</th><th className="num">{t('flux.taux')}</th><th className="num">{t('champs.montant')}</th><th>{t('flux.regle')}</th></tr></thead>
-            <tbody>{(l.data ?? []).map((x, i) => (
-              <tr key={i}><td className="ref">{x.dossier_reference ?? '—'}</td><td className="ref">{x.facture_numero}</td><td className="ref">{date(x.recu_le, langue)}</td>
-                <td className="sec">{x.du_par} → {x.du_a === 'agent' ? (x.agent_id ? profils[x.agent_id] : t('flux.agent')) : x.du_a}</td>
-                <td className="num">{montant(x.base_xof, 'XOF', langue)}</td><td className="num">{pourcent(x.taux, langue, 0)}</td><td className="num">{montant(x.montant_xof, 'XOF', langue)}</td>
-                <td className="mute">{t(`regles.${x.regle}`, { defaultValue: x.regle })} · {date(x.regle_date_effet, langue)}</td></tr>))}</tbody></table>
-        )}
-      </CadreTableau>
+      <div className="fiche-grille">
+        <div className="cadre fiche-principal">
+          {l.chargement && !l.data ? <Chargement /> : enc.length === 0 ? <Vide>{t('flux.aucun')}</Vide> : (
+            <table className="t"><thead><tr><th>{t('champs.dossier')}</th><th>{t('flux.encaissement')}</th><th className="num">{t('champs.montant')}</th>
+              <th className="num">{t('flux.part_cn')}</th><th className="num">{t('flux.gestion')}</th><th>{t('flux.agent')}</th><th className="num">{t('flux.commission')}</th><th>{t('champs.statut')}</th></tr></thead>
+              <tbody>{enc.map((e) => (
+                <tr key={e.cle}><td className="ref">{e.dossier ?? '—'}</td>
+                  <td>{e.facture ?? '—'}<div className="mute">{t('flux.encaisse_le_d', { d: date(e.recu_le, langue) })}</div></td>
+                  <td className="num">{m(e.base)}</td><td className="num">{m(e.ciCn)}</td><td className="num">{m(e.cnCi)}</td>
+                  <td>{e.agents.length === 0 ? <span className="mute">—</span> : e.agents.map((g, i) => <div key={i}>{g.id ? profils[g.id] : t('flux.agent')} · {pourcent(g.taux, langue, 0)}</div>)}</td>
+                  <td className="num">{m(e.agents.reduce((s, x) => s + x.montant, 0))}</td>
+                  <td><Statut statut={val.data ? 'ok' : 'att'} libelle={val.data ? t('flux.valide') : t('flux.a_valider')} /></td></tr>))}</tbody></table>
+          )}
+        </div>
+        <aside className="fiche-cote">
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('flux.regles_datees')}</div>
+            {regles.length === 0 ? <span className="mute">{t('flux.aucune_regle')}</span> : regles.map((r) => (
+              <div key={`${r.regle}${r.taux}${r.effet}`} className="ligne-montant"><span>{t(`regles.${r.regle.replace(/\./g, '_')}`, { defaultValue: r.regle })}<br />
+                <span className="mute">{t('flux.depuis', { d: date(r.effet, langue) })}</span></span><b>{pourcent(r.taux, langue, 0)}</b></div>))}
+            <p className="mute" style={{ margin: 0 }}>{t('flux.aide_regles')}</p>
+          </section>
+        </aside>
+      </div>
     </div>
   );
 }

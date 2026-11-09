@@ -1545,23 +1545,38 @@
   "agent": "Agent",
   "agents": "Commissions des agents pays",
   "agents_sous": "Taux du contrat, à l'encaissement",
+  "aide_regles": "Commission due seulement après l'encaissement client. Une règle modifiée s'applique aux encaissements postérieurs à sa date.",
   "aucun": "Aucun encaissement partagé ce mois-ci.",
+  "aucune_regle": "Aucune règle appliquée ce mois-ci.",
   "avant_factures": "avant émission des factures intragroupe",
   "base": "Base HT",
   "ci_vers_cn": "Dû par GBS CI à GBS Chine",
   "ci_vers_cn_sous": "60 % des forfaits, 70 % des commissions",
   "cn_vers_ci": "Dû par GBS Chine à GBS CI",
   "cn_vers_ci_sous": "5 % de frais de gestion, 30 % de la marge du négoce",
+  "commission": "Commission",
+  "depuis": "depuis le {{d}}",
   "encaisse_le": "Encaissée le",
+  "encaisse_le_d": "encaissé le {{d}}",
+  "encaissement": "Encaissement",
   "facture": "Facture",
   "generer": "Émettre les factures intragroupe",
+  "gestion": "Gestion",
+  "k_encaissements": "Encaissements partagés",
   "mois": "Mois",
+  "n_agents": "{{n}} agents",
+  "part_cn": "Part GBS Chine",
   "regle": "Règle appliquée",
+  "regles_datees": "Règles datées · section 1 bis",
   "releve": "Relevé par dossier : encaissement d'origine, règle et date d'effet",
+  "releve_a_valider": "relevé à valider",
+  "releve_valide": "relevé validé",
   "sens": "Sens",
   "statut": "Relevé",
+  "surtitre": "partage de la valeur et commissions",
   "taux": "Taux",
   "titre": "Partage de la valeur et flux entre GBS Chine et GBS Côte d'Ivoire",
+  "titre_releve": "Relevé de {{mois}} : {{n}} encaissements partagés, {{c}} XOF de commissions d'agents pays",
   "valide": "Validé",
   "valider": "Valider le relevé"
  },
@@ -2823,6 +2838,7 @@
   "agent": {
    "taux": "Commission de l'agent pays"
   },
+  "agent_taux": "Taux d'agent pays (paramètre)",
   "contrat_agent": "Contrat de l'agent pays",
   "partage": {
    "ci_vers_cn": {
@@ -2833,7 +2849,11 @@
     "frais_gestion": "Frais de gestion GBS CI",
     "marge_negoce": "Part GBS CI sur marge du négoce"
    }
-  }
+  },
+  "partage_ci_vers_cn_commissions": "Commissions · part de GBS Chine",
+  "partage_ci_vers_cn_forfaits": "Forfaits · part de GBS Chine",
+  "partage_cn_vers_ci_frais_gestion": "Frais de gestion dus à GBS CI",
+  "partage_cn_vers_ci_marge_negoce": "Marge du négoce · part de GBS CI"
  },
  "resultats": {
   "conforme": "Conforme",

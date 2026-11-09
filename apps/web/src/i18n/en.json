@@ -1545,23 +1545,38 @@
   "agent": "Agent",
   "agents": "Country agent commissions",
   "agents_sous": "Contract rate, on receipt",
+  "aide_regles": "Commission is only due after the client's payment. A changed rule applies to receipts after its date.",
   "aucun": "No shared receipt this month.",
+  "aucune_regle": "No rule applied this month.",
   "avant_factures": "before issuing intercompany invoices",
   "base": "Basis excl. tax",
   "ci_vers_cn": "Owed by GBS CI to GBS China",
   "ci_vers_cn_sous": "60% of fees, 70% of commissions",
   "cn_vers_ci": "Owed by GBS China to GBS CI",
   "cn_vers_ci_sous": "5% management fee, 30% of trading margin",
+  "commission": "Commission",
+  "depuis": "since {{d}}",
   "encaisse_le": "Received on",
+  "encaisse_le_d": "received on {{d}}",
+  "encaissement": "Receipt",
   "facture": "Invoice",
   "generer": "Issue intercompany invoices",
+  "gestion": "Management",
+  "k_encaissements": "Shared receipts",
   "mois": "Month",
+  "n_agents": "{{n}} agents",
+  "part_cn": "GBS China share",
   "regle": "Rule applied",
+  "regles_datees": "Dated rules · section 1 bis",
   "releve": "Statement by file: original receipt, rule and effective date",
+  "releve_a_valider": "statement to approve",
+  "releve_valide": "statement approved",
   "sens": "Direction",
   "statut": "Statement",
+  "surtitre": "value sharing and commissions",
   "taux": "Rate",
   "titre": "Value sharing and flows between GBS China and GBS Côte d'Ivoire",
+  "titre_releve": "{{mois}} statement: {{n}} shared receipts, {{c}} XOF of country agent commissions",
   "valide": "Validated",
   "valider": "Validate statement"
  },
@@ -2823,6 +2838,7 @@
   "agent": {
    "taux": "Country agent commission"
   },
+  "agent_taux": "Country agent rate (parameter)",
   "contrat_agent": "Country agent contract",
   "partage": {
    "ci_vers_cn": {
@@ -2833,7 +2849,11 @@
     "frais_gestion": "GBS CI management fee",
     "marge_negoce": "GBS CI share of trading margin"
    }
-  }
+  },
+  "partage_ci_vers_cn_commissions": "Commissions · GBS China share",
+  "partage_ci_vers_cn_forfaits": "Fees · GBS China share",
+  "partage_cn_vers_ci_frais_gestion": "Management fees due to GBS CI",
+  "partage_cn_vers_ci_marge_negoce": "Trading margin · GBS CI share"
  },
  "resultats": {
   "conforme": "Compliant",

@@ -1545,23 +1545,38 @@
   "agent": "代理",
   "agents": "国家代理佣金",
   "agents_sous": "按合同费率，收款时计算",
+  "aide_regles": "佣金仅在客户付款后产生。规则变更仅适用于其生效日之后的收款。",
   "aucun": "本月无分配收款。",
+  "aucune_regle": "本月未适用任何规则。",
   "avant_factures": "开具集团内部发票前",
   "base": "不含税基数",
   "ci_vers_cn": "GBS CI 应付 GBS 中国",
   "ci_vers_cn_sous": "服务费 60%，佣金 70%",
   "cn_vers_ci": "GBS 中国应付 GBS CI",
   "cn_vers_ci_sous": "5% 管理费，贸易毛利 30%",
+  "commission": "佣金",
+  "depuis": "自 {{d}} 起",
   "encaisse_le": "收款日期",
+  "encaisse_le_d": "{{d}} 收款",
+  "encaissement": "收款",
   "facture": "发票",
   "generer": "开具集团内部发票",
+  "gestion": "管理费",
+  "k_encaissements": "分成收款",
   "mois": "月份",
+  "n_agents": "{{n}} 名代理",
+  "part_cn": "GBS 中国份额",
   "regle": "适用规则",
+  "regles_datees": "按日期生效的规则 · 第 1 bis 节",
   "releve": "按项目对账：原始收款、规则及生效日期",
+  "releve_a_valider": "对账单待确认",
+  "releve_valide": "对账单已确认",
   "sens": "方向",
   "statut": "对账单",
+  "surtitre": "价值分配与佣金",
   "taux": "比例",
   "titre": "GBS 中国与 GBS 科特迪瓦之间的利润分配与往来",
+  "titre_releve": "{{mois}} 对账单：{{n}} 笔分成收款，国家代理佣金 {{c}} XOF",
   "valide": "已确认",
   "valider": "确认对账单"
  },
@@ -2823,6 +2838,7 @@
   "agent": {
    "taux": "国家代理佣金"
   },
+  "agent_taux": "国家代理费率（参数）",
   "contrat_agent": "国家代理合同",
   "partage": {
    "ci_vers_cn": {
@@ -2833,7 +2849,11 @@
     "frais_gestion": "GBS CI 管理费",
     "marge_negoce": "GBS CI 贸易毛利分成"
    }
-  }
+  },
+  "partage_ci_vers_cn_commissions": "佣金 · GBS 中国份额",
+  "partage_ci_vers_cn_forfaits": "服务费 · GBS 中国份额",
+  "partage_cn_vers_ci_frais_gestion": "应付 GBS CI 管理费",
+  "partage_cn_vers_ci_marge_negoce": "贸易利润 · GBS CI 份额"
  },
  "resultats": {
   "conforme": "合格",
