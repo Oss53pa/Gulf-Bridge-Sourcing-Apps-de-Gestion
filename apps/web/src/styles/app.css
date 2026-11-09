@@ -864,3 +864,22 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .ecl-chiffres.f4 { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: none; } .ecl-petit { font-size: 20px !important; }
 .ecl .grl-regle .statut { white-space: nowrap; flex: none; }
 .cpt-ext { border: 0; border-top: 1px solid var(--border); padding: 12px 0 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; }
+
+/* Messagerie */
+.msg { display: flex; flex-direction: column; gap: 12px; }
+.msg-grille { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 0; border-top: 1px solid var(--ink); min-height: 420px; }
+.msg-fils { list-style: none; margin: 0; padding: 0; border-right: 1px solid var(--border); overflow-y: auto; max-height: 70vh; }
+.msg-fils button { display: flex; flex-direction: column; gap: 3px; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--border); padding: 12px; font: inherit; color: var(--ink); cursor: pointer; }
+.msg-fils button.choisi, .msg-fils button:hover { background: var(--white); }
+.msg-meta { font-size: 12px; color: var(--bronze-text); text-transform: uppercase; letter-spacing: .04em; }
+.msg-extrait { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-conv { display: flex; flex-direction: column; min-width: 0; }
+.msg-tete { display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.msg-liste { flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 16px; overflow-y: auto; max-height: 55vh; }
+.msg-bulle { max-width: 75%; align-self: flex-start; background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 12px; }
+.msg-bulle.moi { align-self: flex-end; background: var(--sable); }
+.msg-bulle p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-auteur { font-size: 12px; color: var(--sec); }
+.msg-saisie { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+.msg-saisie .btn { align-self: flex-end; }
+@media (max-width: 900px) { .msg-grille { grid-template-columns: 1fr; } .msg-fils { border-right: 0; max-height: 240px; } }

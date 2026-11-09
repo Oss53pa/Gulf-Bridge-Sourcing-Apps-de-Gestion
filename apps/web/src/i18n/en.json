@@ -1436,6 +1436,7 @@
   "GBS_TROP_DE_CONSULTATIONS": "Too many views in a short time: try again in a few minutes.",
   "GBS_TROP_DE_DEMANDES": "Too many requests: try again later.",
   "GBS_TROP_DE_DEPOTS": "Too many uploads in one minute. Please wait.",
+  "GBS_TROP_DE_MESSAGES": "Too many messages sent within an hour: please wait a little.",
   "GBS_TROP_DE_QUESTIONS": "Maximum number of questions reached.",
   "GBS_TROP_PERCU": "Amount exceeds the balance due.",
   "GBS_UN38_3": "UN38.3 test report required for lithium batteries.",
@@ -2355,6 +2356,31 @@
   "qualite": "Quality",
   "supervision": "Oversight"
  },
+ "msg": {
+  "aucun": "No conversation yet.",
+  "audiences": {
+   "client": "Client",
+   "fournisseur": "Supplier",
+   "interne": "Internal team"
+  },
+  "categorie": "Category",
+  "categories": {
+   "autre": "Other",
+   "expedition": "Shipping",
+   "factures": "Invoices",
+   "qualite": "Quality",
+   "technique": "Technical"
+  },
+  "commande": "Order",
+  "destinataires": "With",
+  "ecrire": "Write a message…",
+  "envoyer": "Send",
+  "message": "Message",
+  "nouveau": "New topic",
+  "sujet": "Subject",
+  "titre": "Messages",
+  "vous": "You"
+ },
  "natures": {
   "acompte": "Deposit",
   "echantillon": "Sample",
@@ -2870,7 +2896,8 @@
    "documents": "Documents",
    "dossier": "My project",
    "expedition": "Shipping",
-   "factures": "Invoices"
+   "factures": "Invoices",
+   "messagerie": "Messages"
   }
  },
  "portail_f": {
@@ -2928,6 +2955,7 @@
    "agrement": "Approval",
    "commandes": "Orders",
    "cotations": "Quotations",
+   "messagerie": "Messages",
    "paiements": "Payments"
   }
  },

@@ -1436,6 +1436,7 @@
   "GBS_TROP_DE_CONSULTATIONS": "Trop de consultations en peu de temps : réessayez dans quelques minutes.",
   "GBS_TROP_DE_DEMANDES": "Trop de demandes : réessayez plus tard.",
   "GBS_TROP_DE_DEPOTS": "Trop de dépôts en une minute. Patientez un instant.",
+  "GBS_TROP_DE_MESSAGES": "Trop de messages envoyés en une heure : patientez un peu.",
   "GBS_TROP_DE_QUESTIONS": "Nombre maximal de questions atteint.",
   "GBS_TROP_PERCU": "Le montant dépasse le reste dû.",
   "GBS_UN38_3": "Rapport de test UN38.3 exigé pour les batteries au lithium.",
@@ -2355,6 +2356,31 @@
   "qualite": "Qualité",
   "supervision": "Supervision"
  },
+ "msg": {
+  "aucun": "Aucune discussion pour le moment.",
+  "audiences": {
+   "client": "Client",
+   "fournisseur": "Fournisseur",
+   "interne": "Équipe interne"
+  },
+  "categorie": "Catégorie",
+  "categories": {
+   "autre": "Autre",
+   "expedition": "Expédition",
+   "factures": "Factures",
+   "qualite": "Qualité",
+   "technique": "Technique"
+  },
+  "commande": "Commande",
+  "destinataires": "Avec",
+  "ecrire": "Écrire un message…",
+  "envoyer": "Envoyer",
+  "message": "Message",
+  "nouveau": "Nouveau sujet",
+  "sujet": "Sujet",
+  "titre": "Messagerie",
+  "vous": "Vous"
+ },
  "natures": {
   "acompte": "Acompte",
   "echantillon": "Échantillon",
@@ -2870,7 +2896,8 @@
    "documents": "Documents",
    "dossier": "Mon dossier",
    "expedition": "Expédition",
-   "factures": "Factures"
+   "factures": "Factures",
+   "messagerie": "Messagerie"
   }
  },
  "portail_f": {
@@ -2928,6 +2955,7 @@
    "agrement": "Agrément",
    "commandes": "Commandes",
    "cotations": "Cotations",
+   "messagerie": "Messagerie",
    "paiements": "Paiements"
   }
  },

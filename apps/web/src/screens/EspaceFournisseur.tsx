@@ -8,9 +8,10 @@ import { ok, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant } from '../lib/format';
 import { Bandeau, Bouton, Chargement, Statut, Vide } from '../components/ui';
+import { MessagerieVue } from './Messagerie';
 
 interface Paiement { nature: string; montant: number; devise: string; etat: 'recu' | 'a_venir' | 'annule'; date: string | null }
-interface Commande { reference: string; statut: string; incoterm: string; lieu: string | null; devise: string; fob_montant: number | null;
+interface Commande { id: string; reference: string; statut: string; incoterm: string; lieu: string | null; devise: string; fob_montant: number | null;
   lignes: { designation: string; quantite: number; prix_unitaire: number; montant: number }[]; paiements: Paiement[] }
 interface Espace {
   utilisateur: { nom: string; sous_role: string };
@@ -20,8 +21,8 @@ interface Espace {
   commandes: Commande[];
   comptes: { type: string; banque: string | null; fin_numero: string; verifie: boolean; verifie_le: string | null }[];
 }
-type Vue = 'accueil' | 'cotations' | 'commandes' | 'paiements' | 'agrement';
-const VUES: Vue[] = ['accueil', 'cotations', 'commandes', 'paiements', 'agrement'];
+type Vue = 'accueil' | 'cotations' | 'commandes' | 'paiements' | 'messagerie' | 'agrement';
+const VUES: Vue[] = ['accueil', 'cotations', 'commandes', 'paiements', 'messagerie', 'agrement'];
 
 export function EspaceFournisseur() {
   const { t } = useTranslation();
@@ -106,6 +107,7 @@ export function EspaceFournisseur() {
               <span className="mute">{t('portail_f.aide_compte')}</span>
             </section>
           </>}
+          {vue === 'messagerie' && <MessagerieVue avecEntete={false} nouveau={{ audiences: ['fournisseur'], commandes: x.commandes.map((c) => ({ id: c.id, libelle: c.reference })) }} />}
           {vue === 'agrement' && <>
             <h1 className="ecl-titre">{t('portail_f.vues.agrement')}</h1>
             <div className="grl-regle"><span>{t('portail_f.agrement')}</span><Statut statut={x.fournisseur.statut_agrement === 'agree' ? 'ok' : 'att'} libelle={t(`agrement.${x.fournisseur.statut_agrement}`, { defaultValue: x.fournisseur.statut_agrement })} /></div>

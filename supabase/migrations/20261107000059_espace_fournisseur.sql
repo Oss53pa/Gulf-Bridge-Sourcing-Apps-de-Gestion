@@ -50,7 +50,7 @@ begin
                       from gbs.consultations_fournisseurs c
                      where exists (select 1 from gbs.liens_fournisseurs l where l.consultation_id = c.id and l.fournisseur_id = f) and c.statut <> 'annulee'),
     -- Ses commandes : ses propres prix ; ni client, ni dossier, ni prix de vente.
-    'commandes', (select coalesce(jsonb_agg(jsonb_build_object('reference', k.reference, 'statut', k.statut, 'incoterm', k.incoterm, 'lieu', k.lieu,
+    'commandes', (select coalesce(jsonb_agg(jsonb_build_object('id', k.id, 'reference', k.reference, 'statut', k.statut, 'incoterm', k.incoterm, 'lieu', k.lieu,
                     'devise', k.devise, 'fob_montant', k.fob_montant,
                     'lignes', (select coalesce(jsonb_agg(jsonb_build_object('designation', a.designation, 'quantite', l.quantite,
                                  'prix_unitaire', l.prix_unitaire, 'montant', l.montant) order by l.cree_le), '[]'::jsonb)

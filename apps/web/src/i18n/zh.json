@@ -1436,6 +1436,7 @@
   "GBS_TROP_DE_CONSULTATIONS": "短时间内访问过多，请几分钟后重试。",
   "GBS_TROP_DE_DEMANDES": "请求过多，请稍后再试。",
   "GBS_TROP_DE_DEPOTS": "一分钟内上传过多，请稍候。",
+  "GBS_TROP_DE_MESSAGES": "一小时内发送消息过多，请稍候。",
   "GBS_TROP_DE_QUESTIONS": "问题数量已达上限。",
   "GBS_TROP_PERCU": "金额超过未付余额。",
   "GBS_UN38_3": "锂电池须提供 UN38.3 测试报告。",
@@ -2355,6 +2356,31 @@
   "qualite": "质量",
   "supervision": "监督"
  },
+ "msg": {
+  "aucun": "暂无对话。",
+  "audiences": {
+   "client": "客户",
+   "fournisseur": "供应商",
+   "interne": "内部团队"
+  },
+  "categorie": "类别",
+  "categories": {
+   "autre": "其他",
+   "expedition": "发运",
+   "factures": "发票",
+   "qualite": "质量",
+   "technique": "技术"
+  },
+  "commande": "订单",
+  "destinataires": "对象",
+  "ecrire": "输入消息…",
+  "envoyer": "发送",
+  "message": "消息",
+  "nouveau": "新话题",
+  "sujet": "主题",
+  "titre": "消息",
+  "vous": "您"
+ },
  "natures": {
   "acompte": "预付款",
   "echantillon": "样品",
@@ -2870,7 +2896,8 @@
    "documents": "文件",
    "dossier": "我的项目",
    "expedition": "发运",
-   "factures": "发票"
+   "factures": "发票",
+   "messagerie": "消息"
   }
  },
  "portail_f": {
@@ -2928,6 +2955,7 @@
    "agrement": "资质",
    "commandes": "订单",
    "cotations": "报价",
+   "messagerie": "消息",
    "paiements": "付款"
   }
  },

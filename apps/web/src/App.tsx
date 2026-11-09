@@ -81,6 +81,7 @@ const ImprimerFacture = paresseux(() => import('./screens/Imprimes'), 'ImprimerF
 const ImprimerInspection = paresseux(() => import('./screens/Imprimes'), 'ImprimerInspection');
 const EspaceClient = paresseux(() => import('./screens/EspaceClient'), 'EspaceClient');
 const EspaceFournisseur = paresseux(() => import('./screens/EspaceFournisseur'), 'EspaceFournisseur');
+const Messagerie = paresseux(() => import('./screens/Messagerie'), 'Messagerie');
 const attente = <div className="screen"><Chargement /></div>;
 
 function Garde({ ecran, children }: { ecran: string; children: ReactNode }) {
@@ -174,6 +175,7 @@ export function App() {
             <Route path="/tresorerie" element={g('tresorerie', <Tresorerie />)} />
             <Route path="/journal" element={g('journal', <Journal />)} />
             <Route path="/documents" element={g('documents', <Documents />)} />
+            <Route path="/messagerie" element={g('messagerie', <Messagerie />)} />
             <Route path="/alertes" element={g('alertes', <Alertes />)} />
             <Route path="/recherche" element={g('recherche', <Recherche />)} />
             <Route path="/parametrage" element={g('parametrage', <Parametrage />)} />

@@ -9,6 +9,7 @@ import { useAuth } from '../lib/auth';
 import { date, montant } from '../lib/format';
 import { urlSignee } from '../lib/fichiers';
 import { Bandeau, Bouton, Chargement, Statut, Vide } from '../components/ui';
+import { MessagerieVue } from './Messagerie';
 
 interface DossierListe { id: string; reference: string; intitule: string; statut: string; phase_courante: string | null; date_ouverture_site: string | null;
   chef: { nom: string; telephone: string | null } | null }
@@ -24,8 +25,8 @@ interface Contenu {
     etapes: { etape: string; lieu: string | null; survenue_le: string; commentaire: string | null }[] }[];
   factures: { numero: string | null; objet: string; type: string; date_emission: string | null; echeance: string | null; devise: string; ttc: number; net_a_payer: number; encaisse: number; statut: string }[];
 }
-type Vue = 'accueil' | 'dossier' | 'expedition' | 'documents' | 'factures';
-const VUES: Vue[] = ['accueil', 'dossier', 'expedition', 'documents', 'factures'];
+type Vue = 'accueil' | 'dossier' | 'expedition' | 'documents' | 'factures' | 'messagerie';
+const VUES: Vue[] = ['accueil', 'dossier', 'expedition', 'documents', 'factures', 'messagerie'];
 
 export function EspaceClient() {
   const { t } = useTranslation();
@@ -55,7 +56,8 @@ export function EspaceClient() {
       </nav>
       <main className="screen ecl-main">
         <Bandeau type="err">{e.erreur ?? c.erreur}</Bandeau>
-        {e.chargement && !e.data ? <Chargement /> : !d ? <Vide>{t('portail.aucun_dossier')}</Vide> : c.chargement && !x ? <Chargement /> : x && <>
+        {vue === 'messagerie' && e.data ? <MessagerieVue avecEntete={false} nouveau={{ audiences: ['client'], dossiers: e.data.dossiers.map((y) => ({ id: y.id, libelle: `${y.reference} · ${y.intitule}` })) }} />
+          : e.chargement && !e.data ? <Chargement /> : !d ? <Vide>{t('portail.aucun_dossier')}</Vide> : c.chargement && !x ? <Chargement /> : x && <>
           {vue === 'accueil' && <>
             <div className="surtitre">{x.dossier.intitule}</div>
             <h1 className="ecl-titre">{t('portail.bonjour', { nom: e.data!.utilisateur.nom })}{actions.length > 0 ? t('portail.actions_attendent', { n: actions.length }) : ''}</h1>
