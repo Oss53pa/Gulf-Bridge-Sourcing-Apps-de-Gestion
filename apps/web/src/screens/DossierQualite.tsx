@@ -81,26 +81,51 @@ export function DossierQualite({ dossierId, clientId }: { dossierId: string; cli
   const c = q.data;
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div className="section-titre">{t('qualite.titre')}</div>
+      <div className="section-titre">{t('qualite.titre')} · DQL</div>
       <Bandeau type="err">{q.erreur ?? em.erreur ?? a.erreur}</Bandeau>
-      {c && <>
-        <div><Statut statut={c.complet ? 'ok' : 'att'} libelle={c.complet ? t('pack.complet') : t('pack.incomplet')} />
-          <span className="mute"> · {t('qualite.referentiel')} : {c.referentiel}{c.reference_client ? ` (${c.reference_client})` : ''}</span></div>
-        <table className="t"><tbody>{c.sections.map((s, i) => (
-          <tr key={s.code}><td>{i + 1}</td><td>{titre(s)}{!s.obligatoire && <span className="mute"> · {t('pack.facultatif')}</span>}</td>
-            <td>{s.present ? <Statut statut="ok" libelle={t('qualite.elements', { n: s.elements.length })} /> : <Statut statut={s.obligatoire ? 'err' : 'neutre'} libelle={t('pack.manquant')} />}</td></tr>))}</tbody></table>
-        <span className="actions" style={{ flexWrap: 'wrap' }}>
-          <Bouton variante="primaire" disabled={a.enCours} onClick={() => void generer()}>{t('qualite.generer_pdf')}</Bouton>
-          {['admin', 'achats_chine'].includes(role) && <Bouton onClick={() => setSeries(true)}>{t('qualite.numeros_serie')}</Bouton>}
-          {['admin', 'hub_afrique'].includes(role) && <Bouton onClick={() => setReferentiel(true)}>{t('qualite.referentiel_client')}</Bouton>}
-        </span>
-        <div className="actions" style={{ flexWrap: 'wrap' }}>
-          {!c.complet && role === 'admin' && <input value={motif} maxLength={1000} placeholder={t('champs.motif')} aria-label={t('champs.motif')} onChange={(e) => setMotif(e.target.value)} />}
-          <Bouton disabled={a.enCours || (!c.complet && (role !== 'admin' || motif.trim().length < 5))} onClick={() => void emettre()}>{t('qualite.enregistrer_remise')}</Bouton>
-        </div>
-        {(em.data ?? []).map((x) => <div key={x.version} className="mute">v{x.version} · {dateHeure(x.emis_le, langue, fuseau)}{x.complet ? '' : ` · ${t('pack.incomplet')}`}</div>)}
-        <p className="mute">{t('qualite.aide')}</p>
-      </>}
+      {c && (() => {
+        const retenus = c.sections.filter((x) => x.obligatoire || x.present);
+        const prets = retenus.filter((x) => x.present).length;
+        const bloquants = c.sections.filter((x) => x.obligatoire && !x.present).length;
+        return (
+          <>
+            <p className="sec" style={{ margin: 0 }}>{t('qualite.synthese', { p: prets, n: retenus.length, r: c.referentiel })}</p>
+            <div className="dql-grille">
+              <table className="t"><thead><tr><th>{t('qualite.element')}</th><th className="num">{t('qualite.pieces')}</th><th>{t('qualite.etat')}</th></tr></thead>
+                <tbody>{c.sections.map((x) => (
+                  <tr key={x.code} className={!x.present && x.obligatoire ? 'dql-manque' : ''}>
+                    <td><span className={'dql-coche' + (x.present ? ' ok' : '')} aria-hidden="true">{x.present ? '✓' : ''}</span>{titre(x)}{!x.obligatoire && <span className="mute"> · {t('pack.facultatif')}</span>}</td>
+                    <td className="num">{x.elements.length || '—'}</td>
+                    <td>{x.present ? <Statut statut="ok" libelle={t('qualite.pret')} /> : <Statut statut={x.obligatoire ? 'err' : 'neutre'} libelle={t('pack.manquant')} />}</td></tr>))}</tbody></table>
+              <aside className="exp-aside">
+                <section>
+                  <b className="liv-client">{c.client}</b>
+                  <span className="sec">{t('qualite.referentiel')} : {c.referentiel}{c.reference_client ? ` (${c.reference_client})` : ''}</span>
+                  <div className="ref-chiffres rnt-chiffres" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                    <div><span>{t('qualite.elements_prets')}</span><b>{prets} / {retenus.length}</b></div>
+                    <div><span>{t('qualite.bloquants')}</span><b className={bloquants ? 'txt-err' : 'txt-ok'}>{bloquants}</b></div>
+                  </div>
+                  <Statut statut={c.complet ? 'ok' : 'att'} libelle={c.complet ? t('pack.complet') : t('qualite.bloquent', { n: bloquants })} />
+                  <Bouton variante="primaire" disabled={a.enCours} onClick={() => void generer()}>{t('qualite.generer_pdf')}</Bouton>
+                  <span className="mute">{t('qualite.aide')}</span>
+                </section>
+                <section>
+                  <div className="surtitre">{t('qualite.remise')}</div>
+                  {!c.complet && role === 'admin' && <input value={motif} maxLength={1000} placeholder={t('champs.motif')} aria-label={t('champs.motif')} onChange={(e) => setMotif(e.target.value)} />}
+                  <Bouton disabled={a.enCours || (!c.complet && (role !== 'admin' || motif.trim().length < 5))} onClick={() => void emettre()}>{t('qualite.enregistrer_remise')}</Bouton>
+                  {(em.data ?? []).map((x) => <span key={x.version} className="mute">v{x.version} · {dateHeure(x.emis_le, langue, fuseau)}{x.complet ? '' : ` · ${t('pack.incomplet')}`}</span>)}
+                </section>
+                <section>
+                  <span className="actions" style={{ flexWrap: 'wrap' }}>
+                    {['admin', 'achats_chine'].includes(role) && <Bouton petit onClick={() => setSeries(true)}>{t('qualite.numeros_serie')}</Bouton>}
+                    {['admin', 'hub_afrique'].includes(role) && <Bouton petit onClick={() => setReferentiel(true)}>{t('qualite.referentiel_client')}</Bouton>}
+                  </span>
+                </section>
+              </aside>
+            </div>
+          </>
+        );
+      })()}
       {series && <NumerosSerie dossierId={dossierId} onClose={() => setSeries(false)} onSaved={() => { setSeries(false); void q.recharger(); }} />}
       {referentiel && <Referentiel clientId={clientId} onClose={() => setReferentiel(false)} onSaved={() => { setReferentiel(false); void q.recharger(); }} />}
     </section>
