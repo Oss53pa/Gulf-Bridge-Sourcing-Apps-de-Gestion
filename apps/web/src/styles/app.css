@@ -543,3 +543,15 @@ td.retard-txt { color: var(--err); }
 .notes { display: flex; gap: 6px; }
 .notes button { border: 1px solid var(--border); background: transparent; border-radius: var(--r); padding: 6px 10px; cursor: pointer; }
 .notes button[aria-checked="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* Page de suivi client : retards par partie prenante */
+.retards-l { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--ink); padding-top: 12px; }
+.retard { display: grid; grid-template-columns: minmax(150px, 260px) minmax(0, 1fr) 56px; gap: 14px; align-items: center; font-size: 14px; }
+.retard b { font-weight: 500; }
+.retard .piste { display: flex; height: 10px; background: var(--sable); }
+.retard .piste .attente { background: var(--nuit); }
+.retard .piste .impact { background: var(--bronze); }
+.retard .num { text-align: right; white-space: nowrap; }
+.pastille-l { display: inline-block; width: 10px; height: 10px; vertical-align: middle; }
+.pastille-l.attente { background: var(--nuit); } .pastille-l.impact { background: var(--bronze); }
+@media (max-width: 640px) { .retard { grid-template-columns: 1fr 56px; } .retard .piste { grid-column: 1 / -1; grid-row: 2; } }
