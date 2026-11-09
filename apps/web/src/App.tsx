@@ -36,6 +36,7 @@ import { ConformiteImport } from './screens/ConformiteImport';
 import { Documents } from './screens/Documents';
 import { Garanties } from './screens/Garanties';
 import { Tresorerie } from './screens/Tresorerie';
+import { Negoce } from './screens/Negoce';
 import { ImprimerRapportOffres } from './screens/RapportOffres';
 import { Articles, Clients, FicheClient, FicheFournisseur, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, HistoriquePrix, MiseEnConcurrence } from './screens/Achats';
@@ -89,6 +90,7 @@ export function App() {
             <Route path="/cloture" element={g('cloture', <ClotureArchivage />)} />
             <Route path="/notes-frais" element={g('notes_frais', <NotesFrais />)} />
             <Route path="/rentabilite" element={g('rentabilite', <Rentabilite />)} />
+            <Route path="/negoce" element={g('negoce', <Negoce />)} />
             <Route path="/prospection" element={g('prospection', <Prospection />)} />
             <Route path="/prospection/entonnoir" element={g('prospection', <Entonnoir />)} />
             <Route path="/prospection/:id" element={g('prospection', <FicheProspect />)} />

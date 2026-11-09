@@ -54,6 +54,7 @@ export const ECRANS: Ecran[] = [
   { id: 'pieces_manquantes', chemin: '/pieces-manquantes', module: 'dossiers', section: 'suivi', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'points_bloquants', chemin: '/points-bloquants', module: 'dossiers', section: 'suivi', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'gantt', chemin: '/gantt', module: 'dossiers', section: 'planning', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 2 },
+  { id: 'negoce', chemin: '/negoce', module: 'dossiers', section: 'portefeuille', roles: ['admin', 'comptable', 'achats_chine'], lot: 2 },
   { id: 'retroplanning', chemin: '/retroplanning', module: 'dossiers', section: 'planning', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 1 },
   { id: 'calendrier', chemin: '/jours-ouvres', module: 'dossiers', section: 'planning', roles: TOUS, lot: 1 },
   { id: 'productivite', chemin: '/productivite', module: 'dossiers', section: 'rapports', roles: ['admin', 'hub_afrique', 'comptable'], lot: 2 },
@@ -114,7 +115,7 @@ export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacriti
 
 /** Codes d'écran (« T-codes ») : saisis dans la recherche du Sommaire, Entrée ouvre l'écran. */
 export const TCODES: Record<string, string> = {
-  tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', garanties: 'GAR', documents: 'DOC', sav: 'SAV', stock: 'STK', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
+  tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', negoce: 'NEG', garanties: 'GAR', documents: 'DOC', sav: 'SAV', stock: 'STK', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
   appels_offres: 'AOF', fiches_reference: 'REF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
   articles: 'ART', consultations: 'MEC', historique_prix: 'PRX', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
   expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
