@@ -25,10 +25,16 @@ interface Contenu {
   points_bloquants: { description: string; partie: string; impact_jours: number; resolu: boolean; echeance: string | null }[];
   expeditions: { reference: string; mode: string; statut: string; port_arrivee: string | null; etd: string | null; eta: string | null;
     etapes: { etape: string; lieu: string | null; survenue_le: string; commentaire: string | null }[] }[];
+  production: {
+    commandes: { reference: string; statut: string; fabricant: string | null; produits: { designation: string; quantite: number }[] }[];
+    inspections: { reference: string | null; type: string; produit: string | null; date_prevue: string | null; date_realisee: string | null; statut: string;
+      decision: string | null; defauts: { critiques: number; majeurs: number; mineurs: number } | null }[];
+    non_conformites: { reference: string | null; gravite: string; description: string; correction: string | null; statut: string; delai: string | null }[];
+  };
   factures: { numero: string | null; objet: string; type: string; date_emission: string | null; echeance: string | null; devise: string; ttc: number; net_a_payer: number; encaisse: number; statut: string }[];
 }
-type Vue = 'accueil' | 'dossier' | 'expedition' | 'documents' | 'factures' | 'messagerie' | 'demande';
-const VUES: Vue[] = ['accueil', 'dossier', 'expedition', 'documents', 'factures', 'messagerie', 'demande'];
+type Vue = 'accueil' | 'dossier' | 'production' | 'expedition' | 'documents' | 'factures' | 'messagerie' | 'demande';
+const VUES: Vue[] = ['accueil', 'dossier', 'production', 'expedition', 'documents', 'factures', 'messagerie', 'demande'];
 
 export function EspaceClient() {
   const { t } = useTranslation();
@@ -99,6 +105,32 @@ export function EspaceClient() {
               <tbody>{x.phases.map((p) => <tr key={p.phase}><td>{String(p.ordre).padStart(2, '0')} · {t(`phases.${p.phase}`, { defaultValue: p.phase })}</td>
                 <td className="ref">{p.debut ? date(p.debut, langue) : '—'}</td><td className="ref">{p.fin ? date(p.fin, langue) : p.fin_prevue ? t('portail.prevue', { d: date(p.fin_prevue, langue) }) : '—'}</td>
                 <td><Statut statut={p.statut === 'terminee' ? 'ok' : p.statut === 'en_cours' ? 'info' : 'neutre'} libelle={t(`portail.statuts_phase.${p.statut}`)} /></td></tr>)}</tbody></table>
+          </>}
+          {vue === 'production' && <>
+            <h1 className="ecl-titre">{t('portail.vues.production')}</h1>
+            <p className="sec">{t('portail.aide_production')}</p>
+            <div className="surtitre">{t('portail.commandes')}</div>
+            {x.production.commandes.length === 0 ? <Vide>{t('portail.aucune_commande')}</Vide> : x.production.commandes.map((k) => (
+              <section key={k.reference} className="ecl-bloc">
+                <div className="liv-pv"><b className="ref">{k.reference}{k.fabricant ? <span className="mute"> · {k.fabricant}</span> : null}</b>
+                  <Statut statut={['livree', 'expediee', 'production_terminee'].includes(k.statut) ? 'ok' : 'info'} libelle={t(`statuts_commande.${k.statut}`, { defaultValue: k.statut })} /></div>
+                <table className="t"><tbody>{k.produits.map((l, i) => <tr key={i}><td>{l.designation}</td><td className="num">{Number(l.quantite)}</td></tr>)}</tbody></table>
+              </section>))}
+            <div className="surtitre">{t('portail.inspections')}</div>
+            {x.production.inspections.length === 0 ? <Vide>{t('portail.aucune_inspection')}</Vide> : (
+              <table className="t"><thead><tr><th>{t('portail.inspection')}</th><th>{t('portail.date')}</th><th>{t('portail.resultat')}</th><th>{t('champs.statut')}</th></tr></thead>
+                <tbody>{x.production.inspections.map((i, n) => <tr key={(i.reference ?? '') + n}>
+                  <td>{t(`types_inspection.${i.type}`, { defaultValue: i.type })}<div className="mute ref">{[i.reference, i.produit].filter(Boolean).join(' · ')}</div></td>
+                  <td className="ref">{i.date_realisee ? date(i.date_realisee, langue) : i.date_prevue ? t('portail.prevue', { d: date(i.date_prevue, langue) }) : '—'}</td>
+                  <td>{i.decision ? <>{t(`decisions.${i.decision}`, { defaultValue: i.decision })}{i.defauts && <div className="mute">{t('portail.defauts', { c: i.defauts.critiques, ma: i.defauts.majeurs, mi: i.defauts.mineurs })}</div>}</> : <span className="mute">—</span>}</td>
+                  <td><Statut statut={i.statut === 'validee' ? (i.decision === 'refus' ? 'err' : 'ok') : i.statut === 'refusee' ? 'err' : i.statut === 'realisee' ? 'att' : 'neutre'} libelle={t(`statuts_inspection.${i.statut}`, { defaultValue: i.statut })} /></td></tr>)}</tbody></table>)}
+            <div className="surtitre">{t('portail.non_conformites')}</div>
+            {x.production.non_conformites.length === 0 ? <Vide>{t('portail.aucune_nc')}</Vide> : (
+              <table className="t"><tbody>{x.production.non_conformites.map((nc, n) => <tr key={(nc.reference ?? '') + n}>
+                <td><Statut statut={nc.gravite === 'critique' ? 'err' : nc.gravite === 'majeur' ? 'att' : 'neutre'} libelle={t(`gravites.${nc.gravite}`)} /></td>
+                <td>{nc.description}{nc.correction && <div className="sec">{t('portail.correction')} : {nc.correction}</div>}<div className="mute ref">{nc.reference ?? ''}</div></td>
+                <td className="ref">{nc.delai ? date(nc.delai, langue) : '—'}</td>
+                <td><Statut statut={nc.statut === 'ouverte' ? 'att' : 'ok'} libelle={t(`statuts_nc.${nc.statut}`)} /></td></tr>)}</tbody></table>)}
           </>}
           {vue === 'expedition' && <>
             <h1 className="ecl-titre">{t('portail.vues.expedition')}</h1>
