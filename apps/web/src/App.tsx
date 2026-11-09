@@ -15,6 +15,7 @@ import { configurationOk } from './lib/supabase';
 import { accueil, ecranAutorise, ROLES_INTERNES } from './lib/droits';
 import { PiecesManquantes, PointsBloquants } from './screens/SuiviDossiers';
 import { GanttPortefeuille, JoursOuvres, Retroplanning } from './screens/Planning';
+import { ClotureArchivage, Productivite } from './screens/Rapports';
 import { Coque } from './components/Coque';
 import { AccesReserve, Chargement } from './components/ui';
 import { ConfigurationManquante, Connexion, SansRole } from './screens/Connexion';
@@ -73,6 +74,8 @@ export function App() {
             <Route path="/gantt" element={g('gantt', <GanttPortefeuille />)} />
             <Route path="/retroplanning" element={g('retroplanning', <Retroplanning />)} />
             <Route path="/jours-ouvres" element={g('calendrier', <JoursOuvres />)} />
+            <Route path="/productivite" element={g('productivite', <Productivite />)} />
+            <Route path="/cloture" element={g('cloture', <ClotureArchivage />)} />
             <Route path="/notes-frais" element={g('notes_frais', <NotesFrais />)} />
             <Route path="/rentabilite" element={g('rentabilite', <Rentabilite />)} />
             <Route path="/prospection" element={g('prospection', <Prospection />)} />

@@ -519,3 +519,27 @@ td.retard-txt { color: var(--err); }
 .rpl-resultat b { font-family: var(--serif); font-size: 26px; font-weight: 500; }
 .ferie { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--sable); font-size: 14px; }
 .txt-ok { color: var(--ok); } .txt-att { color: var(--bronze-text); } .txt-err { color: var(--err); }
+
+/* Productivité et clôture (maquette) */
+.fiche-grille.prd { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 32px; }
+.prd-chef { display: flex; align-items: center; gap: 10px; }
+.prd-chef > span:last-child { display: flex; flex-direction: column; }
+.prd-chef b { font-weight: 500; }
+.pastille-nom { width: 30px; height: 30px; border-radius: 99px; background: var(--sable); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex: none; }
+.prd-phase { display: grid; grid-template-columns: 150px minmax(0, 1fr) 48px; gap: 14px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--sable); }
+.prd-phase > div:first-child { display: flex; flex-direction: column; }
+.prd-phase b { font-weight: 500; }
+.prd-barres { display: flex; flex-direction: column; gap: 4px; }
+.prd-barres span { height: 5px; border-radius: 3px; display: block; }
+.prd-barres .cible { background: var(--strong); }
+.prd-barres .reel.ok { background: var(--ok); } .prd-barres .reel.att { background: var(--bronze); } .prd-barres .reel.err { background: var(--err); }
+.conds { display: flex; flex-direction: column; }
+.cond-l { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--sable); }
+.cond-l > span:last-child { display: flex; flex-direction: column; }
+.cond-l b { font-weight: 500; }
+.cond { width: 18px; height: 18px; border-radius: 99px; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; flex: none; margin-top: 2px; }
+.cond.ok { background: var(--ok); } .cond.err { background: var(--err); } .cond.att { background: var(--bronze); }
+.satisf { display: flex; flex-direction: column; gap: 10px; }
+.notes { display: flex; gap: 6px; }
+.notes button { border: 1px solid var(--border); background: transparent; border-radius: var(--r); padding: 6px 10px; cursor: pointer; }
+.notes button[aria-checked="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
