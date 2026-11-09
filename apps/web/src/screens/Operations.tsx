@@ -157,6 +157,8 @@ export function RapportInspection() {
   const [nc, setNc] = useState({ gravite: 'majeur', description: '', delai: '' });
   const [ncPhotos, setNcPhotos] = useState<string[]>([]);
   const [ficheNc, setFicheNc] = useState<string | null>(null);
+  const [mesuresEtat, setMesuresEtat] = useState<Record<string, string>>({});
+  const profils = useNoms('profils');
   const ref = useAsync(async () => {
     const aid = (i.data as (Inspection & { approbation_id?: string | null }) | null)?.approbation_id;
     return aid ? ok(await supabase.from('approbations_techniques').select('version, objet, echantillon_description, documents').eq('id', aid).maybeSingle()) as
@@ -201,43 +203,43 @@ export function RapportInspection() {
     if (await a.executer(async () => ok(await supabase.rpc('valider_inspection', { p_inspection: x.id, p_decision: decision, p_motif: motif.trim() || null })))) { setDecision(null); recharger(); }
   };
   const plan = x.plan;
+  const points = cs.data ?? [];
+  const renseignes = points.filter((p) => p.resultat !== 'na' || p.mesure).length;
+  const ncOuvertes = (ncs.data ?? []).filter((n) => n.statut !== 'close');
+  const nbPhotos = points.reduce((n, p) => n + (p.photos ?? []).length, 0);
+  const majConstat = async (p: Constat, champs: Record<string, unknown>) => {
+    if (await a.executer(async () => ok(await supabase.from('constats').update(champs).eq('id', p.id)))) void cs.recharger();
+  };
+  const resultat = (p: Constat, r: 'conforme' | 'nc' | 'na') => void majConstat(p, r === 'nc' ? { resultat: r, gravite: p.gravite ?? 'majeur', nombre: Math.max(p.nombre, 1) } : { resultat: r, gravite: null, nombre: 0 });
+  const ddmmaaaa = (v: string | null) => (v ? `${v.slice(8, 10)}.${v.slice(5, 7)}.${v.slice(0, 4)}` : '—');
   return (
-    <div className="screen">
-      <Entete surtitre={`${t('modules.qualite')} · ${t(`types_inspection.${x.type}`)} · ISO 2859-1`} titre={`${x.reference} — ${x.produit ?? ''}`}
-        actions={<>
-          <Statut statut={x.statut} libelle={t(`statuts_inspection.${x.statut}`)} />
-          <Link className="btn" to={`/imprimer/inspection/${x.id}`}>{t('commun.imprimer')}</Link>
-          {validateur && x.statut === 'realisee' && <><Bouton variante="primaire" onClick={() => setDecision('liberation')}>{t('inspections.liberer')}</Bouton>
-            <Bouton variante="danger" onClick={() => setDecision('refus')}>{t('inspections.refuser')}</Bouton></>}
-        </>} />
-      {plan && (
-        <Kpis items={(['critique', 'majeur', 'mineur'] as const).map((k) => ({
-          lib: `${t(`gravites.${k}`)} · NQA ${k === 'critique' ? x.nqa_critique : k === 'majeur' ? x.nqa_majeur : x.nqa_mineur}`,
-          val: `${k === 'critique' ? x.defauts_critiques : k === 'majeur' ? x.defauts_majeurs : x.defauts_mineurs} / ${plan[k].ac}`,
-          sous: t('inspections.plan', { l: plan[k].lettre, n: plan[k].n, ac: plan[k].ac, re: plan[k].re }),
-        })).concat([{ lib: t('inspections.decision_proposee'), val: x.decision_proposee ? t(`decisions.${x.decision_proposee}`) : '—', sous: t('inspections.lot_niveau', { lot: x.taille_lot, n: x.niveau }) }])} />
-      )}
-      {ref.data && <p className="mute">{t('approbation.reference_inspection', { v: ref.data.version, objet: ref.data.objet })}{ref.data.echantillon_description ? ` · ${t('approbation.echantillon')} : ${ref.data.echantillon_description}` : ''}</p>}
+    <div className="screen" style={{ overflow: 'auto' }}>
+      <Entete surtitre={`${t('modules.qualite')} · ${t('inspections.fiche')} · ${x.reference} · INS`}
+        titre={<>{x.produit ?? x.reference} <span className="h1-statut"><Statut statut={x.statut} libelle={x.statut === 'realisee' ? t('inspections.k_valider') : t(`statuts_inspection.${x.statut}`)} /></span></>} />
+      <div className="sec" style={{ marginTop: -10 }}>{[t(`types_inspection.${x.type}`), ddmmaaaa(x.date_realisee ?? x.date_prevue), x.inspecteur_id ? profils[x.inspecteur_id] : null,
+        t('inspections.lot_niveau', { lot: x.taille_lot, n: x.niveau }), `NQA ${x.nqa_majeur}`].filter(Boolean).join(' · ')}</div>
+      {ref.data && <p className="mute" style={{ margin: 0 }}>{t('approbation.reference_inspection', { v: ref.data.version, objet: ref.data.objet })}{ref.data.echantillon_description ? ` · ${t('approbation.echantillon')} : ${ref.data.echantillon_description}` : ''}</p>}
       <Bandeau type="err">{a.erreur}</Bandeau>
-      <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {saisit && (
-          <section className="grille3" style={{ alignItems: 'end', gridTemplateColumns: 'repeat(3, minmax(0,1fr)) auto auto' }}>
-            <Champ label={t('inspections.defauts_critiques')}><input inputMode="numeric" value={d.c} onChange={(e) => setDefauts({ ...d, c: e.target.value.replace(/\D/g, '') })} /></Champ>
-            <Champ label={t('inspections.defauts_majeurs')}><input inputMode="numeric" value={d.ma} onChange={(e) => setDefauts({ ...d, ma: e.target.value.replace(/\D/g, '') })} /></Champ>
-            <Champ label={t('inspections.defauts_mineurs')}><input inputMode="numeric" value={d.mi} onChange={(e) => setDefauts({ ...d, mi: e.target.value.replace(/\D/g, '') })} /></Champ>
-            <Bouton onClick={() => void enregistrerDefauts(false)}>{t('commun.enregistrer')}</Bouton>
-            {x.statut === 'planifiee' && <Bouton variante="primaire" onClick={() => void enregistrerDefauts(true)}>{t('inspections.terminer')}</Bouton>}
-          </section>
-        )}
-        <section>
-          <div className="section-titre">{t('inspections.points')}</div>
-          <table className="t"><thead><tr><th>#</th><th>{t('inspections.point')}</th><th>{t('inspections.exigence')}</th><th>{t('inspections.mesure')}</th><th>{t('inspections.resultat')}</th><th>{t('inspections.gravite')}</th></tr></thead>
-            <tbody>{(cs.data ?? []).map((p) => (
-              <tr key={p.id}><td>{p.ordre}</td><td>{p.point}</td><td className="sec">{p.exigence ?? '—'}</td><td className="sec">{p.mesure ?? '—'}</td>
-                <td><Statut statut={p.resultat === 'conforme' ? 'validee' : p.resultat === 'nc' ? 'refusee' : 'annulee'} libelle={t(`resultats.${p.resultat}`)} /></td>
-                <td className="sec">{p.gravite ? `${t(`gravites.${p.gravite}`)} × ${p.nombre}` : '—'}</td></tr>))}</tbody></table>
+      <div className="fiche-grille">
+        <div className="fiche-principal" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="ins-avancement"><span className="cmd-barre"><span style={{ width: `${points.length ? (renseignes / points.length) * 100 : 0}%`, background: 'var(--ink)' }} /></span>
+            <span className="mute">{t('inspections.points_renseignes', { n: renseignes, total: points.length })}</span></div>
+          {points.length === 0 ? <span className="mute">{t('inspections.aucun_point')}</span> : points.map((p) => (
+            <div key={p.id} className={'ins-point' + (p.resultat === 'nc' ? ' nc' : '')}>
+              <div><b>{p.point}</b><div className="mute">{t('inspections.attendu', { v: p.exigence ?? '—' })}</div>
+                {p.resultat === 'nc' && p.gravite && <div className="txt-err" style={{ fontSize: 13 }}>{t(`gravites.${p.gravite}`)} × {p.nombre}</div>}</div>
+              <input value={mesuresEtat[p.id] ?? p.mesure ?? ''} maxLength={200} placeholder={t('inspections.mesure_relevee')} disabled={!saisit} aria-label={t('inspections.mesure')}
+                onChange={(e) => setMesuresEtat({ ...mesuresEtat, [p.id]: e.target.value })}
+                onBlur={() => { const v = (mesuresEtat[p.id] ?? '').trim(); if (mesuresEtat[p.id] !== undefined && v !== (p.mesure ?? '')) void majConstat(p, { mesure: v || null }); }} />
+              <span className="ins-choix" role="group" aria-label={t('inspections.resultat')}>
+                {(['conforme', 'nc', 'na'] as const).map((r) => (
+                  <button key={r} type="button" disabled={!saisit || a.enCours} aria-pressed={p.resultat === r}
+                    className={'ins-c ' + r + (p.resultat === r ? ' actif' : '')} onClick={() => resultat(p, r)} data-sans-glose>{t(`inspections.court.${r}`)}</button>))}
+              </span>
+              <span className="mute ins-photos">{t('inspections.n_photos', { n: (p.photos ?? []).length })}</span>
+            </div>))}
           {saisit && (
-            <div className="grille3" style={{ alignItems: 'end', marginTop: 8, gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr auto' }}>
+            <div className="grille3" style={{ alignItems: 'end', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr auto' }}>
               <Champ label={t('inspections.point')}><input value={point.point} maxLength={300} onChange={(e) => setPoint({ ...point, point: e.target.value })} /></Champ>
               <Champ label={t('inspections.exigence')}><input value={point.exigence} maxLength={500} onChange={(e) => setPoint({ ...point, exigence: e.target.value })} /></Champ>
               <Champ label={t('inspections.mesure')}><input value={point.mesure} maxLength={200} onChange={(e) => setPoint({ ...point, mesure: e.target.value })} /></Champ>
@@ -245,30 +247,69 @@ export function RapportInspection() {
                 {['conforme', 'nc', 'na'].map((r) => <option key={r} value={r}>{t(`resultats.${r}`)}</option>)}</select></Champ>
               <Champ label={t('inspections.gravite')}><select value={point.gravite} onChange={(e) => setPoint({ ...point, gravite: e.target.value })}>
                 <option value="">—</option>{['critique', 'majeur', 'mineur'].map((g) => <option key={g} value={g}>{t(`gravites.${g}`)}</option>)}</select></Champ>
-              <Bouton onClick={() => void ajouterPoint()}>{t('commun.ajouter')}</Bouton>
+              <Bouton onClick={() => void ajouterPoint()}>{t('inspections.ajouter_point')}</Bouton>
             </div>
-          )}
-        </section>
-        <section>
-          <div className="section-titre">{t('inspections.non_conformites')}</div>
-          {(ncs.data ?? []).length === 0 ? <span className="mute">{t('inspections.aucune_nc')}</span> : (
-            <table className="t"><tbody>{(ncs.data ?? []).map((n) => (
-              <tr key={n.id}><td className="ref">{n.reference}</td><td>{t(`gravites.${n.gravite}`)}</td><td>{n.description}</td><td className="ref">{date(n.delai, langue)}</td>
-                <td><Statut statut={n.statut} libelle={t(`statuts_nc.${n.statut}`)} /></td>
-                <td className="num"><Bouton petit onClick={() => setFicheNc(n.id)}>{t('nc.ouvrir_fiche')}</Bouton></td></tr>))}</tbody></table>
           )}
           {saisit && (
-            <div className="grille3" style={{ alignItems: 'end', marginTop: 8, gridTemplateColumns: '1fr 3fr 1fr auto' }}>
-              <Champ label={t('inspections.gravite')}><select value={nc.gravite} onChange={(e) => setNc({ ...nc, gravite: e.target.value })}>{['critique', 'majeur', 'mineur'].map((g) => <option key={g} value={g}>{t(`gravites.${g}`)}</option>)}</select></Champ>
-              <Champ label={t('champs.description')}><input value={nc.description} maxLength={4000} onChange={(e) => setNc({ ...nc, description: e.target.value })} /></Champ>
-              <Champ label={t('inspections.delai')}><input type="date" value={nc.delai} onChange={(e) => setNc({ ...nc, delai: e.target.value })} /></Champ>
-              <Bouton onClick={() => void ajouterNc()}>{t('commun.ajouter')}</Bouton>
-            </div>
+            <section className="fiche-bloc">
+              <div className="surtitre">{t('inspections.defauts_echantillon')}</div>
+              <div className="grille3" style={{ alignItems: 'end', gridTemplateColumns: 'repeat(3, minmax(0,1fr)) auto auto' }}>
+                <Champ label={t('inspections.defauts_critiques')}><input inputMode="numeric" value={d.c} onChange={(e) => setDefauts({ ...d, c: e.target.value.replace(/\D/g, '') })} /></Champ>
+                <Champ label={t('inspections.defauts_majeurs')}><input inputMode="numeric" value={d.ma} onChange={(e) => setDefauts({ ...d, ma: e.target.value.replace(/\D/g, '') })} /></Champ>
+                <Champ label={t('inspections.defauts_mineurs')}><input inputMode="numeric" value={d.mi} onChange={(e) => setDefauts({ ...d, mi: e.target.value.replace(/\D/g, '') })} /></Champ>
+                <Bouton onClick={() => void enregistrerDefauts(false)}>{t('commun.enregistrer')}</Bouton>
+                {x.statut === 'planifiee' && <Bouton variante="primaire" onClick={() => void enregistrerDefauts(true)}>{t('inspections.terminer')}</Bouton>}
+              </div>
+            </section>
           )}
-          {saisit && <div className="actions" style={{ marginTop: 6 }}><Depotx dossierId={x.dossier_id} valeur={null} onChange={(c) => setNcPhotos((p) => (p.length < 20 ? [...p, c] : p))} />
-            {ncPhotos.length > 0 && <span className="mute">{t('nc.photos_jointes', { n: ncPhotos.length })}</span>}</div>}
-          {ficheNc && <FicheNc id={ficheNc} onClose={() => setFicheNc(null)} onChange={recharger} />}
-        </section>
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('inspections.non_conformites')}</div>
+            {(ncs.data ?? []).length === 0 ? <span className="mute">{t('inspections.aucune_nc')}</span> : (
+              <table className="t"><tbody>{(ncs.data ?? []).map((n) => (
+                <tr key={n.id}><td className="ref">{n.reference}</td><td>{t(`gravites.${n.gravite}`)}</td><td>{n.description}</td><td className="ref">{date(n.delai, langue)}</td>
+                  <td><Statut statut={n.statut} libelle={t(`statuts_nc.${n.statut}`)} /></td>
+                  <td className="num"><Bouton petit onClick={() => setFicheNc(n.id)}>{t('nc.ouvrir_fiche')}</Bouton></td></tr>))}</tbody></table>
+            )}
+            {saisit && (
+              <div className="grille3" style={{ alignItems: 'end', gridTemplateColumns: '1fr 3fr 1fr auto' }}>
+                <Champ label={t('inspections.gravite')}><select value={nc.gravite} onChange={(e) => setNc({ ...nc, gravite: e.target.value })}>{['critique', 'majeur', 'mineur'].map((g) => <option key={g} value={g}>{t(`gravites.${g}`)}</option>)}</select></Champ>
+                <Champ label={t('champs.description')}><input value={nc.description} maxLength={4000} onChange={(e) => setNc({ ...nc, description: e.target.value })} /></Champ>
+                <Champ label={t('inspections.delai')}><input type="date" value={nc.delai} onChange={(e) => setNc({ ...nc, delai: e.target.value })} /></Champ>
+                <Bouton onClick={() => void ajouterNc()}>{t('commun.ajouter')}</Bouton>
+              </div>
+            )}
+            {saisit && <div className="actions"><Depotx dossierId={x.dossier_id} valeur={null} onChange={(c) => setNcPhotos((q) => (q.length < 20 ? [...q, c] : q))} />
+              {ncPhotos.length > 0 && <span className="mute">{t('nc.photos_jointes', { n: ncPhotos.length })}</span>}</div>}
+            {ficheNc && <FicheNc id={ficheNc} onClose={() => setFicheNc(null)} onChange={recharger} />}
+          </section>
+        </div>
+        <aside className="fiche-cote">
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('inspections.decision')}</div>
+            {ncOuvertes.length > 0 ? <span className="txt-err">{t('inspections.nc_a_lever', { n: ncOuvertes.length })}</span>
+              : <span className="mute">{x.decision ? t(`inspections.decisions_finales.${x.decision}`) : t('inspections.aucune_nc_ouverte')}</span>}
+            {validateur && x.statut === 'realisee' && <div className="actions">
+              <Bouton variante="danger" onClick={() => setDecision('refus')}>{t('inspections.refuser')}</Bouton>
+              <Bouton variante="primaire" onClick={() => setDecision('liberation')}>{t('inspections.liberer')}</Bouton></div>}
+          </section>
+          {plan && (
+            <section className="fiche-bloc">
+              <div className="surtitre">{t('inspections.plan_aql')}</div>
+              {(['critique', 'majeur', 'mineur'] as const).map((k) => (
+                <div key={k} className="ligne-montant"><span>{t(`gravites.${k}`)} · NQA {k === 'critique' ? x.nqa_critique : k === 'majeur' ? x.nqa_majeur : x.nqa_mineur}<br />
+                  <span className="mute">{t('inspections.plan', { l: plan[k].lettre, n: plan[k].n, ac: plan[k].ac, re: plan[k].re })}</span></span>
+                  <b>{k === 'critique' ? x.defauts_critiques : k === 'majeur' ? x.defauts_majeurs : x.defauts_mineurs} / {plan[k].ac}</b></div>))}
+              <div className="ligne-montant"><span>{t('inspections.decision_proposee')}</span><b>{x.decision_proposee ? t(`decisions.${x.decision_proposee}`) : '—'}</b></div>
+            </section>
+          )}
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('inspections.rapport_pdf')}</div>
+            <div className="ligne-montant"><span>{t('inspections.points_controles')}</span><b>{points.length}</b></div>
+            <div className="ligne-montant"><span>{t('inspections.non_conformites')}</span><b>{(ncs.data ?? []).length}</b></div>
+            <div className="ligne-montant"><span>{t('inspections.photos')}</span><b>{nbPhotos}</b></div>
+            <Link className="btn" style={{ justifyContent: 'center' }} to={`/imprimer/inspection/${x.id}`}>{t('inspections.generer_rapport')}</Link>
+          </section>
+        </aside>
       </div>
       {decision && (
         <Tiroir titre={decision === 'liberation' ? t('inspections.liberer') : t('inspections.refuser')} onClose={() => setDecision(null)}>

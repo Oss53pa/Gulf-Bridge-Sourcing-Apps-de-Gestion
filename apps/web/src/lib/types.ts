@@ -68,7 +68,7 @@ export interface Inspection {
   defauts_critiques: number; defauts_majeurs: number; defauts_mineurs: number; decision_proposee: string | null; decision: string | null;
   statut: string; conclusion: string | null; validee_le: string | null;
 }
-export interface Constat { id: string; inspection_id: string; ordre: number; point: string; exigence: string | null; mesure: string | null; resultat: string; gravite: string | null; nombre: number; commentaire: string | null; }
+export interface Constat { id: string; inspection_id: string; ordre: number; point: string; exigence: string | null; mesure: string | null; resultat: string; gravite: string | null; nombre: number; commentaire: string | null; photos: string[]; }
 export interface NonConformite { id: string; reference: string; inspection_id: string | null; gravite: string; description: string; correction: string | null; delai: string | null; statut: string; }
 export interface Expedition {
   id: string; reference: string; dossier_id: string; mode: string; transitaire: string | null; conteneurs: string[]; plombs: string[];
