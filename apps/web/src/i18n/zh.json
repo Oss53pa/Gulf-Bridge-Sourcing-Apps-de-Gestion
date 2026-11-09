@@ -800,6 +800,14 @@
   "traiter": "处理",
   "validees_a_rembourser": "已批准，待报销"
  },
+ "dcl": {
+  "aide_convertir": "为该客户开启询价，再将需求关联至其项目；客户将看到“已开启询价”。",
+  "convertir": "开启或关联询价",
+  "rattacher": "关联至项目",
+  "refuser": "不受理（原因）",
+  "titre": "客户提交的需求 · {{n}}",
+  "traiter": "处理需求"
+ },
  "dd_lien": {
   "accepter": "接受",
   "aide": "Gulf Bridge Sourcing 在合作前会核查每家供应商。请在此上传所需文件：每份文件经审核后被接受，或注明原因予以退回。",
@@ -1258,6 +1266,7 @@
   "GBS_DELAIS_CIBLES_MANQUANTS": "缺少目标期限：请在参数设置中设定。",
   "GBS_DELAI_INVALIDE": "期限无效：须自今日起，最长一年。",
   "GBS_DEMANDE_INVALIDE": "询价无效。",
+  "GBS_DEMANDE_TRAITEE": "该需求已处理。",
   "GBS_DEPOT_ECHEC": "文件上传失败，请重试。",
   "GBS_DEROGATION_ADMIN": "例外放行仅限管理员。",
   "GBS_DEVISE_COMPTE": "币种与账户不符。",
@@ -2847,6 +2856,7 @@
  "portail": {
   "actions": "待办事项",
   "actions_attendent": "，有 {{n}} 项待办",
+  "aide_demande": "简单描述即可：项目负责人会与您确认需求。",
   "aide_documents": "项目的已验证文件，随时可下载。",
   "aide_factures": "我们的服务费与厂家发票分开开具，厂家发票由您直接支付给工厂。",
   "aucun_document": "暂无文件。",
@@ -2855,29 +2865,57 @@
   "aucune_expedition": "暂无发运。",
   "aucune_facture": "暂无已开发票。",
   "avant_ouverture": "距开业天数 · {{d}}",
+  "besoin": "您的需求",
   "bonjour": "{{nom}}，您好",
   "chef": "您的项目负责人",
   "debut": "开始",
+  "demande_envoyee": "需求已提交：项目负责人将与您联系。",
+  "demande_invalide": "需求描述至少10个字符；日期格式为日/月/年。",
   "demandee_le": "{{d}} 提出",
   "depart_arrivee": "出发 {{d}} · 预计到达 {{a}}",
   "derniers_documents": "最新文件",
   "dossier": "项目",
   "echeance": "到期日",
   "en_cours": "进行中",
+  "ensuite": "后续流程",
+  "envoyer_demande": "提交需求",
   "etape": "阶段",
+  "etapes_demande": {
+   "1": {
+    "texte": "项目负责人按需求指南与您确认需求。",
+    "titre": "快速回复"
+   },
+   "2": {
+    "texte": "按总成本而非仅价格比较三家报价。",
+    "titre": "工厂询价"
+   },
+   "3": {
+    "texte": "您选择报价；我们签署委托并启动跟进。",
+    "titre": "采购委托"
+   }
+  },
   "facture": "发票",
   "fin": "结束",
   "marge_planning": "计划余量（工作日）",
+  "mes_demandes": "我的需求",
   "montant": "金额",
   "navigation": "客户空间导航",
+  "nouveau_projet": "新项目",
   "ouverture_le": "开业日期 {{d}}",
+  "ouverture_souhaitee": "期望开业日期",
   "pieces": {
    "expiree": "已过期",
    "manquante": "待提交",
    "refusee": "需重新提交"
   },
   "prevue": "计划 {{d}}",
+  "quantite": "数量",
   "reste": "待付余额",
+  "statuts_demande": {
+   "convertie": "已开启询价",
+   "nouvelle": "已收到",
+   "refusee": "未受理"
+  },
   "statuts_facture": {
    "emise": "待付",
    "partiellement_payee": "部分已付",
@@ -2893,6 +2931,7 @@
   "transparence": "完全透明",
   "vues": {
    "accueil": "首页",
+   "demande": "新需求",
    "documents": "文件",
    "dossier": "我的项目",
    "expedition": "发运",

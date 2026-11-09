@@ -885,3 +885,4 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 @media (max-width: 900px) { .msg-grille { grid-template-columns: 1fr; } .msg-fils { border-right: 0; max-height: 240px; } }
 @media (max-width: 1500px) { .topbar .sync { display: none; } }
 .msg-fils b .badge { margin-left: 6px; }
+.dcl { margin-bottom: 12px; flex: none; }

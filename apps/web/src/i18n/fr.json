@@ -800,6 +800,14 @@
   "traiter": "Traiter",
   "validees_a_rembourser": "Validées, à rembourser"
  },
+ "dcl": {
+  "aide_convertir": "Ouvrez la consultation pour ce client, puis rattachez la demande à son dossier ; le client voit alors « Consultation ouverte ».",
+  "convertir": "Ouvrir ou rattacher une consultation",
+  "rattacher": "Rattacher au dossier",
+  "refuser": "Ne pas retenir (motif)",
+  "titre": "Demandes reçues des clients · {{n}}",
+  "traiter": "Traiter la demande"
+ },
  "dd_lien": {
   "accepter": "Accepter",
   "aide": "Gulf Bridge Sourcing vérifie chaque fournisseur avant de travailler avec lui. Déposez ici les documents demandés : chaque fichier est contrôlé puis accepté, ou refusé avec le motif.",
@@ -1258,6 +1266,7 @@
   "GBS_DELAIS_CIBLES_MANQUANTS": "Délais cibles manquants : définissez-les dans le paramétrage.",
   "GBS_DELAI_INVALIDE": "Délai invalide : à partir d'aujourd'hui, au plus un an.",
   "GBS_DEMANDE_INVALIDE": "Demande invalide.",
+  "GBS_DEMANDE_TRAITEE": "Demande déjà traitée.",
   "GBS_DEPOT_ECHEC": "Le dépôt du fichier a échoué. Réessayez.",
   "GBS_DEROGATION_ADMIN": "Dérogation réservée à l'administratrice.",
   "GBS_DEVISE_COMPTE": "La devise ne correspond pas au compte.",
@@ -2847,6 +2856,7 @@
  "portail": {
   "actions": "Actions attendues",
   "actions_attendent": ", {{n}} action(s) vous attendent",
+  "aide_demande": "Quelques mots suffisent : votre chef de dossier précise le besoin avec vous.",
   "aide_documents": "Les documents validés de votre dossier, conservés et téléchargeables à tout moment.",
   "aide_factures": "Nos honoraires sont facturés séparément de la facture du fabricant, que vous réglez directement à l'usine.",
   "aucun_document": "Aucun document disponible.",
@@ -2855,29 +2865,57 @@
   "aucune_expedition": "Aucune expédition pour le moment.",
   "aucune_facture": "Aucune facture émise.",
   "avant_ouverture": "jours avant l'ouverture · {{d}}",
+  "besoin": "Ce dont vous avez besoin",
   "bonjour": "Bonjour {{nom}}",
   "chef": "Votre chef de dossier",
   "debut": "Début",
+  "demande_envoyee": "Demande envoyée : votre chef de dossier vous recontacte.",
+  "demande_invalide": "Décrivez le besoin en 10 caractères au moins ; date au format jour/mois/année.",
   "demandee_le": "Demandée le {{d}}",
   "depart_arrivee": "Départ {{d}} · arrivée prévue {{a}}",
   "derniers_documents": "Derniers documents",
   "dossier": "Dossier",
   "echeance": "Échéance",
   "en_cours": "en cours",
+  "ensuite": "Ce qui se passe ensuite",
+  "envoyer_demande": "Envoyer la demande",
   "etape": "Étape",
+  "etapes_demande": {
+   "1": {
+    "texte": "Votre chef de dossier précise le besoin avec le guide d'expression du besoin.",
+    "titre": "Rappel rapide"
+   },
+   "2": {
+    "texte": "Trois offres comparées sur le coût global, pas seulement le prix.",
+    "titre": "Consultation des usines"
+   },
+   "3": {
+    "texte": "Vous choisissez l'offre ; nous signons le mandat et lançons le suivi.",
+    "titre": "Mandat d'achat"
+   }
+  },
   "facture": "Facture",
   "fin": "Fin",
   "marge_planning": "jours ouvrés de marge sur le planning",
+  "mes_demandes": "Mes demandes",
   "montant": "Montant",
   "navigation": "Navigation de l'espace client",
+  "nouveau_projet": "Un nouveau projet",
   "ouverture_le": "ouverture du site le {{d}}",
+  "ouverture_souhaitee": "Date d'ouverture souhaitée",
   "pieces": {
    "expiree": "Expirée",
    "manquante": "À transmettre",
    "refusee": "À refaire"
   },
   "prevue": "prévue {{d}}",
+  "quantite": "Quantité",
   "reste": "Reste à régler",
+  "statuts_demande": {
+   "convertie": "Consultation ouverte",
+   "nouvelle": "Reçue",
+   "refusee": "Non retenue"
+  },
   "statuts_facture": {
    "emise": "À régler",
    "partiellement_payee": "Partiellement réglée",
@@ -2893,6 +2931,7 @@
   "transparence": "Transparence totale",
   "vues": {
    "accueil": "Accueil",
+   "demande": "Nouvelle demande",
    "documents": "Documents",
    "dossier": "Mon dossier",
    "expedition": "Expédition",

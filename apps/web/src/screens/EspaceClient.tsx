@@ -10,6 +10,8 @@ import { date, montant } from '../lib/format';
 import { urlSignee } from '../lib/fichiers';
 import { Bandeau, Bouton, Chargement, Statut, Vide } from '../components/ui';
 import { MessagerieVue } from './Messagerie';
+import { z } from 'zod';
+import { useAction } from '../lib/data';
 
 interface DossierListe { id: string; reference: string; intitule: string; statut: string; phase_courante: string | null; date_ouverture_site: string | null;
   chef: { nom: string; telephone: string | null } | null }
@@ -25,8 +27,8 @@ interface Contenu {
     etapes: { etape: string; lieu: string | null; survenue_le: string; commentaire: string | null }[] }[];
   factures: { numero: string | null; objet: string; type: string; date_emission: string | null; echeance: string | null; devise: string; ttc: number; net_a_payer: number; encaisse: number; statut: string }[];
 }
-type Vue = 'accueil' | 'dossier' | 'expedition' | 'documents' | 'factures' | 'messagerie';
-const VUES: Vue[] = ['accueil', 'dossier', 'expedition', 'documents', 'factures', 'messagerie'];
+type Vue = 'accueil' | 'dossier' | 'expedition' | 'documents' | 'factures' | 'messagerie' | 'demande';
+const VUES: Vue[] = ['accueil', 'dossier', 'expedition', 'documents', 'factures', 'messagerie', 'demande'];
 
 export function EspaceClient() {
   const { t } = useTranslation();
@@ -57,7 +59,8 @@ export function EspaceClient() {
       </nav>
       <main className="screen ecl-main">
         <Bandeau type="err">{e.erreur ?? c.erreur}</Bandeau>
-        {vue === 'messagerie' && e.data ? <MessagerieVue avecEntete={false} nouveau={{ audiences: ['client'], dossiers: e.data.dossiers.map((y) => ({ id: y.id, libelle: `${y.reference} · ${y.intitule}` })) }} />
+        {vue === 'demande' ? <NouvelleDemande />
+          : vue === 'messagerie' && e.data ? <MessagerieVue avecEntete={false} nouveau={{ audiences: ['client'], dossiers: e.data.dossiers.map((y) => ({ id: y.id, libelle: `${y.reference} · ${y.intitule}` })) }} />
           : e.chargement && !e.data ? <Chargement /> : !d ? <Vide>{t('portail.aucun_dossier')}</Vide> : c.chargement && !x ? <Chargement /> : x && <>
           {vue === 'accueil' && <>
             <div className="surtitre">{x.dossier.intitule}</div>
@@ -139,5 +142,47 @@ function Frise({ phases }: { phases: Contenu['phases'] }) {
       <li key={p.phase} className={p.statut === 'terminee' ? 'faite' : p.statut === 'en_cours' ? 'courante' : ''}>
         <span className="pt" /><span className="nom">{String(p.ordre).padStart(2, '0')} · {t(`phases.${p.phase}`, { defaultValue: p.phase })}</span>
         {p.statut === 'en_cours' && <span className="dt">{t('portail.en_cours')}</span>}</li>))}</ol>
+  );
+}
+
+/** Nouvelle demande du client : transmise à l'équipe commerciale, qui ouvre la consultation ou répond. */
+function NouvelleDemande() {
+  const { t } = useTranslation();
+  const { langue } = useAuth();
+  const l = useAsync(async () => ok(await supabase.from('demandes_clients').select('id, besoin, statut, motif_refus, cree_le').order('cree_le', { ascending: false }).limit(50)) as
+    { id: string; besoin: string; statut: 'nouvelle' | 'convertie' | 'refusee'; motif_refus: string | null; cree_le: string }[], []);
+  const a = useAction();
+  const [f, setF] = useState({ besoin: '', quantite: '', ouverture_souhaitee: '' });
+  const [envoyee, setEnvoyee] = useState(false);
+  const envoyer = async () => {
+    const v = z.object({ besoin: z.string().trim().min(10).max(4000), quantite: z.string().trim().max(120).nullable(), ouverture_souhaitee: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable() }).strict()
+      .safeParse({ besoin: f.besoin, quantite: f.quantite.trim() || null, ouverture_souhaitee: f.ouverture_souhaitee || null });
+    if (!v.success) { a.setErreur(t('portail.demande_invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('deposer_demande_client', { p: v.data })))) { setF({ besoin: '', quantite: '', ouverture_souhaitee: '' }); setEnvoyee(true); void l.recharger(); }
+  };
+  return (
+    <div className="ecl-grille">
+      <section className="ecl-bloc">
+        <div className="surtitre">{t('portail.nouveau_projet')}</div>
+        <h1 className="ecl-titre">{t('portail.vues.demande')}</h1>
+        <p className="sec">{t('portail.aide_demande')}</p>
+        <label className="champ"><span>{t('portail.besoin')}</span><textarea rows={5} maxLength={4000} value={f.besoin} onChange={(e) => setF({ ...f, besoin: e.target.value })} /></label>
+        <div className="grille2">
+          <label className="champ"><span>{t('portail.quantite')}</span><input maxLength={120} value={f.quantite} onChange={(e) => setF({ ...f, quantite: e.target.value })} /></label>
+          <label className="champ"><span>{t('portail.ouverture_souhaitee')}</span><input type="date" value={f.ouverture_souhaitee} onChange={(e) => setF({ ...f, ouverture_souhaitee: e.target.value })} /></label>
+        </div>
+        {envoyee && <Bandeau type="ok">{t('portail.demande_envoyee')}</Bandeau>}
+        <Bandeau type="err">{a.erreur}</Bandeau>
+        <Bouton variante="primaire" disabled={a.enCours || f.besoin.trim().length < 10} onClick={() => void envoyer()}>{t('portail.envoyer_demande')}</Bouton>
+      </section>
+      <aside className="exp-aside">
+        <section><div className="surtitre">{t('portail.ensuite')}</div>
+          {[1, 2, 3].map((i) => <div key={i} className="grl-regle"><span><b>{String(i).padStart(2, '0')} · {t(`portail.etapes_demande.${i}.titre`)}</b><span className="mute">{t(`portail.etapes_demande.${i}.texte`)}</span></span></div>)}</section>
+        <section><div className="surtitre">{t('portail.mes_demandes')}</div>
+          {(l.data ?? []).length === 0 ? <span className="mute">—</span> : (l.data ?? []).map((d) => (
+            <div key={d.id} className="grl-regle"><span>{d.besoin.slice(0, 80)}{d.besoin.length > 80 ? '…' : ''}<span className="mute">{date(d.cree_le, langue)}{d.motif_refus ? ` · ${d.motif_refus}` : ''}</span></span>
+              <Statut statut={d.statut === 'convertie' ? 'ok' : d.statut === 'refusee' ? 'neutre' : 'att'} libelle={t(`portail.statuts_demande.${d.statut}`)} /></div>))}</section>
+      </aside>
+    </div>
   );
 }

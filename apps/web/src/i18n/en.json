@@ -800,6 +800,14 @@
   "traiter": "Process",
   "validees_a_rembourser": "Approved, to reimburse"
  },
+ "dcl": {
+  "aide_convertir": "Open the consultation for this client, then link the request to its file; the client then sees “Consultation opened”.",
+  "convertir": "Open or link a consultation",
+  "rattacher": "Link to the file",
+  "refuser": "Decline (reason)",
+  "titre": "Requests received from clients · {{n}}",
+  "traiter": "Handle the request"
+ },
  "dd_lien": {
   "accepter": "Accept",
   "aide": "Gulf Bridge Sourcing checks every supplier before working with them. Upload the requested documents here: each file is reviewed, then accepted or rejected with the reason.",
@@ -1258,6 +1266,7 @@
   "GBS_DELAIS_CIBLES_MANQUANTS": "Target lead times missing: set them in the settings.",
   "GBS_DELAI_INVALIDE": "Invalid deadline: from today, at most one year.",
   "GBS_DEMANDE_INVALIDE": "Invalid request.",
+  "GBS_DEMANDE_TRAITEE": "Request already handled.",
   "GBS_DEPOT_ECHEC": "File upload failed. Try again.",
   "GBS_DEROGATION_ADMIN": "Waiver reserved to the administrator.",
   "GBS_DEVISE_COMPTE": "Currency does not match the account.",
@@ -2847,6 +2856,7 @@
  "portail": {
   "actions": "Actions awaited",
   "actions_attendent": ", {{n}} action(s) awaiting you",
+  "aide_demande": "A few words are enough: your project manager will clarify the need with you.",
   "aide_documents": "Your project's validated documents, kept and downloadable at any time.",
   "aide_factures": "Our fees are invoiced separately from the manufacturer's invoice, which you pay directly to the factory.",
   "aucun_document": "No document available.",
@@ -2855,29 +2865,57 @@
   "aucune_expedition": "No shipment yet.",
   "aucune_facture": "No invoice issued.",
   "avant_ouverture": "days before opening · {{d}}",
+  "besoin": "What you need",
   "bonjour": "Hello {{nom}}",
   "chef": "Your project manager",
   "debut": "Start",
+  "demande_envoyee": "Request sent: your project manager will get back to you.",
+  "demande_invalide": "Describe the need in at least 10 characters; date as day/month/year.",
   "demandee_le": "Requested on {{d}}",
   "depart_arrivee": "Departure {{d}} · expected arrival {{a}}",
   "derniers_documents": "Latest documents",
   "dossier": "Project",
   "echeance": "Due date",
   "en_cours": "in progress",
+  "ensuite": "What happens next",
+  "envoyer_demande": "Send the request",
   "etape": "Step",
+  "etapes_demande": {
+   "1": {
+    "texte": "Your project manager clarifies the need with the needs guide.",
+    "titre": "Quick call-back"
+   },
+   "2": {
+    "texte": "Three offers compared on total cost, not just price.",
+    "titre": "Factory consultation"
+   },
+   "3": {
+    "texte": "You choose the offer; we sign the mandate and start follow-up.",
+    "titre": "Purchase mandate"
+   }
+  },
   "facture": "Invoice",
   "fin": "End",
   "marge_planning": "working days of slack in the schedule",
+  "mes_demandes": "My requests",
   "montant": "Amount",
   "navigation": "Client area navigation",
+  "nouveau_projet": "A new project",
   "ouverture_le": "site opening on {{d}}",
+  "ouverture_souhaitee": "Desired opening date",
   "pieces": {
    "expiree": "Expired",
    "manquante": "To send",
    "refusee": "To redo"
   },
   "prevue": "planned {{d}}",
+  "quantite": "Quantity",
   "reste": "Balance due",
+  "statuts_demande": {
+   "convertie": "Consultation opened",
+   "nouvelle": "Received",
+   "refusee": "Not taken up"
+  },
   "statuts_facture": {
    "emise": "To pay",
    "partiellement_payee": "Partly paid",
@@ -2893,6 +2931,7 @@
   "transparence": "Full transparency",
   "vues": {
    "accueil": "Home",
+   "demande": "New request",
    "documents": "Documents",
    "dossier": "My project",
    "expedition": "Shipping",

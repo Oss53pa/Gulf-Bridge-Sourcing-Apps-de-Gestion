@@ -8,11 +8,11 @@ import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { nombre } from '../lib/format';
+import { date as dateFr, nombre } from '../lib/format';
 import { normaliser } from '../lib/droits';
 import type { Client, Piece } from '../lib/types';
 import { urlSignee } from '../lib/fichiers';
-import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Onglets, Statut, Vide } from '../components/ui';
+import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 
 interface Consultation {
   dossier_id: string; reference: string; intitule: string; client_id: string; client: string; client_verifie: boolean;
@@ -28,6 +28,54 @@ const TON: Record<string, string> = {
 const FILTRES = { toutes: [] as string[], a_facturer: ['demande_recue'], attente_paiement: ['forfait_facture'],
   redaction: ['forfait_regle', 'cdc_redaction'], sourcing: ['cdc_valide', 'sourcing_lance'] };
 type Filtre = keyof typeof FILTRES;
+
+
+interface DemandeClient { id: string; client_id: string; besoin: string; quantite: string | null; ouverture_souhaitee: string | null; cree_le: string; clients: { raison_sociale: string } | null }
+
+/** Demandes déposées par les clients sur leur portail : à convertir en consultation (dossier du client) ou à refuser avec motif. */
+function DemandesClients() {
+  const { t } = useTranslation();
+  const nav = useNavigate();
+  const { langue } = useAuth();
+  const l = useAsync(async () => ok(await supabase.from('demandes_clients').select('id, client_id, besoin, quantite, ouverture_souhaitee, cree_le, clients(raison_sociale)')
+    .eq('statut', 'nouvelle').order('cree_le')) as unknown as DemandeClient[], []);
+  const [sel, setSel] = useState<DemandeClient | null>(null);
+  const ds = useAsync(async () => (sel ? ok(await supabase.from('dossiers').select('id, reference, intitule').eq('client_id', sel.client_id).in('statut', ['ouvert', 'suspendu']).order('ouvert_le', { ascending: false })) as
+    { id: string; reference: string; intitule: string }[] : []), [sel?.id]);
+  const a = useAction();
+  const [dossierId, setDossierId] = useState('');
+  const [motif, setMotif] = useState('');
+  const traiter = async (conv: boolean) => {
+    if (!sel) return;
+    const args = conv ? { p_demande: sel.id, p_dossier: dossierId } : { p_demande: sel.id, p_dossier: null, p_motif: motif.trim() };
+    if (await a.executer(async () => ok(await supabase.rpc('traiter_demande_client', args)))) { setSel(null); setDossierId(''); setMotif(''); void l.recharger(); }
+  };
+  if (!l.data?.length) return <Bandeau type="err">{l.erreur}</Bandeau>;
+  return (
+    <section className="cadre dcl">
+      <div className="section-titre">{t('dcl.titre', { n: l.data.length })}</div>
+      <table className="t"><tbody>{l.data.map((d) => (
+        <tr key={d.id} className="cliquable" onClick={() => setSel(d)}><td>{d.clients?.raison_sociale ?? '—'}<div className="mute">{dateFr(d.cree_le, langue)}</div></td>
+          <td>{d.besoin}{d.quantite && <div className="mute">{d.quantite}</div>}</td><td className="ref">{d.ouverture_souhaitee ? dateFr(d.ouverture_souhaitee, langue) : '—'}</td></tr>))}</tbody></table>
+      {sel && (
+        <Tiroir titre={t('dcl.traiter')} onClose={() => setSel(null)}>
+          <p><b>{sel.clients?.raison_sociale}</b></p>
+          <p className="sec" style={{ whiteSpace: 'pre-wrap' }}>{sel.besoin}</p>
+          <div className="section-titre">{t('dcl.convertir')}</div>
+          <p className="mute">{t('dcl.aide_convertir')}</p>
+          <Bouton onClick={() => nav('/consultations/nouvelle')}>{t('consultations.nouvelle')}</Bouton>
+          <select value={dossierId} onChange={(e) => setDossierId(e.target.value)} aria-label={t('champs.dossier')}>
+            <option value="">—</option>{(ds.data ?? []).map((x) => <option key={x.id} value={x.id}>{x.reference} · {x.intitule}</option>)}</select>
+          <Bouton variante="primaire" disabled={a.enCours || !dossierId} onClick={() => void traiter(true)}>{t('dcl.rattacher')}</Bouton>
+          <div className="section-titre">{t('dcl.refuser')}</div>
+          <textarea rows={2} maxLength={1000} value={motif} placeholder={t('champs.motif')} aria-label={t('champs.motif')} onChange={(e) => setMotif(e.target.value)} />
+          <Bouton disabled={a.enCours || motif.trim().length < 5} onClick={() => void traiter(false)}>{t('dcl.refuser')}</Bouton>
+          <Bandeau type="err">{ds.erreur ?? a.erreur}</Bandeau>
+        </Tiroir>
+      )}
+    </section>
+  );
+}
 
 export function Consultations() {
   const { t } = useTranslation();
@@ -56,6 +104,7 @@ export function Consultations() {
     <div className="screen">
       <Entete surtitre={`${t('modules.commercial')} · ${t('consultations.surtitre')} · CNS`} titre={l.data ? titre : t('ecrans.consultations_clients')}
         actions={peutCreer && <Bouton variante="primaire" onClick={() => nav('/consultations/nouvelle')}>{t('consultations.nouvelle')}</Bouton>} />
+      {peutCreer && <DemandesClients />}
       <Kpis items={[
         { lib: t('consultations.k_en_cours'), val: enCours.length, sous: t('consultations.k_en_cours_sous') },
         { lib: t('consultations.k_factures'), val: principal ? nombre(principal[1], langue) : '—',
