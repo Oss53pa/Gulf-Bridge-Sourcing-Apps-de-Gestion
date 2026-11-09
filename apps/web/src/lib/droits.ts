@@ -44,7 +44,7 @@ export const ECRANS: Ecran[] = [
   { id: 'clients', chemin: '/clients', module: 'commercial', section: 'prospection', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'consultations_clients', chemin: '/consultations', module: 'commercial', section: 'affaires', roles: ['admin', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'nouvelle_consultation', chemin: '/consultations/nouvelle', module: 'commercial', section: 'affaires', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 0 },
-  { id: 'appels_offres', chemin: '', module: 'commercial', section: 'appels_offres', roles: ['admin', 'hub_afrique'], lot: 2 },
+  { id: 'appels_offres', chemin: '/appels-offres', module: 'commercial', section: 'appels_offres', roles: ['admin', 'hub_afrique'], lot: 2 },
   { id: 'portefeuille', chemin: '/dossiers', module: 'dossiers', section: 'portefeuille', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'nouveau_dossier', chemin: '/dossiers/nouveau', module: 'dossiers', section: 'portefeuille', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 0 },
   { id: 'mes_taches', chemin: '/mes-taches', module: 'dossiers', section: 'suivi', roles: TOUS, lot: 1 },
