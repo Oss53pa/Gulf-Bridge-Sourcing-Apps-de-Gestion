@@ -362,6 +362,7 @@
   "telex_release": "电放"
  },
  "connexion": {
+  "afficher_mdp": "显示密码",
   "annuler": "切换账户",
   "code": "6 位数字验证码",
   "code_invalide": "验证码为 6 位数字。",
@@ -372,6 +373,7 @@
   "etape": "第 {{n}} 步，共 2 步",
   "identifiants_invalides": "请输入有效邮箱和至少 8 位的密码。",
   "inscription_mfa": "首次登录：请用身份验证器扫描此二维码，然后输入 6 位数字验证码。",
+  "masquer_mdp": "隐藏密码",
   "mot_de_passe": "密码",
   "qr": "双重认证注册二维码",
   "refus": "登录被拒绝，请检查账号信息。",

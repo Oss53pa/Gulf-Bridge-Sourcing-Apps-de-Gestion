@@ -362,6 +362,7 @@
   "telex_release": "Telex release"
  },
  "connexion": {
+  "afficher_mdp": "Show password",
   "annuler": "Use another account",
   "code": "6-digit code",
   "code_invalide": "The code has 6 digits.",
@@ -372,6 +373,7 @@
   "etape": "Step {{n}} of 2",
   "identifiants_invalides": "Enter a valid e-mail and a password of at least 8 characters.",
   "inscription_mfa": "First sign-in: scan this code with your authenticator app, then enter the 6-digit code.",
+  "masquer_mdp": "Hide password",
   "mot_de_passe": "Password",
   "qr": "Two-factor enrolment QR code",
   "refus": "Sign-in refused. Check your credentials.",

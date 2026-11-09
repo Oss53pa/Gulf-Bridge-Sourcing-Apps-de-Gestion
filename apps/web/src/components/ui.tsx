@@ -159,3 +159,23 @@ export function AccesReserve() {
 export function Jauge({ valeur }: { valeur: number }) {
   return <div className="jauge" role="progressbar" aria-valuenow={valeur} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${Math.max(0, Math.min(100, valeur))}%` }} /></div>;
 }
+
+/** Champ mot de passe avec bouton « œil » pour afficher ou masquer la saisie. */
+export function MotDePasse(p: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const { t } = useTranslation();
+  const [visible, setVisible] = useState(false);
+  return (
+    <span className="mdp">
+      <input {...p} type={visible ? 'text' : 'password'} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+      <button type="button" className="mdp-oeil" aria-pressed={visible}
+        aria-label={visible ? t('connexion.masquer_mdp') : t('connexion.afficher_mdp')} title={visible ? t('connexion.masquer_mdp') : t('connexion.afficher_mdp')}
+        onClick={() => setVisible((v) => !v)}>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+          {visible && <path d="M4 4l16 16" />}
+        </svg>
+      </button>
+    </span>
+  );
+}

@@ -362,6 +362,7 @@
   "telex_release": "Télex release"
  },
  "connexion": {
+  "afficher_mdp": "Afficher le mot de passe",
   "annuler": "Changer de compte",
   "code": "Code à 6 chiffres",
   "code_invalide": "Le code compte 6 chiffres.",
@@ -372,6 +373,7 @@
   "etape": "Étape {{n}} sur 2",
   "identifiants_invalides": "Saisissez un e-mail valide et un mot de passe d'au moins 8 caractères.",
   "inscription_mfa": "Première connexion : scannez ce code avec votre application d'authentification, puis saisissez le code à 6 chiffres.",
+  "masquer_mdp": "Masquer le mot de passe",
   "mot_de_passe": "Mot de passe",
   "qr": "QR code d'inscription au double facteur",
   "refus": "Connexion refusée. Vérifiez vos identifiants.",

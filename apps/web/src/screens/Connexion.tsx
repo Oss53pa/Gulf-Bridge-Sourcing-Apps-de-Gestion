@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
-import { Bandeau, Bouton, Champ } from '../components/ui';
+import { Bandeau, Bouton, Champ, MotDePasse } from '../components/ui';
 import type { Langue } from '../lib/format';
 
 const schemaIdentifiants = z.object({
@@ -90,7 +90,7 @@ export function Connexion() {
               <input type="email" autoComplete="username" value={email} maxLength={254} onChange={(e) => setEmail(e.target.value)} required />
             </Champ>
             <Champ label={t('connexion.mot_de_passe')}>
-              <input type="password" autoComplete="current-password" value={mdp} maxLength={128} onChange={(e) => setMdp(e.target.value)} required />
+              <MotDePasse autoComplete="current-password" value={mdp} maxLength={128} onChange={(e) => setMdp(e.target.value)} required />
             </Champ>
             {erreur && <Bandeau type="err">{erreur}</Bandeau>}
             <Bouton type="submit" variante="primaire" disabled={enCours}>{t('connexion.continuer')}</Bouton>
