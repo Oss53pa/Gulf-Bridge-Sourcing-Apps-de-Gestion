@@ -32,7 +32,7 @@ export const MODULES: Module[] = [
   { id: 'logistique', metier: ['logistique'], sections: ['transport', 'import'] },
   { id: 'apres_vente', metier: ['commercial'], sections: ['garantie', 'interventions'] },
   { id: 'finance', metier: ['finance'], sections: ['facturation', 'tresorerie', 'partage'] },
-  { id: 'echanges', metier: ['commercial', 'logistique'], sections: ['messagerie'] },
+  { id: 'echanges', metier: ['commercial', 'logistique'], sections: ['documents', 'messagerie'] },
   { id: 'parametrage', metier: ['administration'], sections: ['referentiel'] },
 ];
 
@@ -80,6 +80,7 @@ export const ECRANS: Ecran[] = [
   { id: 'tresorerie', chemin: '', module: 'finance', section: 'tresorerie', roles: ['admin', 'comptable'], lot: 2 },
   { id: 'commissions', chemin: '/commissions', module: 'finance', section: 'partage', roles: ['admin', 'comptable', 'agent_pays'], lot: 1 },
   { id: 'notes_frais', chemin: '/notes-frais', module: 'finance', section: 'partage', roles: TOUS, lot: 1 },
+  { id: 'documents', chemin: '/documents', module: 'echanges', section: 'documents', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 2 },
   { id: 'messagerie', chemin: '', module: 'echanges', section: 'messagerie', roles: TOUS, lot: 1 },
   { id: 'parametrage', chemin: '/parametrage', module: 'parametrage', section: 'referentiel', roles: ['admin'], lot: 0 },
 ];
@@ -112,7 +113,7 @@ export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacriti
 
 /** Codes d'écran (« T-codes ») : saisis dans la recherche du Sommaire, Entrée ouvre l'écran. */
 export const TCODES: Record<string, string> = {
-  tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', sav: 'SAV', stock: 'STK', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
+  tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', documents: 'DOC', sav: 'SAV', stock: 'STK', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
   appels_offres: 'AOF', fiches_reference: 'REF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
   articles: 'ART', consultations: 'MEC', historique_prix: 'PRX', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
   expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',

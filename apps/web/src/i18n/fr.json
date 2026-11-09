@@ -1020,6 +1020,47 @@
   "tva": "TVA",
   "zh_lot1": "Version chinoise : traduction à valider (lot 1)."
  },
+ "docs": {
+  "aide_creation": "Le document est créé en brouillon ; déposez ensuite sa première version. Les CGV et documents sans dossier ne sont pas gérés ici.",
+  "aide_revue": "Une nouvelle version repasse le document en revue.",
+  "archiver": "Archiver",
+  "aucun": "Aucun document.",
+  "aucune_version": "Aucune version déposée.",
+  "commentaire": "Ce qui change (3 caractères au moins)",
+  "courante": "Courante",
+  "deposer": "Déposer une nouvelle version",
+  "document": "Document",
+  "enregistrer_version": "Enregistrer la version",
+  "nouveau": "Nouveau document",
+  "partie": "Partie concernée",
+  "passer": {
+   "en_revue": "Mettre en revue",
+   "en_signature": "Envoyer en signature",
+   "en_vigueur": "Mettre en vigueur"
+  },
+  "remplacee": "Remplacée",
+  "statuts": {
+   "archive": "Archivé",
+   "brouillon": "Brouillon",
+   "en_revue": "En revue",
+   "en_signature": "En signature",
+   "en_vigueur": "En vigueur"
+  },
+  "surtitre": "documents",
+  "titre": "Contrats, mandats et rapports classés par dossier, avec leurs versions",
+  "type": "Type",
+  "types": {
+   "autre": "Autre",
+   "avenant": "Avenant",
+   "contrat": "Contrat",
+   "facture": "Facture",
+   "mandat": "Mandat",
+   "rapport": "Rapport"
+  },
+  "version": "Version",
+  "version_invalide": "Joignez le fichier et décrivez la modification (3 caractères au moins).",
+  "versions": "Versions"
+ },
  "dossiers": {
   "aide_mode": "Le mode financier découle du type de dossier et ne pourra plus être modifié. Le négoce est porté par GBS Chine et exige la vérification du client.",
   "aucun": "Aucun dossier.",
@@ -1095,6 +1136,7 @@
   "conformite_import": "Conformité à l'import",
   "consultations": "Mise en concurrence",
   "consultations_clients": "Consultations",
+  "documents": "Documents",
   "expeditions": "Expéditions",
   "factures": "Facturation",
   "fiches_reference": "Fiches de référence",
@@ -1221,7 +1263,9 @@
   "GBS_DEVIS_NON_SIGNE": "Aucun devis signé sur ce dossier.",
   "GBS_DOCUMENTS_INVALIDES": "Documents invalides : uniquement des fichiers déposés dans ce dossier.",
   "GBS_DOCUMENTS_LC_INVALIDES": "Liste des documents exigés invalide.",
+  "GBS_DOCUMENT_ARCHIVE": "Document archivé : il ne se modifie plus.",
   "GBS_DOCUMENT_DEJA_RECU": "Ce document est déjà reçu pour cette expédition.",
+  "GBS_DOCUMENT_SANS_VERSION": "Déposez d'abord une version du document.",
   "GBS_DOCUMENT_SIGNE": "Document signé : il ne se modifie plus ; créez une nouvelle version ou un avenant.",
   "GBS_DOCUMENT_VALIDE": "Document validé : il ne se modifie plus.",
   "GBS_DOSSIER_ARCHIVE": "Ce dossier est archivé : il est en lecture seule.",
@@ -3312,6 +3356,7 @@
   "consultation": "Consultation",
   "controle": "Contrôle",
   "controles": "Contrôles",
+  "documents": "Documents",
   "facturation": "Facturation",
   "fournisseurs": "Fournisseurs",
   "garantie": "Garantie",

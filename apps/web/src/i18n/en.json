@@ -1020,6 +1020,47 @@
   "tva": "VAT",
   "zh_lot1": "Chinese version: translation to be validated (phase 1)."
  },
+ "docs": {
+  "aide_creation": "The document is created as a draft; then upload its first version. Terms of sale and documents without a project are not handled here.",
+  "aide_revue": "A new version sends the document back for review.",
+  "archiver": "Archive",
+  "aucun": "No document.",
+  "aucune_version": "No version uploaded.",
+  "commentaire": "What changes (3+ characters)",
+  "courante": "Current",
+  "deposer": "Upload a new version",
+  "document": "Document",
+  "enregistrer_version": "Save the version",
+  "nouveau": "New document",
+  "partie": "Party concerned",
+  "passer": {
+   "en_revue": "Send for review",
+   "en_signature": "Send for signature",
+   "en_vigueur": "Put in force"
+  },
+  "remplacee": "Superseded",
+  "statuts": {
+   "archive": "Archived",
+   "brouillon": "Draft",
+   "en_revue": "Under review",
+   "en_signature": "For signature",
+   "en_vigueur": "In force"
+  },
+  "surtitre": "documents",
+  "titre": "Contracts, mandates and reports filed by project, with their versions",
+  "type": "Type",
+  "types": {
+   "autre": "Other",
+   "avenant": "Amendment",
+   "contrat": "Contract",
+   "facture": "Invoice",
+   "mandat": "Mandate",
+   "rapport": "Report"
+  },
+  "version": "Version",
+  "version_invalide": "Attach the file and describe the change (3+ characters).",
+  "versions": "Versions"
+ },
  "dossiers": {
   "aide_mode": "The financial mode follows the file type and cannot be changed later. Trading is carried by GBS China and requires client verification.",
   "aucun": "No file.",
@@ -1095,6 +1136,7 @@
   "conformite_import": "Import compliance",
   "consultations": "Competitive bidding",
   "consultations_clients": "Consultations",
+  "documents": "Documents",
   "expeditions": "Shipments",
   "factures": "Invoicing",
   "fiches_reference": "Reference sheets",
@@ -1221,7 +1263,9 @@
   "GBS_DEVIS_NON_SIGNE": "No signed quote on this file.",
   "GBS_DOCUMENTS_INVALIDES": "Invalid documents: only files uploaded to this file.",
   "GBS_DOCUMENTS_LC_INVALIDES": "Invalid required document list.",
+  "GBS_DOCUMENT_ARCHIVE": "Archived document: it can no longer be changed.",
   "GBS_DOCUMENT_DEJA_RECU": "This document has already been received for this shipment.",
+  "GBS_DOCUMENT_SANS_VERSION": "Upload a version of the document first.",
   "GBS_DOCUMENT_SIGNE": "Signed document: it can no longer change; create a new version or an amendment.",
   "GBS_DOCUMENT_VALIDE": "Validated document: it can no longer change.",
   "GBS_DOSSIER_ARCHIVE": "This file is archived: it is read-only.",
@@ -3312,6 +3356,7 @@
   "consultation": "Sourcing",
   "controle": "Control",
   "controles": "Inspections",
+  "documents": "Documents",
   "facturation": "Invoicing",
   "fournisseurs": "Suppliers",
   "garantie": "Warranty",

@@ -1020,6 +1020,47 @@
   "tva": "增值税",
   "zh_lot1": "中文版本：译文待审定（第 1 期）。"
  },
+ "docs": {
+  "aide_creation": "文件以草稿创建；随后上传首个版本。通用销售条款及无项目文件不在此管理。",
+  "aide_revue": "新版本将使文件重新进入审阅。",
+  "archiver": "归档",
+  "aucun": "暂无文件。",
+  "aucune_version": "暂无版本。",
+  "commentaire": "变更说明（至少3个字符）",
+  "courante": "当前",
+  "deposer": "上传新版本",
+  "document": "文件",
+  "enregistrer_version": "保存版本",
+  "nouveau": "新建文件",
+  "partie": "相关方",
+  "passer": {
+   "en_revue": "提交审阅",
+   "en_signature": "提交签署",
+   "en_vigueur": "设为生效"
+  },
+  "remplacee": "已替换",
+  "statuts": {
+   "archive": "已归档",
+   "brouillon": "草稿",
+   "en_revue": "审阅中",
+   "en_signature": "签署中",
+   "en_vigueur": "生效中"
+  },
+  "surtitre": "文件",
+  "titre": "按项目归档的合同、委托书和报告及其版本",
+  "type": "类型",
+  "types": {
+   "autre": "其他",
+   "avenant": "补充协议",
+   "contrat": "合同",
+   "facture": "发票",
+   "mandat": "委托书",
+   "rapport": "报告"
+  },
+  "version": "版本",
+  "version_invalide": "请附文件并说明变更（至少3个字符）。",
+  "versions": "版本"
+ },
  "dossiers": {
   "aide_mode": "资金模式由项目类型决定，之后不可更改。贸易业务由 GBS 中国承担，且需完成客户核查。",
   "aucun": "暂无项目。",
@@ -1095,6 +1136,7 @@
   "conformite_import": "进口合规",
   "consultations": "比价",
   "consultations_clients": "咨询",
+  "documents": "文件",
   "expeditions": "发运",
   "factures": "开票",
   "fiches_reference": "参考案例",
@@ -1221,7 +1263,9 @@
   "GBS_DEVIS_NON_SIGNE": "该项目无已签署报价。",
   "GBS_DOCUMENTS_INVALIDES": "文件无效：仅限本项目已上传文件。",
   "GBS_DOCUMENTS_LC_INVALIDES": "所需单据清单无效。",
+  "GBS_DOCUMENT_ARCHIVE": "文件已归档，不可再修改。",
   "GBS_DOCUMENT_DEJA_RECU": "此发运已收到该文件。",
+  "GBS_DOCUMENT_SANS_VERSION": "请先上传文件版本。",
   "GBS_DOCUMENT_SIGNE": "文件已签署，不可修改；请新建版本或补充协议。",
   "GBS_DOCUMENT_VALIDE": "文件已确认，不可修改。",
   "GBS_DOSSIER_ARCHIVE": "该项目已归档，只读。",
@@ -3312,6 +3356,7 @@
   "consultation": "询价",
   "controle": "控制",
   "controles": "检验",
+  "documents": "文件",
   "facturation": "开票",
   "fournisseurs": "供应商",
   "garantie": "保修",
