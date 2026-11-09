@@ -35,6 +35,8 @@ T = {
  'connexion.email': ('E-mail professionnel', 'Work e-mail', '工作邮箱'),
  'connexion.mot_de_passe': ('Mot de passe', 'Password', '密码'),
  'connexion.continuer': ('Continuer', 'Continue', '继续'),
+ 'connexion.afficher_mdp': ('Afficher le mot de passe', 'Show password', '显示密码'),
+ 'connexion.masquer_mdp': ('Masquer le mot de passe', 'Hide password', '隐藏密码'),
  'connexion.identifiants_invalides': ('Saisissez un e-mail valide et un mot de passe d\'au moins 8 caractères.', 'Enter a valid e-mail and a password of at least 8 characters.', '请输入有效邮箱和至少 8 位的密码。'),
  'connexion.refus': ('Connexion refusée. Vérifiez vos identifiants.', 'Sign-in refused. Check your credentials.', '登录被拒绝，请检查账号信息。'),
  'connexion.inscription_mfa': ('Première connexion : scannez ce code avec votre application d\'authentification, puis saisissez le code à 6 chiffres.', 'First sign-in: scan this code with your authenticator app, then enter the 6-digit code.', '首次登录：请用身份验证器扫描此二维码，然后输入 6 位数字验证码。'),
