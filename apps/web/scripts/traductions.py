@@ -820,6 +820,13 @@ T = {
  'canaux.wechat': ('WeChat', 'WeChat', '微信'), 'canaux.email': ('E-mail', 'E-mail', '邮件'), 'canaux.formulaire': ('Formulaire', 'Form', '表单'), 'canaux.autre': ('Autre', 'Other', '其他'),
  # ------------------------------------------------------------------ commandes
  'commandes.titre': ('{{n}} commandes, {{p}} en production', '{{n}} orders, {{p}} in production', '{{n}} 个订单，{{p}} 个生产中'),
+ 'commandes.surtitre': ('commandes fournisseurs', 'supplier orders', '供应商订单'),
+ 'commandes.titre_en_cours': ('{{n}} commandes en cours', '{{n}} orders in progress', '{{n}} 个订单进行中'),
+ 'commandes.titre_retard': ('{{n}} commande en retard ouvre droit à pénalité contractuelle', '{{n}} late order gives rise to a contractual penalty', '{{n}} 个订单延误，可主张合同违约金'),
+ 'commandes.verrous': ('Verrous de paiement', 'Payment locks', '付款锁定'), 'commandes.commande': ('Commande', 'Order', '订单'),
+ 'commandes.fabricant': ('Fabricant', 'Manufacturer', '制造商'), 'commandes.objet': ('Objet', 'Subject', '事由'), 'commandes.valeur': ('Valeur', 'Value', '金额'),
+ 'commandes.etape': ("Étape du dossier achat", 'Purchase file stage', '采购档案步骤'), 'commandes.etape_n': ('étape {{r}}/{{n}}', 'stage {{r}}/{{n}}', '步骤 {{r}}/{{n}}'),
+ 'commandes.livraison_depassee': ('livraison promise au {{d}} dépassée', 'promised delivery {{d}} exceeded', '承诺交期 {{d}} 已过'),
  'commandes.nouvelle': ('Nouvelle commande', 'New order', '新建订单'), 'commandes.aucune': ('Aucune commande.', 'No order.', '暂无订单。'),
  'commandes.total': ('Commandes', 'Orders', '订单'), 'commandes.attente_contrat': ('en attente du contrat signé', 'awaiting signed contract', '等待签署合同'),
  'commandes.verrou1_leve': ('verrou 1 levé', 'lock 1 lifted', '第一道锁已解除'), 'commandes.verrou2_leve': ('verrou 2 levé', 'lock 2 lifted', '第二道锁已解除'),

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -199,44 +199,66 @@ function SaisieOffre({ rfq, invites, onClose, onOk }: { rfq: Rfq; invites: strin
 }
 
 // ============================================================================ Commandes
+const EN_COURS_CMD = ['brouillon', 'contrat_signe', 'en_production', 'production_terminee'];
+
+/** Commandes fournisseurs (maquette CMD) : étape du dossier achat et retards ouvrant droit à pénalité. */
 export function Commandes() {
   const { t } = useTranslation();
   const nav = useNavigate();
   const [params] = useSearchParams();
   const { langue, profil, societeActive } = useAuth();
   const fournisseurs = useNoms('fournisseurs');
-  const dossiers = useNoms('dossiers');
   const [creer, setCreer] = useState(Boolean(params.get('dossier')));
   const l = useAsync(async () => ok(await supabase.from('commandes').select('*').order('cree_le', { ascending: false }).limit(500)) as Commande[], [societeActive]);
-  const totaux = useMemo(() => {
-    const prod = (l.data ?? []).filter((c) => c.statut === 'en_production').length;
-    const brouillon = (l.data ?? []).filter((c) => c.statut === 'brouillon').length;
-    return { prod, brouillon, tot: (l.data ?? []).length };
-  }, [l.data]);
+  const ids = [...new Set((l.data ?? []).map((c) => c.dossier_id))];
+  const ds = useAsync(async () => (ids.length ? ok(await supabase.from('dossiers').select('id, reference, intitule, phase_courante').in('id', ids)) as
+    { id: string; reference: string; intitule: string; phase_courante: string | null }[] : []), [ids.join(',')]);
+  const ph = useAsync(async () => (ids.length ? ok(await supabase.from('dossier_phases').select('dossier_id, phase, ordre').in('dossier_id', ids)) as
+    { dossier_id: string; phase: string; ordre: number }[] : []), [ids.join(',')]);
+  const jour = new Date().toISOString().slice(0, 10);
+  const enCours = (l.data ?? []).filter((c) => EN_COURS_CMD.includes(c.statut));
+  const enRetard = (c: Commande) => EN_COURS_CMD.includes(c.statut) && Boolean(c.date_livraison_promise) && c.date_livraison_promise! < jour;
+  const retards = enCours.filter(enRetard);
   const ecrit = ['admin', 'achats_chine'].includes(profil?.role ?? '');
+  const etape = (c: Commande) => {
+    const d = (ds.data ?? []).find((x) => x.id === c.dossier_id);
+    const phases = (ph.data ?? []).filter((x) => x.dossier_id === c.dossier_id).sort((a, b) => a.ordre - b.ordre);
+    const rang = phases.findIndex((x) => x.phase === d?.phase_courante) + 1;
+    return { d, rang, total: phases.length };
+  };
+  const titre = t('commandes.titre_en_cours', { n: enCours.length }) + (retards.length ? ` ; ${t('commandes.titre_retard', { n: retards.length })}` : '');
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.achats')} · M7`} titre={t('commandes.titre', { n: totaux.tot, p: totaux.prod })}
-        actions={ecrit && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('commandes.nouvelle')}</Bouton>} />
-      <Kpis items={[
-        { lib: t('commandes.total'), val: totaux.tot },
-        { lib: t('statuts_commande.brouillon'), val: totaux.brouillon, sous: t('commandes.attente_contrat') },
-        { lib: t('statuts_commande.en_production'), val: totaux.prod, sous: t('commandes.verrou1_leve') },
-        { lib: t('statuts_commande.expediee'), val: (l.data ?? []).filter((c) => c.statut === 'expediee').length, sous: t('commandes.verrou2_leve') },
-      ]} />
-      <Bandeau type="err">{l.erreur}</Bandeau>
-      <CadreTableau>
-        {l.chargement ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('commandes.aucune')}</Vide> : (
-          <table className="t"><thead><tr><th>{t('champs.reference')}</th><th>{t('champs.dossier')}</th><th>{t('champs.fournisseur')}</th><th>{t('champs.incoterm')}</th>
-            <th className="num">{t('champs.montant')}</th><th className="num">{t('champs.fob')}</th><th>{t('champs.statut')}</th></tr></thead>
-            <tbody>{(l.data ?? []).map((c) => (
-              <tr key={c.id} className="cliquable" onClick={() => nav(`/commandes/${c.id}`)}>
-                <td className="ref">{c.reference}{c.sur_mesure && <div className="mute">{t('commandes.sur_mesure')}</div>}</td><td className="ref">{dossiers[c.dossier_id]}</td>
-                <td>{fournisseurs[c.fournisseur_id]}</td><td>{c.incoterm} {c.lieu}</td>
-                <td className="num">{montant(c.montant_marchandise, c.devise, langue)}</td><td className="num">{montant(c.fob_montant, c.devise, langue)}</td>
-                <td><Statut statut={c.statut} libelle={t(`statuts_commande.${c.statut}`)} /></td></tr>))}</tbody></table>
+      <Entete surtitre={`${t('modules.achats')} · ${t('commandes.surtitre')} · CMD`} titre={l.data ? titre : t('ecrans.commandes')}
+        actions={<>
+          {['admin', 'achats_chine', 'comptable'].includes(profil?.role ?? '') && <Bouton onClick={() => nav('/paiements')}>{t('commandes.verrous')}</Bouton>}
+          {ecrit && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('commandes.nouvelle')}</Bouton>}
+        </>} />
+      <Bandeau type="err">{l.erreur ?? ds.erreur ?? ph.erreur}</Bandeau>
+      <div className="cadre">
+        {l.chargement && !l.data ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('commandes.aucune')}</Vide> : (
+          <table className="t"><thead><tr><th>{t('commandes.commande')}</th><th>{t('commandes.fabricant')}</th><th>{t('commandes.objet')}</th><th>{t('champs.incoterm')}</th>
+            <th className="num">{t('commandes.valeur')}</th><th>{t('champs.statut')}</th><th>{t('commandes.etape')}</th></tr></thead>
+            <tbody>{(l.data ?? []).map((c) => {
+              const e = etape(c), retard = enRetard(c);
+              return (
+                <tr key={c.id} className="cliquable" onClick={() => nav(`/commandes/${c.id}`)}>
+                  <td className="ref">{c.reference}{c.sur_mesure && <div className="mute">{t('commandes.sur_mesure')}</div>}</td>
+                  <td>{fournisseurs[c.fournisseur_id]}</td>
+                  <td>{e.d?.intitule ?? '—'}<div className="mute ref">{e.d?.reference}</div></td>
+                  <td className="sec">{c.incoterm} {c.lieu}</td>
+                  <td className="num">{montant(c.fob_montant || c.montant_marchandise, c.devise, langue)}</td>
+                  <td><Statut statut={c.statut} libelle={t(`statuts_commande.${c.statut}`)} /></td>
+                  <td>{e.d?.phase_courante ? <div className="cmd-etape">
+                    <span>{String(e.rang).padStart(2, '0')} · {t(`phases.${e.d.phase_courante}`)}</span>
+                    <span className="cmd-barre"><span style={{ width: `${e.total ? (e.rang / e.total) * 100 : 0}%` }} /></span>
+                    <span className={retard ? 'txt-err' : 'mute'} style={{ fontSize: 12 }}>
+                      {t('commandes.etape_n', { r: e.rang, n: e.total })}{retard ? ` · ${t('commandes.livraison_depassee', { d: c.date_livraison_promise!.split('-').reverse().join('.') })}` : ''}</span>
+                  </div> : '—'}</td>
+                </tr>);
+            })}</tbody></table>
         )}
-      </CadreTableau>
+      </div>
       {creer && <NouvelleCommande dossierInitial={params.get('dossier')} onClose={() => setCreer(false)} onOk={(id) => nav(`/commandes/${id}`)} />}
     </div>
   );
