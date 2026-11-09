@@ -15,37 +15,78 @@ import { PackDocumentaire } from './PackDocumentaire';
 import { TransitaireExpedition } from './Transitaires';
 
 // ============================================================================ Inspections
+type InspectionListe = Inspection & { commandes: { fournisseur_id: string } | null };
+const initiales = (nom: string | undefined) => (nom ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('') || '—';
+
+/** Planning des inspections (maquette INS) : à valider, planifiées, à venir ; non-conformités qui bloquent la libération. */
 export function Inspections() {
   const { t } = useTranslation();
   const nav = useNavigate();
   const [params] = useSearchParams();
-  const { langue, profil } = useAuth();
+  const { profil } = useAuth();
   const dossiers = useNoms('dossiers');
   const profils = useNoms('profils');
+  const fournisseurs = useNoms('fournisseurs');
   const [creer, setCreer] = useState(Boolean(params.get('commande')));
-  const l = useAsync(async () => ok(await supabase.from('inspections').select('*').order('date_prevue', { ascending: true, nullsFirst: false }).limit(500)) as Inspection[], []);
+  const l = useAsync(async () => ok(await supabase.from('inspections').select('*, commandes(fournisseur_id)')
+    .order('date_prevue', { ascending: true, nullsFirst: false }).limit(500)) as unknown as InspectionListe[], []);
+  const ncs = useAsync(async () => ok(await supabase.from('non_conformites').select('id, statut').neq('statut', 'close').limit(1000)) as { id: string; statut: string }[], []);
   const ecrit = ['admin', 'achats_chine'].includes(profil?.role ?? '');
-  const n = (s: string) => (l.data ?? []).filter((i) => i.statut === s).length;
+  const tous = l.data ?? [];
+  const jour = new Date().toISOString().slice(0, 10);
+  const finSemaine = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const aValider = tous.filter((i) => i.statut === 'realisee');
+  const planifiees = tous.filter((i) => i.statut === 'planifiee' && i.date_prevue && i.date_prevue >= jour && i.date_prevue <= finSemaine);
+  const sansDate = tous.filter((i) => i.statut === 'planifiee' && !i.date_prevue);
+  const mois = jour.slice(0, 7);
+  const joursMois = new Set(tous.filter((i) => (i.date_realisee ?? '').startsWith(mois)).map((i) => `${i.inspecteur_id}|${i.date_realisee}`)).size;
+  const aVenir = tous.filter((i) => i.statut === 'planifiee' && i.date_prevue).slice(0, 8);
+  const ordre = ['realisee', 'planifiee', 'refusee', 'validee'];
+  const liste = [...tous].sort((x, y) => ordre.indexOf(x.statut) - ordre.indexOf(y.statut) || (x.date_prevue ?? '9').localeCompare(y.date_prevue ?? '9'));
+  const ddmm = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
+  const ddmmaaaa = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : '—');
+  const titre = [t('inspections.titre_valider', { n: aValider.length }), t('inspections.titre_semaine', { n: planifiees.length })].join(', ')
+    + ((ncs.data ?? []).length ? ` ; ${t('inspections.titre_nc', { n: (ncs.data ?? []).length })}` : '');
+  const objet = (i: InspectionListe) => i.produit ?? (dossiers[i.dossier_id] ?? '—');
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.qualite')} · M8`} titre={t('inspections.titre', { n: (l.data ?? []).length })}
+      <Entete surtitre={`${t('modules.qualite')} · ${t('inspections.surtitre')} · INS`} titre={l.data ? titre : t('ecrans.inspections')}
         actions={ecrit && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('inspections.planifier')}</Bouton>} />
       <Kpis items={[
-        { lib: t('statuts_inspection.planifiee'), val: n('planifiee') }, { lib: t('statuts_inspection.realisee'), val: n('realisee'), sous: t('inspections.a_valider') },
-        { lib: t('statuts_inspection.validee'), val: n('validee'), sous: t('inspections.liberees') }, { lib: t('statuts_inspection.refusee'), val: n('refusee') },
+        { lib: t('inspections.k_valider'), val: aValider.length, sous: t('inspections.k_valider_sous') },
+        { lib: t('inspections.k_planifiees'), val: planifiees.length, sous: t('inspections.k_planifiees_sous') },
+        { lib: t('inspections.k_sans_date'), val: sansDate.length, sous: t('inspections.k_sans_date_sous') },
+        { lib: t('inspections.k_jours'), val: joursMois, sous: t('inspections.k_jours_sous') },
       ]} />
-      <Bandeau type="err">{l.erreur}</Bandeau>
-      <CadreTableau>
-        {l.chargement ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('inspections.aucune')}</Vide> : (
-          <table className="t"><thead><tr><th>{t('champs.reference')}</th><th>{t('champs.dossier')}</th><th>{t('champs.type')}</th><th>{t('inspections.inspecteur')}</th><th>{t('champs.date')}</th><th className="num">{t('inspections.lot')}</th><th>{t('inspections.decision_proposee')}</th><th>{t('champs.statut')}</th></tr></thead>
-            <tbody>{(l.data ?? []).map((i) => (
-              <tr key={i.id} className="cliquable" onClick={() => nav(`/inspections/${i.id}`)}>
-                <td className="ref">{i.reference}</td><td className="ref">{dossiers[i.dossier_id]}</td><td>{t(`types_inspection.${i.type}`)}</td>
-                <td className="sec">{i.inspecteur_id ? profils[i.inspecteur_id] : '—'}</td><td className="ref">{date(i.date_realisee ?? i.date_prevue, langue)}</td>
-                <td className="num">{i.taille_lot}</td><td>{i.decision_proposee ? <Statut statut={i.decision_proposee} libelle={t(`decisions.${i.decision_proposee}`)} /> : '—'}</td>
-                <td><Statut statut={i.statut} libelle={t(`statuts_inspection.${i.statut}`)} /></td></tr>))}</tbody></table>
-        )}
-      </CadreTableau>
+      <Bandeau type="err">{l.erreur ?? ncs.erreur}</Bandeau>
+      <div className="fiche-grille">
+        <div className="cadre fiche-principal">
+          {l.chargement && !l.data ? <Chargement /> : tous.length === 0 ? <Vide>{t('inspections.aucune')}</Vide> : (
+            <table className="t"><thead><tr><th>{t('inspections.inspection')}</th><th>{t('inspections.objet_fabricant_type')}</th><th>{t('champs.date')}</th>
+              <th>{t('inspections.insp')}</th><th className="num">{t('inspections.lot')}</th><th>{t('champs.statut')}</th></tr></thead>
+              <tbody>{liste.map((i) => (
+                <tr key={i.id} className="cliquable" onClick={() => nav(`/inspections/${i.id}`)}>
+                  <td className="ref">{i.reference}</td>
+                  <td><div style={{ fontWeight: 500 }}>{objet(i)}</div>
+                    <div className="mute">{[i.commandes ? fournisseurs[i.commandes.fournisseur_id] : null, t(`types_inspection.${i.type}`)].filter(Boolean).join(' · ')}</div></td>
+                  <td className="ref">{ddmmaaaa(i.date_realisee ?? i.date_prevue)}</td>
+                  <td className="sec" title={i.inspecteur_id ? profils[i.inspecteur_id] : undefined}>{i.inspecteur_id ? initiales(profils[i.inspecteur_id]) : '—'}</td>
+                  <td className="num">{i.taille_lot}</td>
+                  <td><Statut statut={i.statut} libelle={i.statut === 'validee' && i.decision ? `${t('statuts_inspection.validee')} · ${t(`inspections.decisions_finales.${i.decision}`)}` : i.statut === 'realisee' ? t('inspections.k_valider') : t(`statuts_inspection.${i.statut}`)} /></td>
+                </tr>))}</tbody></table>
+          )}
+        </div>
+        <aside className="fiche-cote">
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('inspections.a_venir')}</div>
+            {aVenir.length === 0 ? <span className="mute">{t('inspections.aucune_a_venir')}</span> : aVenir.map((i) => (
+              <div key={i.id} className="ao-cal cliquable" onClick={() => nav(`/inspections/${i.id}`)}>
+                <span className={'ref' + (i.date_prevue! <= jour ? ' txt-err' : '')}>{ddmm(i.date_prevue)}</span>
+                <span><b>{objet(i)}</b><br /><span className="mute">{t(`types_inspection.${i.type}`)} · {i.inspecteur_id ? initiales(profils[i.inspecteur_id]) : '—'}</span></span>
+              </div>))}
+          </section>
+        </aside>
+      </div>
       {creer && <NouvelleInspection commandeInitiale={params.get('commande')} onClose={() => setCreer(false)} onOk={(id) => nav(`/inspections/${id}`)} />}
     </div>
   );
