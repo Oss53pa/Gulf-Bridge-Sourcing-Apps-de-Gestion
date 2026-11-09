@@ -37,6 +37,7 @@ import { Documents } from './screens/Documents';
 import { Garanties } from './screens/Garanties';
 import { Tresorerie } from './screens/Tresorerie';
 import { Negoce } from './screens/Negoce';
+import { Ethique } from './screens/Ethique';
 import { ImprimerRapportOffres } from './screens/RapportOffres';
 import { Articles, Clients, FicheClient, FicheFournisseur, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, HistoriquePrix, MiseEnConcurrence } from './screens/Achats';
@@ -112,6 +113,7 @@ export function App() {
             <Route path="/commandes/:id" element={g('commandes', <FicheCommande />)} />
             <Route path="/inspections" element={g('inspections', <Inspections />)} />
             <Route path="/non-conformites" element={g('non_conformites', <NonConformites />)} />
+            <Route path="/ethique" element={g('ethique', <Ethique />)} />
             <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
             <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
             <Route path="/interventions" element={g('interventions', <Interventions />)} />
