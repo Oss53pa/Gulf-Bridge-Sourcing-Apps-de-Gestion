@@ -6,7 +6,7 @@ import { PageDueDiligence } from './screens/PiecesDueDiligence';
 import { PageTransitaire } from './screens/Transitaires';
 import { Entonnoir, FicheProspect, Prospection } from './screens/Prospection';
 import { NonConformites } from './screens/NonConformites';
-import { ReservesOuvertes } from './screens/Receptions';
+import { Livraisons, ReservesOuvertes } from './screens/Receptions';
 import { Interventions } from './screens/Interventions';
 import { ImprimerCertificatLc } from './screens/LettresCredit';
 import type { ReactNode } from 'react';
@@ -106,6 +106,7 @@ export function App() {
             <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
             <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
             <Route path="/interventions" element={g('interventions', <Interventions />)} />
+            <Route path="/livraisons" element={g('livraisons', <Livraisons />)} />
             <Route path="/reserves" element={g('reserves', <ReservesOuvertes />)} />
             <Route path="/expeditions/:id" element={g('expeditions', <FicheExpedition />)} />
             <Route path="/factures" element={g('factures', <Factures />)} />

@@ -66,6 +66,7 @@ export const ECRANS: Ecran[] = [
   { id: 'non_conformites', chemin: '/non-conformites', module: 'qualite', section: 'non_conformites', roles: ['admin', 'achats_chine'], lot: 1 },
   { id: 'expeditions', chemin: '/expeditions', module: 'logistique', section: 'transport', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays'], lot: 0 },
   { id: 'conformite_import', chemin: '', module: 'logistique', section: 'import', roles: ['admin', 'achats_chine'], lot: 2 },
+  { id: 'livraisons', chemin: '/livraisons', module: 'logistique', section: 'import', roles: ['admin', 'hub_afrique', 'achats_chine'], lot: 1 },
   { id: 'reserves', chemin: '/reserves', module: 'logistique', section: 'import', roles: ['admin', 'hub_afrique', 'achats_chine'], lot: 1 },
   { id: 'interventions', chemin: '/interventions', module: 'apres_vente', section: 'interventions', roles: ['admin', 'hub_afrique', 'achats_chine', 'inspecteur'], lot: 1 },
   { id: 'factures', chemin: '/factures', module: 'finance', section: 'facturation', roles: ['admin', 'hub_afrique', 'comptable'], lot: 0 },

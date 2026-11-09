@@ -705,3 +705,16 @@ td.retard-txt { color: var(--err); }
 .exp-reste { font-family: var(--serif); font-size: 30px; font-weight: 400; }
 .exp-jrn { display: flex; flex-direction: column; gap: 2px; font-size: 14px; padding: 4px 0; }
 @media (max-width: 900px) { .exp-infos { grid-template-columns: repeat(2, minmax(0, 1fr)); } .exp-frise { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 16px; } }
+
+/* Logistique · livraison et réception (maquette LIV) */
+.ref-grille.liv-grille { grid-template-columns: minmax(0, 1fr) 360px; }
+.liv-detail section { gap: 6px; }
+.liv-client { font-size: 17px; font-weight: 600; }
+.liv-douane { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; font-size: 13px; color: var(--sec); }
+.liv-douane > div { display: flex; flex-direction: column; gap: 6px; }
+.liv-douane span { height: 4px; border-radius: 2px; background: var(--border); }
+.liv-douane .fait { color: var(--ink); }
+.liv-douane .fait span { background: var(--ink); }
+.liv-pv { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.liv-reserve { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px; }
+@media (max-width: 1100px) { .ref-grille.liv-grille { grid-template-columns: 1fr; } }
