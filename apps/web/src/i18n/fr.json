@@ -2945,7 +2945,8 @@
    "terminee": "Terminée"
   },
   "tous_documents": "Tous les documents",
-  "transmettre": "Transmettez ces documents à votre chef de dossier ; le dépôt en ligne arrive dans une prochaine version.",
+  "transmettre": "Transmettez chaque document depuis cette page (PDF ou image, 25 Mo au plus) ; votre chef de dossier le vérifie ensuite.",
+  "transmettre_piece": "Transmettre",
   "transparence": "Transparence totale",
   "vues": {
    "accueil": "Accueil",

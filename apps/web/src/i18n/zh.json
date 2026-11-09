@@ -2945,7 +2945,8 @@
    "terminee": "已完成"
   },
   "tous_documents": "全部文件",
-  "transmettre": "请将这些文件发送给您的项目负责人；在线上传将在后续版本提供。",
+  "transmettre": "请在本页上传各项文件（PDF 或图片，最大 25 MB），项目经理随后审核。",
+  "transmettre_piece": "上传",
   "transparence": "完全透明",
   "vues": {
    "accueil": "首页",

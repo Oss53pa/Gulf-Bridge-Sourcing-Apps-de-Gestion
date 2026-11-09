@@ -1,13 +1,13 @@
 // Portail client avec compte (maquette « Espace client »), première tranche en lecture :
 // accueil, dossier, expédition, documents, factures. Le contenu vient de la base (même règle que la page
 // de suivi par lien) ; aucune table interne n'est lue directement par un compte client.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { ok, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, montant } from '../lib/format';
-import { urlSignee } from '../lib/fichiers';
+import { deposerPieceClient, FichierRefuse, urlSignee } from '../lib/fichiers';
 import { Bandeau, Bouton, Chargement, Statut, Vide } from '../components/ui';
 import { MessagerieVue } from './Messagerie';
 import { z } from 'zod';
@@ -31,6 +31,7 @@ interface Contenu {
       decision: string | null; defauts: { critiques: number; majeurs: number; mineurs: number } | null }[];
     non_conformites: { reference: string | null; gravite: string; libelle: string; statut: string; delai: string | null }[];
   };
+  depots: { id: string; libelle: string; phase: string; statut: string }[];
   factures: { numero: string | null; objet: string; type: string; date_emission: string | null; echeance: string | null; devise: string; ttc: number; net_a_payer: number; encaisse: number; statut: string }[];
 }
 type Vue = 'accueil' | 'dossier' | 'production' | 'expedition' | 'documents' | 'factures' | 'messagerie' | 'demande';
@@ -82,7 +83,8 @@ export function EspaceClient() {
                 {actions.length === 0 ? <span className="mute">{t('portail.aucune_action')}</span> : actions.map((p, i) => (
                   <div key={p.libelle + i} className="grl-regle"><span><b>{String(i + 1).padStart(2, '0')} · {p.libelle}</b>
                     <span className="mute">{p.demandee_le ? t('portail.demandee_le', { d: date(p.demandee_le, langue) }) : t(`phases.${p.phase}`, { defaultValue: p.phase })}</span></span>
-                    <Statut statut={p.statut === 'refusee' || p.statut === 'expiree' ? 'err' : 'att'} libelle={t(`portail.pieces.${p.statut}`, { defaultValue: p.statut })} /></div>))}
+                    <span className="actions"><Statut statut={p.statut === 'refusee' || p.statut === 'expiree' ? 'err' : 'att'} libelle={t(`portail.pieces.${p.statut}`, { defaultValue: p.statut })} />
+                      {(() => { const dp = x.depots.find((y) => y.phase === p.phase && y.libelle === p.libelle); return dp ? <Transmettre pieceId={dp.id} onFait={() => void c.recharger()} /> : null; })()}</span></div>))}
                 {actions.length > 0 && <span className="mute">{t('portail.transmettre')}</span>}
                 {x.points_bloquants.filter((b) => !b.resolu).map((b) => <Bandeau key={b.description} type="err">{b.description}</Bandeau>)}
               </section>
@@ -165,6 +167,30 @@ export function EspaceClient() {
       </main>
     </div>
   );
+}
+
+/** Transmission d'une pièce attendue : fichier contrôlé côté serveur, la pièce passe « reçue ». */
+function Transmettre({ pieceId, onFait }: { pieceId: string; onFait: () => void }) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLInputElement>(null);
+  const [etat, setEtat] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState(false);
+  const surFichier = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setEnvoi(true); setEtat(null);
+    try { await deposerPieceClient(pieceId, f); onFait(); }
+    catch (err) {
+      const code = err instanceof FichierRefuse ? (err.message === 'type' ? 'GBS_FICHIER_TYPE' : 'GBS_FICHIER_TAILLE') : String((err as Error).message ?? '');
+      setEtat(t(`erreurs.${code}`, { defaultValue: t('erreurs.generique') }));
+    } finally { setEnvoi(false); }
+  };
+  return (<>
+    <input ref={ref} type="file" hidden accept="application/pdf,image/png,image/jpeg,image/webp" onChange={(e) => void surFichier(e)} />
+    <Bouton petit disabled={envoi} onClick={() => ref.current?.click()}>{envoi ? t('depot.envoi') : t('portail.transmettre_piece')}</Bouton>
+    {etat && <span className="txt-err">{etat}</span>}
+  </>);
 }
 
 function Frise({ phases }: { phases: Contenu['phases'] }) {

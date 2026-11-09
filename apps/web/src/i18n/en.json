@@ -2945,7 +2945,8 @@
    "terminee": "Completed"
   },
   "tous_documents": "All documents",
-  "transmettre": "Send these documents to your project manager; online upload is coming in a later version.",
+  "transmettre": "Send each document from this page (PDF or image, 25 MB max); your project manager then checks it.",
+  "transmettre_piece": "Upload",
   "transparence": "Full transparency",
   "vues": {
    "accueil": "Home",
