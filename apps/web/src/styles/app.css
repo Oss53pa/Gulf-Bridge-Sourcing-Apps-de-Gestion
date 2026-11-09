@@ -151,7 +151,7 @@ table.t td.num, table.t th.num { text-align: right; white-space: nowrap; }
 .statut .g { font-size: 14px; line-height: 1; }
 .statut.ok { color: var(--ok); } .statut.err { color: var(--err); } .statut.att { color: var(--bronze-text); }
 .statut.info { color: var(--nuit); } .statut.neutre { color: var(--sec); }
-.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 13px; background: var(--sable); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; white-space: nowrap; border-radius: 999px; font-size: 13px; background: var(--sable); }
 .chip.ok { background: var(--ok-bg); color: var(--ok); } .chip.err { background: var(--err-bg); color: var(--err); }
 .chip.att { background: #F3E7D6; color: var(--bronze-text); } .chip.info { background: var(--info-bg); color: var(--nuit); }
 
@@ -479,3 +479,43 @@ td.retard-txt { color: var(--err); }
 .escalade .pastille { width: 22px; height: 22px; border-radius: 99px; background: var(--border); color: var(--sec); font-size: 12px; display: flex; align-items: center; justify-content: center; flex: none; }
 .escalade li.atteint .pastille { background: var(--ink); color: var(--bg); }
 .escalade li.atteint:last-child .pastille { background: var(--bronze); }
+
+/* Gantt, rétroplanning, jours ouvrés (maquette) */
+.gantt { display: flex; flex-direction: column; min-width: 760px; }
+.gantt-ligne { display: grid; grid-template-columns: 260px minmax(0, 1fr); align-items: center; min-height: 58px; border-bottom: 1px solid var(--sable); }
+.gantt.rpl .gantt-ligne { grid-template-columns: 230px 56px minmax(0, 1fr); min-height: 48px; }
+.gantt-ligne.cliquable { cursor: pointer; }
+.gantt-ligne.cliquable:hover { background: var(--sable); }
+.gantt-tete { min-height: 34px; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 2; }
+.gantt-gauche { display: flex; flex-direction: column; gap: 2px; padding: 0 10px; min-width: 0; font-size: 13px; }
+.gantt-gauche b { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gantt-gauche.surtitre, .rpl-cible.surtitre { margin: 0; }
+.rpl-cible { text-align: right; padding-right: 10px; font-size: 13px; }
+.gantt-zone { position: relative; height: 100%; min-height: inherit; border-left: 1px solid var(--border); }
+.gantt-mois { position: relative; height: 34px; }
+.gantt-mois span { position: absolute; top: 9px; padding-left: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--mute); white-space: nowrap; }
+.gantt-trait { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--sable); }
+.gantt-barre { position: absolute; top: 50%; transform: translateY(-50%); height: 20px; border-radius: 999px; padding: 0 8px; font-size: 12px; line-height: 20px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; }
+.gantt-barre.faite { background: var(--ink); color: var(--bg); }
+.gantt-barre.cours { background: var(--bronze); color: #fff; }
+.gantt-barre.retard { background: var(--err); color: #fff; }
+.gantt-barre.prevue { background: var(--white); border: 1px solid var(--ink); color: var(--ink); }
+.gantt-auj { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--ink); z-index: 1; }
+.gantt-ouverture { position: absolute; top: 18%; bottom: 18%; width: 2px; background: var(--bronze); z-index: 1; }
+.gantt-legende { display: flex; gap: 22px; flex-wrap: wrap; padding: 12px 10px; font-size: 13px; color: var(--sec); }
+.gantt-legende span { display: inline-flex; align-items: center; gap: 6px; }
+.gantt-legende .gantt-barre { position: static; transform: none; display: inline-block; width: 22px; height: 10px; padding: 0; }
+.gantt-legende .l-auj { display: inline-block; width: 1px; height: 14px; background: var(--ink); }
+.gantt-legende .l-ouv { display: inline-block; width: 2px; height: 14px; background: var(--bronze); }
+.rpl-plan { position: absolute; top: calc(50% + 12px); height: 3px; background: var(--strong); border-radius: 2px; }
+.rpl-dates { position: absolute; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--sec); white-space: nowrap; }
+.rpl-grand { font-family: var(--serif); font-size: 46px; line-height: 1; }
+.rpl-autre { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 0; border-bottom: 1px solid var(--sable); background: transparent;
+  padding: 8px 0; text-align: left; cursor: pointer; width: 100%; }
+.rpl-autre > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rpl-autre b { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rpl-resultat { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--border); padding-top: 10px; }
+.rpl-resultat b { font-family: var(--serif); font-size: 26px; font-weight: 500; }
+.ferie { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--sable); font-size: 14px; }
+.txt-ok { color: var(--ok); } .txt-att { color: var(--bronze-text); } .txt-err { color: var(--err); }

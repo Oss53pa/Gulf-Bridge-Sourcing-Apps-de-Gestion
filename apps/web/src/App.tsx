@@ -14,6 +14,7 @@ import { useAuth } from './lib/auth';
 import { configurationOk } from './lib/supabase';
 import { accueil, ecranAutorise, ROLES_INTERNES } from './lib/droits';
 import { PiecesManquantes, PointsBloquants } from './screens/SuiviDossiers';
+import { GanttPortefeuille, JoursOuvres, Retroplanning } from './screens/Planning';
 import { Coque } from './components/Coque';
 import { AccesReserve, Chargement } from './components/ui';
 import { ConfigurationManquante, Connexion, SansRole } from './screens/Connexion';
@@ -69,6 +70,9 @@ export function App() {
             <Route path="/mes-taches" element={g('mes_taches', <MesTaches />)} />
             <Route path="/pieces-manquantes" element={g('pieces_manquantes', <PiecesManquantes />)} />
             <Route path="/points-bloquants" element={g('points_bloquants', <PointsBloquants />)} />
+            <Route path="/gantt" element={g('gantt', <GanttPortefeuille />)} />
+            <Route path="/retroplanning" element={g('retroplanning', <Retroplanning />)} />
+            <Route path="/jours-ouvres" element={g('calendrier', <JoursOuvres />)} />
             <Route path="/notes-frais" element={g('notes_frais', <NotesFrais />)} />
             <Route path="/rentabilite" element={g('rentabilite', <Rentabilite />)} />
             <Route path="/prospection" element={g('prospection', <Prospection />)} />

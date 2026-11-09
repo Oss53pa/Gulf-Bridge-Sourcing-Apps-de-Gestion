@@ -39,7 +39,6 @@ export const MODULES: Module[] = [
 export const ECRANS: Ecran[] = [
   { id: 'tableau', chemin: '/tableau-de-bord', module: 'pilotage', section: 'synthese', roles: TOUS, lot: 0 },
   { id: 'rentabilite', chemin: '/rentabilite', module: 'pilotage', section: 'synthese', roles: ['admin', 'comptable'], lot: 1 },
-  { id: 'retroplanning', chemin: '', module: 'dossiers', section: 'planning', roles: TOUS, lot: 1 },
   { id: 'journal', chemin: '/journal', module: 'supervision', section: 'controle', roles: ['admin', 'comptable'], lot: 0 },
   { id: 'prospection', chemin: '/prospection', module: 'commercial', section: 'prospection', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 1 },
   { id: 'clients', chemin: '/clients', module: 'commercial', section: 'prospection', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
@@ -49,7 +48,9 @@ export const ECRANS: Ecran[] = [
   { id: 'mes_taches', chemin: '/mes-taches', module: 'dossiers', section: 'suivi', roles: TOUS, lot: 1 },
   { id: 'pieces_manquantes', chemin: '/pieces-manquantes', module: 'dossiers', section: 'suivi', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
   { id: 'points_bloquants', chemin: '/points-bloquants', module: 'dossiers', section: 'suivi', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
-  { id: 'gantt', chemin: '', module: 'dossiers', section: 'planning', roles: TOUS, lot: 2 },
+  { id: 'gantt', chemin: '/gantt', module: 'dossiers', section: 'planning', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 2 },
+  { id: 'retroplanning', chemin: '/retroplanning', module: 'dossiers', section: 'planning', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 1 },
+  { id: 'calendrier', chemin: '/jours-ouvres', module: 'dossiers', section: 'planning', roles: TOUS, lot: 1 },
   { id: 'fournisseurs', chemin: '/fournisseurs', module: 'achats', section: 'fournisseurs', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
   { id: 'articles', chemin: '/articles', module: 'achats', section: 'fournisseurs', roles: TOUS, lot: 0 },
   { id: 'consultations', chemin: '/mise-en-concurrence', module: 'achats', section: 'consultation', roles: ['admin', 'achats_chine'], lot: 0 },
@@ -101,7 +102,7 @@ export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacriti
 /** Codes d'écran (« T-codes ») : saisis dans la recherche du Sommaire, Entrée ouvre l'écran. */
 export const TCODES: Record<string, string> = {
   tableau: 'TDB', rentabilite: 'RNT', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
-  appels_offres: 'AOF', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', fournisseurs: 'FOU',
+  appels_offres: 'AOF', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', fournisseurs: 'FOU',
   articles: 'ART', consultations: 'MEC', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
   expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
   rapprochement: 'BNK', flux: 'FLX', tresorerie: 'TRC', commissions: 'COM', notes_frais: 'NDF', messagerie: 'MSG', parametrage: 'PAR',
