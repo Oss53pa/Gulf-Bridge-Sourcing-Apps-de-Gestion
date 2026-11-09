@@ -30,6 +30,7 @@ import { MesTaches } from './screens/Delais';
 import { PageSuivi } from './screens/Suivi';
 import { NotesFrais, Rentabilite } from './screens/Couts';
 import { Alertes } from './screens/Alertes';
+import { Recherche } from './screens/Recherche';
 import { ImprimerRapportOffres } from './screens/RapportOffres';
 import { Articles, Clients, FicheClient, FicheFournisseur, Fournisseurs } from './screens/Tiers';
 import { Commandes, FicheCommande, HistoriquePrix, MiseEnConcurrence } from './screens/Achats';
@@ -117,6 +118,7 @@ export function App() {
             <Route path="/paiements" element={g('paiements', <Paiements />)} />
             <Route path="/journal" element={g('journal', <Journal />)} />
             <Route path="/alertes" element={g('alertes', <Alertes />)} />
+            <Route path="/recherche" element={g('recherche', <Recherche />)} />
             <Route path="/parametrage" element={g('parametrage', <Parametrage />)} />
             <Route path="*" element={<AccesReserve />} />
           </Routes>

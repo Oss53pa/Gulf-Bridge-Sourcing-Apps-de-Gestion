@@ -1119,6 +1119,7 @@
   "productivite": "Productivity",
   "prospection": "Prospecting",
   "rapprochement": "Bank statements & reconciliation",
+  "recherche": "Global search",
   "rentabilite": "Profitability by mission",
   "reserves": "Reception reservations",
   "retroplanning": "Backward planning",
@@ -2975,6 +2976,15 @@
   },
   "titre": "Site receptions"
  },
+ "recherche": {
+  "aide": "Enter at least two characters.",
+  "aucun": "No result for \"{{q}}\".",
+  "droits": "Only items your rights allow you to read appear; at most 8 results per field.",
+  "essayez": "Try",
+  "placeholder": "Search a client, file, invoice, shipment…",
+  "resultats": "{{n}} result(s) in {{m}} module(s)",
+  "tous_modules": "all modules"
+ },
  "ref": {
   "accord": "Consent",
   "accords": {
@@ -3155,6 +3165,7 @@
   "portefeuille": "Portfolio",
   "prospection": "Prospecting",
   "rapports": "Reports",
+  "recherche": "Search",
   "referentiel": "Reference data",
   "suivi": "Follow-up",
   "synthese": "Overview",

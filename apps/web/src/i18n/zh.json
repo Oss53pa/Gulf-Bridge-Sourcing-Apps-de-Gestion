@@ -1119,6 +1119,7 @@
   "productivite": "效率",
   "prospection": "潜在客户",
   "rapprochement": "银行对账单与对账",
+  "recherche": "全局搜索",
   "rentabilite": "项目盈利",
   "reserves": "验收保留意见",
   "retroplanning": "倒排计划",
@@ -2975,6 +2976,15 @@
   },
   "titre": "现场验收"
  },
+ "recherche": {
+  "aide": "请至少输入两个字符。",
+  "aucun": "未找到“{{q}}”的结果。",
+  "droits": "仅显示您有权查看的内容；每个字段最多 8 条。",
+  "essayez": "试试",
+  "placeholder": "搜索客户、项目、发票、发运…",
+  "resultats": "{{m}} 个模块中共 {{n}} 条结果",
+  "tous_modules": "全部模块"
+ },
  "ref": {
   "accord": "同意",
   "accords": {
@@ -3155,6 +3165,7 @@
   "portefeuille": "项目组合",
   "prospection": "潜在客户",
   "rapports": "报告",
+  "recherche": "搜索",
   "referentiel": "基础数据",
   "suivi": "跟进",
   "synthese": "概览",

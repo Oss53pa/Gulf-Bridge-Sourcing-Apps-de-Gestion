@@ -765,3 +765,13 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .alr-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .alr-detail .btn { align-self: flex-start; text-decoration: none; }
 @media (max-width: 1100px) { .ref-grille.alr-grille { grid-template-columns: 1fr; } .alr-ligne { grid-template-columns: 1fr; gap: 4px; } }
+
+/* Supervision · recherche globale */
+.rch-form .search { width: 100%; max-width: 720px; height: 48px; font-size: 17px; }
+.rch-essais { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rch-essais .chip { border: 0; cursor: pointer; font: inherit; font-size: 13px; }
+.rch-groupes { display: flex; flex-direction: column; gap: 20px; max-width: 900px; }
+.rch-groupe { display: flex; flex-direction: column; border-top: 1px solid var(--ink); padding-top: 8px; }
+.rch-ligne { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--border); color: var(--ink); text-decoration: none; }
+.rch-ligne > span:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rch-ligne:hover { background: var(--white); }

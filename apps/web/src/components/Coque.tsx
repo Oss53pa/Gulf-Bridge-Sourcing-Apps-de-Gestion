@@ -107,7 +107,7 @@ export function Coque({ children }: { children: ReactNode }) {
     e.preventDefault();
     const v = q.trim();
     if (v.length < 2 || v.length > 80) return;
-    nav(`/dossiers?q=${encodeURIComponent(v)}`);
+    nav(`/recherche?q=${encodeURIComponent(v)}`);
   };
 
   return (

@@ -1119,6 +1119,7 @@
   "productivite": "Productivité",
   "prospection": "Prospection",
   "rapprochement": "Relevés bancaires et rapprochement",
+  "recherche": "Recherche globale",
   "rentabilite": "Rentabilité par mission",
   "reserves": "Réserves de réception",
   "retroplanning": "Rétroplanning",
@@ -2975,6 +2976,15 @@
   },
   "titre": "Réceptions sur site"
  },
+ "recherche": {
+  "aide": "Saisissez au moins deux caractères.",
+  "aucun": "Aucun résultat pour « {{q}} ».",
+  "droits": "Seuls les éléments que vos droits permettent de lire apparaissent ; 8 résultats au plus par champ.",
+  "essayez": "Essayez",
+  "placeholder": "Rechercher un client, un dossier, une facture, une expédition…",
+  "resultats": "{{n}} résultat(s) dans {{m}} module(s)",
+  "tous_modules": "tous les modules"
+ },
  "ref": {
   "accord": "Accord",
   "accords": {
@@ -3155,6 +3165,7 @@
   "portefeuille": "Portefeuille",
   "prospection": "Prospection",
   "rapports": "Rapports",
+  "recherche": "Recherche",
   "referentiel": "Référentiel",
   "suivi": "Suivi",
   "synthese": "Synthèse",
