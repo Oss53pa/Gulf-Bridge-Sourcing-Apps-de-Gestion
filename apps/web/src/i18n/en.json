@@ -12,6 +12,47 @@
   "sous_surveillance": "Under watch",
   "suspendu": "Suspended"
  },
+ "alertes": {
+  "a_traiter": "To handle",
+  "actions": {
+   "due_diligence": "Start the due diligence review before expiry.",
+   "fne": "Obtain FNE certification before sending to the client.",
+   "paiement_a_valider": "Check the account and approve the payment (dual approval).",
+   "point_bloquant": "Settle the escalated issue and record the resolution.",
+   "retard_paiement": "Chase the client and track collection."
+  },
+  "aide": "Deadlines from every module and entries awaiting action, within your rights. Same rules as the header counter.",
+  "aucune": "No alert.",
+  "aujourdhui": "Today",
+  "categories": {
+   "due_diligence": "Due diligence",
+   "fne": "Invoice to certify",
+   "paiement_a_valider": "Payment to approve",
+   "point_bloquant": "Blocking issue",
+   "retard_paiement": "Late payment"
+  },
+  "critique": "Critical",
+  "dans": "In {{n}} d",
+  "dd_detail": "{{ref}} · start the review before expiry",
+  "dd_titre": "{{f}} · approval valid until {{d}}",
+  "delai": "Time left",
+  "depassee": "{{n}} d overdue",
+  "echeance": "Due date",
+  "fne_titre": "{{ref}} · awaiting FNE certification",
+  "fr_titre": "{{ref}} unpaid since {{d}}",
+  "natures": {
+   "acompte": "deposit",
+   "echantillon": "sample",
+   "frais": "fees",
+   "solde": "balance"
+  },
+  "ouvrir": "Open →",
+  "pay_titre": "{{ref}} · {{nature}} prepared, to approve",
+  "pb_titre": "Escalated blocking issue · file {{ref}}",
+  "reference": "Reference",
+  "titre": "{{n}} alert(s), {{c}} critical",
+  "toutes": "All"
+ },
  "ao": {
   "aide_depot": "Submission requires every document. The reasons for each lost tender inform the next responses.",
   "aide_nouveau": "The list of administrative documents is prefilled; adjust it to the tender file.",
@@ -1041,6 +1082,7 @@
   "transporteur": "Carrier"
  },
  "ecrans": {
+  "alertes": "Alerts",
   "appels_offres": "Tenders",
   "approbation": "Technical approval",
   "articles": "Item master",

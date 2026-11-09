@@ -12,6 +12,47 @@
   "sous_surveillance": "Sous surveillance",
   "suspendu": "Suspendu"
  },
+ "alertes": {
+  "a_traiter": "À traiter",
+  "actions": {
+   "due_diligence": "Lancer la revue de due diligence avant expiration.",
+   "fne": "Obtenir la certification FNE avant envoi au client.",
+   "paiement_a_valider": "Contrôler le compte et valider le paiement (double validation).",
+   "point_bloquant": "Arbitrer le point escaladé et consigner la résolution.",
+   "retard_paiement": "Relancer le client et suivre l'encaissement."
+  },
+  "aide": "Les échéances de tous les modules et les saisies qui attendent une action, selon vos droits. Mêmes règles que le compteur de l'en-tête.",
+  "aucune": "Aucune alerte.",
+  "aujourdhui": "Aujourd'hui",
+  "categories": {
+   "due_diligence": "Due diligence",
+   "fne": "Facture à certifier",
+   "paiement_a_valider": "Paiement à valider",
+   "point_bloquant": "Point bloquant",
+   "retard_paiement": "Retard de paiement"
+  },
+  "critique": "Critique",
+  "dans": "Dans {{n}} j",
+  "dd_detail": "{{ref}} · lancer la revue avant expiration",
+  "dd_titre": "{{f}} · agrément valable jusqu'au {{d}}",
+  "delai": "Délai",
+  "depassee": "Dépassée de {{n}} j",
+  "echeance": "Échéance",
+  "fne_titre": "{{ref}} · en attente de certification FNE",
+  "fr_titre": "{{ref}} impayée depuis le {{d}}",
+  "natures": {
+   "acompte": "acompte",
+   "echantillon": "échantillon",
+   "frais": "frais",
+   "solde": "solde"
+  },
+  "ouvrir": "Ouvrir →",
+  "pay_titre": "{{ref}} · {{nature}} préparé, à valider",
+  "pb_titre": "Point bloquant escaladé · dossier {{ref}}",
+  "reference": "Référence",
+  "titre": "{{n}} alerte(s), dont {{c}} critique(s)",
+  "toutes": "Toutes"
+ },
  "ao": {
   "aide_depot": "Le dépôt exige toutes les pièces. Les motifs de chaque appel d'offres perdu servent aux réponses suivantes.",
   "aide_nouveau": "La liste des pièces administratives est pré-remplie ; ajustez-la au dossier de consultation.",
@@ -1041,6 +1082,7 @@
   "transporteur": "Transporteur"
  },
  "ecrans": {
+  "alertes": "Alertes",
   "appels_offres": "Appels d'offres",
   "approbation": "Approbation technique",
   "articles": "Référentiel articles",

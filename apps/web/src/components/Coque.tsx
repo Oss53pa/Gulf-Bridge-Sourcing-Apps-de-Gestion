@@ -137,7 +137,7 @@ export function Coque({ children }: { children: ReactNode }) {
             }}>{l === 'zh' ? '中文' : `${l.toUpperCase()} · 中文`}</button>
           ))}
         </div>
-        <button className="tb-btn" onClick={() => nav('/tableau-de-bord')} aria-label={t('coque.alertes')}>
+        <button className="tb-btn" onClick={() => nav('/alertes')} aria-label={t('coque.alertes')}>
           {t('coque.alertes')} {alertes !== null && alertes > 0 && <span className="badge">{alertes}</span>}
         </button>
         <span className={'sync' + (enLigne ? '' : ' off')}>

@@ -39,6 +39,7 @@ export const MODULES: Module[] = [
 export const ECRANS: Ecran[] = [
   { id: 'tableau', chemin: '/tableau-de-bord', module: 'pilotage', section: 'synthese', roles: TOUS, lot: 0 },
   { id: 'rentabilite', chemin: '/rentabilite', module: 'pilotage', section: 'synthese', roles: ['admin', 'comptable'], lot: 1 },
+  { id: 'alertes', chemin: '/alertes', module: 'supervision', section: 'controle', roles: TOUS, lot: 0 },
   { id: 'journal', chemin: '/journal', module: 'supervision', section: 'controle', roles: ['admin', 'comptable'], lot: 0 },
   { id: 'prospection', chemin: '/prospection', module: 'commercial', section: 'prospection', roles: ['admin', 'hub_afrique', 'agent_pays'], lot: 1 },
   { id: 'clients', chemin: '/clients', module: 'commercial', section: 'prospection', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable'], lot: 0 },
@@ -108,7 +109,7 @@ export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacriti
 
 /** Codes d'écran (« T-codes ») : saisis dans la recherche du Sommaire, Entrée ouvre l'écran. */
 export const TCODES: Record<string, string> = {
-  tableau: 'TDB', rentabilite: 'RNT', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
+  tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
   appels_offres: 'AOF', fiches_reference: 'REF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
   articles: 'ART', consultations: 'MEC', historique_prix: 'PRX', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
   expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
