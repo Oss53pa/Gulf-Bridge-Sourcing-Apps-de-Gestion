@@ -9,7 +9,7 @@ import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date } from '../lib/format';
 import { urlSignee } from '../lib/fichiers';
-import { Bandeau, Bouton, CadreTableau, Champ, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
+import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
 import { Depot } from '../components/Depot';
 
 interface Reception { id: string; reference: string; dossier_id: string; expedition_id: string | null; date_reception: string; lieu: string;
@@ -25,6 +25,115 @@ const GRAVITE = { mineure: 'neutre', majeure: 'att', bloquante: 'err' } as const
 const DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 async function ouvrir(c: string) { const u = await urlSignee(c); if (u) window.open(u, '_blank', 'noopener,noreferrer'); }
+
+interface Livraison { id: string; reference: string; dossier_id: string; transitaire: string | null; port_arrivee: string | null; statut: string;
+  date_mainlevee: string | null; dossiers: { reference: string; clients: { raison_sociale: string } | null } | null }
+type RecLiv = Pick<Reception, 'id' | 'reference' | 'expedition_id' | 'statut' | 'client_signataire' | 'date_reception'>;
+type ResLiv = Pick<Reserve, 'id' | 'reception_id' | 'numero' | 'description' | 'statut' | 'gravite'>;
+// Dédouanement : seules les étapes mesurées en base (lien transmis au transitaire, déclaration déposée, mainlevée).
+const DOUANE = ['documents_transmis', 'declaration_deposee', 'mainlevee'] as const;
+
+/** Livraison et réception (maquette LIV) : expéditions arrivées, dédouanement, procès-verbal et réserves. */
+export function Livraisons() {
+  const { t } = useTranslation();
+  const { profil, langue } = useAuth();
+  const ecrit = ['admin', 'hub_afrique'].includes(profil?.role ?? '');
+  const l = useAsync(async () => ok(await supabase.from('expeditions').select('id, reference, dossier_id, transitaire, port_arrivee, statut, date_mainlevee, dossiers(reference, clients(raison_sociale))')
+    .in('statut', ['arrivee', 'mise_a_disposition', 'livree']).order('modifie_le', { ascending: false }).limit(200)) as unknown as Livraison[], []);
+  const ids = (l.data ?? []).map((e) => e.id);
+  const cle = ids.join(',');
+  const rec = useAsync(async () => (ids.length ? ok(await supabase.from('receptions').select('id, reference, expedition_id, statut, client_signataire, date_reception')
+    .in('expedition_id', ids).order('cree_le', { ascending: false })) as RecLiv[] : []), [cle]);
+  const recIds = (rec.data ?? []).map((r) => r.id);
+  const res = useAsync(async () => (recIds.length ? ok(await supabase.from('reserves_reception').select('id, reception_id, numero, description, statut, gravite')
+    .in('reception_id', recIds).order('numero')) as ResLiv[] : []), [recIds.join(',')]);
+  const docs = useAsync(async () => (ids.length ? ok(await supabase.from('documents_transitaires').select('expedition_id, type').in('expedition_id', ids)
+    .in('type', ['declaration_douane', 'mainlevee'])) as { expedition_id: string; type: string }[] : []), [cle]);
+  const liens = useAsync(async () => (ids.length ? ok(await supabase.from('liens_transitaires').select('expedition_id').in('expedition_id', ids)) as { expedition_id: string }[] : []), [cle]);
+  const [sel, setSel] = useState<string | null>(null);
+  const [fiche, setFiche] = useState<string | null>(null);
+  const [nouvelle, setNouvelle] = useState(false);
+  const tous = l.data ?? [];
+  // Réception courante : la plus récente non refusée, sinon la plus récente.
+  const reception = (e: string) => { const r = (rec.data ?? []).filter((x) => x.expedition_id === e); return r.find((x) => x.statut !== 'refusee') ?? r[0] ?? null; };
+  const reserves = (r: RecLiv | null) => (r ? (res.data ?? []).filter((x) => x.reception_id === r.id) : []);
+  const douane = (e: Livraison) => {
+    const d = (docs.data ?? []).filter((x) => x.expedition_id === e.id).map((x) => x.type);
+    return { documents_transmis: (liens.data ?? []).some((x) => x.expedition_id === e.id), declaration_deposee: d.includes('declaration_douane'),
+      mainlevee: Boolean(e.date_mainlevee) || d.includes('mainlevee') };
+  };
+  const etapeDouane = (e: Livraison) => { const d = douane(e); return d.mainlevee ? 'mainlevee' : d.declaration_deposee ? 'declaration_deposee' : d.documents_transmis ? 'documents_transmis' : null; };
+  const pv = (r: RecLiv | null) => {
+    if (!r) return { statut: 'neutre', lib: t('livraison.pv_a_venir') };
+    const ouvertes = reserves(r).filter((x) => x.statut === 'ouverte').length;
+    if (r.statut === 'signee') return { statut: ouvertes ? 'att' : 'ok', lib: ouvertes ? t('livraison.pv_signe_reserves', { n: ouvertes }) : t('livraison.pv_reserves_levees') };
+    if (r.statut === 'definitive') return { statut: 'ok', lib: reserves(r).length ? t('reception.statuts.definitive') : t('livraison.pv_sans_reserve') };
+    return { statut: STATUT[r.statut], lib: t(`reception.statuts.${r.statut}`) };
+  };
+  const enCours = tous.filter((e) => reception(e.id)?.statut !== 'definitive');
+  const aLever = (res.data ?? []).filter((x) => x.statut === 'ouverte' && (rec.data ?? []).some((r) => r.id === x.reception_id && r.statut === 'signee')).length;
+  const titre = [t('livraison.titre_en_cours', { n: enCours.length }), aLever ? t('livraison.titre_reserves', { n: aLever }) : null].filter(Boolean).join(' ; ');
+  const x = tous.find((e) => e.id === sel) ?? tous[0] ?? null;
+  const rx = x ? reception(x.id) : null;
+  const ddmm = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
+  return (
+    <div className="screen">
+      <Entete surtitre={`${t('modules.logistique')} · ${t('livraison.surtitre')} · LIV`} titre={l.data ? titre : t('ecrans.livraisons')} />
+      <Bandeau type="err">{l.erreur ?? rec.erreur ?? res.erreur ?? docs.erreur ?? liens.erreur}</Bandeau>
+      <div className="ref-grille liv-grille">
+        <div className="cadre">
+          {l.chargement && !l.data ? <Chargement /> : tous.length === 0 ? <Vide>{t('livraison.aucune')}</Vide> : (
+            <table className="t"><thead><tr><th>{t('livraison.livraison')}</th><th>{t('livraison.client')}</th><th>{t('livraison.transitaire')}</th>
+              <th>{t('livraison.dedouanement')}</th><th>{t('champs.date')}</th><th>{t('livraison.pv')}</th></tr></thead>
+              <tbody>{tous.map((e) => {
+                const r = reception(e.id), p = pv(r), d = etapeDouane(e);
+                return (
+                  <tr key={e.id} className={'cliquable' + (x?.id === e.id ? ' choisi' : '')} onClick={() => setSel(e.id)}>
+                    <td className="ref">{e.reference}</td><td>{e.dossiers?.clients?.raison_sociale ?? '—'}</td>
+                    <td className="sec">{e.transitaire ?? '—'}</td>
+                    <td><Statut statut={d === 'mainlevee' ? 'ok' : d ? 'info' : 'neutre'} libelle={d ? t(`livraison.douane.${d}`) : t('livraison.douane_non_commence')} /></td>
+                    <td className="ref">{ddmm(r?.date_reception ?? e.date_mainlevee)}</td>
+                    <td><Statut statut={p.statut} libelle={p.lib} /></td>
+                  </tr>);
+              })}</tbody></table>
+          )}
+        </div>
+        {x && (
+          <aside className="exp-aside liv-detail">
+            <section>
+              <span className="mute">{x.reference}</span>
+              <b className="liv-client">{x.dossiers?.clients?.raison_sociale ?? '—'}</b>
+              <span className="sec">{[x.dossiers?.reference, x.transitaire, x.port_arrivee].filter(Boolean).join(' · ')}</span>
+              <Link to={`/expeditions/${x.id}`}>{t('livraison.voir_expedition')}</Link>
+            </section>
+            <section>
+              <div className="surtitre">{t('livraison.dedouanement')}</div>
+              <div className="liv-douane">{DOUANE.map((k) => <div key={k} className={douane(x)[k] ? 'fait' : ''}><span />{t(`livraison.douane.${k}`)}</div>)}</div>
+              {x.date_mainlevee && <span className="mute">{t('livraison.mainlevee_le', { d: date(x.date_mainlevee, langue) })}</span>}
+              <p className="mute">{t('livraison.aide_douane')}</p>
+            </section>
+            <section>
+              <div className="liv-pv"><span className="surtitre">{t('livraison.reception_site')}</span><Statut statut={pv(rx).statut} libelle={pv(rx).lib} /></div>
+              {rx ? <>
+                <span className="sec">{rx.client_signataire ? t('livraison.signe_par', { nom: rx.client_signataire }) : `${rx.reference} · ${date(rx.date_reception, langue)}`}</span>
+                {reserves(rx).map((s) => (
+                  <div key={s.id} className="liv-reserve"><span>{s.numero}. {s.description}</span>
+                    <Statut statut={s.statut === 'levee' ? 'ok' : 'att'} libelle={t(`reception.statuts_reserve.${s.statut}`)} />
+                    {ecrit && rx.statut === 'signee' && s.statut === 'ouverte' ? <Bouton petit onClick={() => setFiche(rx.id)}>{t('reception.lever')}</Bouton> : <span />}
+                  </div>))}
+                <Bouton onClick={() => setFiche(rx.id)}>{t('livraison.ouvrir_pv')}</Bouton>
+              </> : ecrit ? <Bouton variante="primaire" onClick={() => setNouvelle(true)}>{t('reception.nouvelle')}</Bouton>
+                : <span className="mute">{t('reception.aucune')}</span>}
+            </section>
+          </aside>
+        )}
+      </div>
+      {nouvelle && x && <NouvelleReception dossierId={x.dossier_id} expeditionId={x.id} onClose={() => setNouvelle(false)}
+        onSaved={(id) => { setNouvelle(false); setFiche(id); void rec.recharger(); }} />}
+      {fiche && <FicheReception id={fiche} onClose={() => setFiche(null)} onChange={() => { void rec.recharger(); void res.recharger(); }} />}
+    </div>
+  );
+}
 
 /** Réserves ouvertes de tous les dossiers visibles, en retard d'abord. */
 export function ReservesOuvertes() {
@@ -83,12 +192,12 @@ export function ReceptionsDossier({ dossierId }: { dossierId: string }) {
   );
 }
 
-function NouvelleReception({ dossierId, onClose, onSaved }: { dossierId: string; onClose: () => void; onSaved: (id: string) => void }) {
+function NouvelleReception({ dossierId, expeditionId, onClose, onSaved }: { dossierId: string; expeditionId?: string; onClose: () => void; onSaved: (id: string) => void }) {
   const { t } = useTranslation();
   const a = useAction();
   const exp = useAsync(async () => ok(await supabase.from('expeditions').select('id, reference, statut').eq('dossier_id', dossierId)
     .in('statut', ['arrivee', 'mise_a_disposition', 'livree'])) as { id: string; reference: string }[], [dossierId]);
-  const [f, setF] = useState({ expedition_id: '', date_reception: aujourdhui(), lieu: '', constat: '' });
+  const [f, setF] = useState({ expedition_id: expeditionId ?? '', date_reception: aujourdhui(), lieu: '', constat: '' });
   const enregistrer = async () => {
     const v = z.object({ dossier_id: z.string().uuid(), expedition_id: z.string().uuid().nullable(), date_reception: DATE, lieu: z.string().trim().min(2).max(200),
       constat: z.string().trim().max(4000).nullable() }).strict()

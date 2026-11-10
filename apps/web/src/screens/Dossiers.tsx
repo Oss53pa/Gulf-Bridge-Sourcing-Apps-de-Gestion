@@ -5,84 +5,173 @@ import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { date } from '../lib/format';
+import { nombre } from '../lib/format';
 import { normaliser as _n } from '../lib/droits';
-import type { Client, Dossier, Phase, Piece } from '../lib/types';
-import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Onglets, Statut, Vide } from '../components/ui';
+import type { Client, Piece } from '../lib/types';
+import { Bandeau, Bouton, Champ, Chargement, Entete, Onglets, Statut, Vide } from '../components/ui';
 import { useNoms } from '../lib/referentiels';
+
+interface LignePortefeuille {
+  id: string; reference: string; intitule: string; client_id: string; client: string; segment: string | null; pays: string;
+  societe_id: string; modele: string; mode_financier: string; phase_courante: string; statut: string; priorite: string;
+  ouvert_le: string; date_ouverture_site: string | null; chef_id: string | null; completude: number; fob_xof: number | null;
+  marge_jours: number | null; marge_alerte: boolean; etat: string;
+}
+const ETATS: Record<string, string> = {
+  bloquant: 'err', intenable: 'err', nc_ouverte: 'att', attente_tiers: 'att', dans_les_delais: 'ok',
+  suspendu: 'att', clos: 'neutre', annule: 'neutre',
+};
+const ORDRE_PHASES = ['consultation', 'verification', 'mise_en_concurrence', 'devis_mandat', 'contrat', 'approbation_technique',
+  'production', 'inspection', 'expedition', 'livraison', 'cloture'];
+const initiales = (nom: string | undefined) => (nom ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('');
+
+function Completude({ v }: { v: number }) {
+  const pc = Math.round(v * 100);
+  const cls = pc >= 90 ? 'ok' : pc < 50 ? 'bas' : '';
+  return (
+    <span className="compl">
+      <span className={'compl-piste ' + cls}><span style={{ width: `${pc}%` }} /></span>
+      <span className="compl-pc">{pc} %</span>
+    </span>
+  );
+}
 
 export function Portefeuille() {
   const { t } = useTranslation();
   const nav = useNavigate();
   const [params] = useSearchParams();
-  const { societeActive, langue, profil } = useAuth();
-  const [filtre, setFiltre] = useState<'ouvert' | 'clos' | 'tous'>('ouvert');
+  const { societeActive, langue, profil, societes } = useAuth();
+  const [statut, setStatut] = useState<'ouvert' | 'clos' | 'tous'>('ouvert');
+  const [modele, setModele] = useState<string>('tous');
+  const [vue, setVue] = useState<'liste' | 'colonnes'>('liste');
+  const [plein, setPlein] = useState(false);
   const [q, setQ] = useState(params.get('q') ?? '');
   const [sel, setSel] = useState<string | null>(null);
-  const clients = useNoms('clients');
-  const { data, erreur, chargement } = useAsync(async () => {
-    let r = supabase.from('dossiers').select('*').order('cree_le', { ascending: false }).limit(500);
-    if (societeActive) r = r.eq('societe_id', societeActive);
-    if (filtre !== 'tous') r = r.eq('statut', filtre);
-    return ok(await r) as Dossier[];
-  }, [societeActive, filtre]);
+  const profils = useNoms('profils');
+  const { data, erreur, chargement } = useAsync(async () =>
+    ok(await supabase.rpc('portefeuille', { p_statut: statut === 'tous' ? null : statut })) as LignePortefeuille[], [statut]);
+  const parSociete = useMemo(() => (data ?? []).filter((d) => !societeActive || d.societe_id === societeActive), [data, societeActive]);
+  const modeles = useMemo(() => [...new Set(parSociete.map((d) => d.modele))], [parSociete]);
   const liste = useMemo(() => {
     const n = _n(q.trim());
-    return (data ?? []).filter((d) => !n || _n(d.reference).includes(n) || _n(d.intitule).includes(n) || _n(clients[d.client_id] ?? '').includes(n));
-  }, [data, q, clients]);
-  const choisi = liste.find((d) => d.id === sel) ?? null;
-  const phases = useAsync(async () => (choisi ? (ok(await supabase.from('dossier_phases').select('*').eq('dossier_id', choisi.id).order('ordre')) as Phase[]) : []), [choisi?.id]);
+    return parSociete.filter((d) => (modele === 'tous' || d.modele === modele)
+      && (!n || _n(d.reference).includes(n) || _n(d.intitule).includes(n) || _n(d.client).includes(n)));
+  }, [parSociete, modele, q]);
+  const choisi = liste.find((d) => d.id === sel) ?? liste[0] ?? null;
   const peutCreer = ['admin', 'hub_afrique', 'agent_pays'].includes(profil?.role ?? '');
+  const m = (v: number | null) => (v === null ? '—' : `${nombre(v / 1e6, langue, 1)} M`);
+  const fobTotal = parSociete.reduce((a, d) => a + (d.fob_xof ?? 0), 0);
+  const fobVisible = parSociete.some((d) => d.fob_xof !== null);
+  const alertes = parSociete.filter((d) => d.marge_alerte).length;
+  const titre = [
+    t('portefeuille.titre_n', { n: parSociete.length, statut: t(`portefeuille.statut_${statut}`) }),
+    fobVisible ? t('portefeuille.titre_fob', { v: nombre(fobTotal / 1e6, langue, 1) }) : null,
+  ].filter(Boolean).join(', ') + (alertes > 0 ? ` ; ${t('portefeuille.titre_marge', { n: alertes })}` : '');
+  const ddmmyyyy = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : '—');
+  const etat = (d: LignePortefeuille) => <Statut statut={ETATS[d.etat] ?? 'neutre'} libelle={t(`portefeuille.etats.${d.etat}`)} />;
+
+  const exporter = () => {
+    const echap = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lignes = [['reference', 'client', 'pays', 'phase', 'etat', 'completude', 'fob_xof', 'ouverture_site', 'marge_jours'].join(';'),
+      ...liste.map((d) => [d.reference, d.client, d.pays, d.phase_courante, d.etat, Math.round(d.completude * 100), d.fob_xof ?? '',
+        d.date_ouverture_site ?? '', d.marge_jours ?? ''].map(echap).join(';'))];
+    const url = URL.createObjectURL(new Blob(['﻿' + lignes.join('\n')], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = `portefeuille-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.dossiers')} · M23`} titre={t('dossiers.titre', { n: liste.length })}
-        actions={peutCreer && <Link className="btn primaire" to="/dossiers/nouveau">{t('dossiers.nouveau')}</Link>} />
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 'none' }}>
-        <Onglets actif={filtre} onChange={setFiltre} items={[
-          { id: 'ouvert', lib: t('dossiers.ouverts') }, { id: 'clos', lib: t('dossiers.clos') }, { id: 'tous', lib: t('dossiers.tous') }]} />
-        <input className="search" placeholder={t('dossiers.filtrer')} value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} aria-label={t('dossiers.filtrer')} />
+      <Entete surtitre={`${t('modules.dossiers')} · ${t('sections.portefeuille')} · PTF`} titre={chargement ? t('ecrans.portefeuille') : titre}
+        actions={<>
+          <Bouton onClick={exporter} disabled={liste.length === 0}>{t('portefeuille.exporter')}</Bouton>
+          {peutCreer && <Link className="btn primaire" to="/dossiers/nouveau">{t('dossiers.nouveau')}</Link>}
+        </>} />
+      <div className="pf-barre">
+        <Onglets actif={modele} onChange={setModele} items={[
+          { id: 'tous', lib: t('dossiers.tous') }, ...modeles.map((x) => ({ id: x, lib: t(`modeles.${x}`) }))]} />
+        <input className="pf-recherche" placeholder={t('portefeuille.rechercher')} value={q} maxLength={80}
+          onChange={(e) => setQ(e.target.value)} aria-label={t('portefeuille.rechercher')} />
+        <span className="pf-droite">
+          <select className="pf-statut" value={statut} onChange={(e) => setStatut(e.target.value as typeof statut)} aria-label={t('champs.statut')}>
+            <option value="ouvert">{t('dossiers.ouverts')}</option><option value="clos">{t('dossiers.clos')}</option><option value="tous">{t('dossiers.tous')}</option>
+          </select>
+          <span className="mute">{t('portefeuille.lignes', { n: liste.length })}</span>
+          <span className="pf-vues" role="tablist">
+            <button role="tab" aria-selected={vue === 'liste'} onClick={() => setVue('liste')}>{t('portefeuille.liste')}</button>
+            <button role="tab" aria-selected={vue === 'colonnes'} onClick={() => setVue('colonnes')}>{t('portefeuille.colonnes')}</button>
+          </span>
+          <Bouton petit onClick={() => setPlein(true)}>{t('commun.plein_ecran')}</Bouton>
+        </span>
       </div>
       <Bandeau type="err">{erreur}</Bandeau>
-      <div className="liste-detail">
-        <div className="liste">
-          <CadreTableau>
-            {chargement ? <Chargement /> : liste.length === 0 ? <Vide>{t('dossiers.aucun')}</Vide> : (
+      <div className="liste-detail pf">
+        <div className={plein ? 'plein-ecran' : 'liste'}>
+          {plein && <div className="actions" style={{ justifyContent: 'flex-end' }}><Bouton petit onClick={() => setPlein(false)}>{t('commun.quitter_plein_ecran')}</Bouton></div>}
+          {chargement ? <Chargement /> : liste.length === 0 ? <Vide>{t('dossiers.aucun')}</Vide> : vue === 'liste' ? (
+            <div className="cadre">
               <table className="t">
-                <thead><tr><th>{t('champs.reference')}</th><th>{t('champs.client')} · {t('champs.intitule')}</th><th>{t('champs.mode')}</th>
-                  <th>{t('champs.phase')}</th><th>{t('champs.priorite')}</th><th>{t('champs.ouvert_le')}</th></tr></thead>
+                <thead><tr><th>{t('champs.reference')}</th><th>{t('champs.client')}</th><th>{t('champs.pays')}</th><th>{t('champs.phase')}</th>
+                  <th>{t('champs.statut')}</th><th>{t('portefeuille.completude')}</th><th className="num">FOB</th>
+                  <th className="num">{t('portefeuille.ouverture')}</th><th className="num">{t('portefeuille.marge')}</th></tr></thead>
                 <tbody>
                   {liste.map((d) => (
-                    <tr key={d.id} className="cliquable" aria-selected={d.id === sel} onClick={() => setSel(d.id)} onDoubleClick={() => nav(`/dossiers/${d.id}`)}>
+                    <tr key={d.id} className="cliquable" aria-selected={d.id === choisi?.id} onClick={() => setSel(d.id)} onDoubleClick={() => nav(`/dossiers/${d.id}`)}>
                       <td className="ref">{d.reference}</td>
-                      <td><div>{clients[d.client_id] ?? '…'}</div><div className="mute">{d.intitule}</div></td>
-                      <td className="sec">{t(`modes.${d.mode_financier}`)}</td>
-                      <td><Statut statut={d.statut === 'ouvert' ? 'en_cours' : d.statut} libelle={t(`phases.${d.phase_courante}`)} /></td>
-                      <td className="sec">{t(`priorites.${d.priorite}`)}</td>
-                      <td className="ref">{date(d.ouvert_le, langue)}</td>
+                      <td className="ellipse" title={d.intitule}>{d.client}</td>
+                      <td className="sec">{d.pays}</td>
+                      <td>{t(`phases.${d.phase_courante}`)}</td>
+                      <td>{etat(d)}</td>
+                      <td><Completude v={Number(d.completude)} /></td>
+                      <td className="num">{m(d.fob_xof)}</td>
+                      <td className="num">{ddmmyyyy(d.date_ouverture_site)}</td>
+                      <td className={'num' + (d.marge_alerte ? ' alerte' : '')}>{d.marge_jours === null ? '—' : t('portefeuille.jours', { n: d.marge_jours })}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            )}
-          </CadreTableau>
+            </div>
+          ) : (
+            <div className="pf-kanban">
+              {ORDRE_PHASES.filter((ph) => liste.some((d) => d.phase_courante === ph)).map((ph) => (
+                <section key={ph} className="pf-col">
+                  <h3>{t(`phases.${ph}`)} <span className="mute">{liste.filter((d) => d.phase_courante === ph).length}</span></h3>
+                  {liste.filter((d) => d.phase_courante === ph).map((d) => (
+                    <button key={d.id} className={'pf-carte' + (d.id === choisi?.id ? ' on' : '')} onClick={() => setSel(d.id)} onDoubleClick={() => nav(`/dossiers/${d.id}`)}>
+                      <span className="ref">{d.reference}</span>
+                      <span className="pf-carte-client">{d.client}</span>
+                      {etat(d)}
+                      <Completude v={Number(d.completude)} />
+                    </button>
+                  ))}
+                </section>
+              ))}
+            </div>
+          )}
         </div>
-        <aside className="detail">
+        <aside className="detail pf-detail">
           {!choisi ? <Vide>{t('dossiers.choisir')}</Vide> : (
             <>
-              <div className="surtitre">{choisi.reference}</div>
-              <h2 style={{ fontSize: 22 }}>{choisi.intitule}</h2>
-              <dl className="dl">
-                <dt>{t('champs.client')}</dt><dd>{clients[choisi.client_id]}</dd>
-                <dt>{t('champs.modele')}</dt><dd>{t(`modeles.${choisi.modele}`)}</dd>
-                <dt>{t('champs.mode')}</dt><dd>{t(`modes.${choisi.mode_financier}`)}</dd>
-                <dt>{t('champs.pays')}</dt><dd>{choisi.pays}</dd>
-                {choisi.date_ouverture_site && <><dt>{t('champs.date_ouverture_site')}</dt><dd>{date(choisi.date_ouverture_site, langue)}</dd></>}
-              </dl>
-              <div className="phases">
-                {(phases.data ?? []).map((p) => <span key={p.id} className={'phase ' + p.statut}>{t(`phases.${p.phase}`)}</span>)}
+              <div className="surtitre">{t('portefeuille.selectionne')}</div>
+              <h2 className="pf-nom">{choisi.client}</h2>
+              <div className="sec">{choisi.reference}{choisi.chef_id ? ` · ${t('portefeuille.chef')} ${initiales(profils[choisi.chef_id])}` : ''} · {t('champs.phase').toLowerCase()} {t(`phases.${choisi.phase_courante}`)}</div>
+              <div className="pf-champs">
+                <div><span>{t('champs.pays')}</span><b>{choisi.pays}</b></div>
+                <div><span>{t('portefeuille.segment')}</span><b>{choisi.segment ?? '—'}</b></div>
+                <div><span>{t('portefeuille.mode')}</span><b>{t(`modes.${choisi.mode_financier}`)}</b></div>
+                <div><span>{t('portefeuille.societe')}</span><b>{societes.find((x) => x.id === choisi.societe_id)?.raison_sociale ?? '—'}</b></div>
+                <div><span>{t('portefeuille.valeur_fob')}</span><b>{m(choisi.fob_xof)}</b></div>
+                <div><span>{t('portefeuille.ouverture_site')}</span><b>{ddmmyyyy(choisi.date_ouverture_site)}</b></div>
+                <div><span>{t('portefeuille.marge_restante')}</span><b>{choisi.marge_jours === null ? '—' : t('portefeuille.jours', { n: choisi.marge_jours })}</b></div>
+                <div><span>{t('portefeuille.completude')}</span><b>{Math.round(Number(choisi.completude) * 100)} %</b></div>
               </div>
-              <Link className="btn primaire" to={`/dossiers/${choisi.id}`}>{t('dossiers.ouvrir')}</Link>
+              <div className="pf-lecture">
+                <div className="surtitre">{t('portefeuille.lecture')}</div>
+                <p>{t(`portefeuille.lectures.${choisi.etat}`, { defaultValue: t('portefeuille.lectures.dans_les_delais') })} {choisi.date_ouverture_site ? t('portefeuille.lecture_marge') : ''}</p>
+              </div>
+              <div className="actions">
+                <Link className="btn primaire" to={`/dossiers/${choisi.id}`}>{t('dossiers.ouvrir')}</Link>
+              </div>
             </>
           )}
         </aside>

@@ -79,7 +79,7 @@ describe('Page de suivi client', () => {
     const l = await lien(db, m, d);
     const r = await suivre(db, l.jeton);
     expect(Object.keys(r).sort()).toEqual(['client', 'documents', 'dossier', 'expeditions', 'expire_le', 'factures',
-      'ouverture', 'phases', 'pieces_attendues', 'points_bloquants']);
+      'ouverture', 'phases', 'pieces_attendues', 'points_bloquants', 'retards']);
     const texte = JSON.stringify(r);
     for (const interdit of ['prix_unitaire', 'montant_marchandise', 'fob', 'marge', 'commission', 'fournisseur_id', 'Foshan']) {
       expect(texte).not.toContain(interdit);

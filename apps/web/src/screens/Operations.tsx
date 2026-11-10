@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
@@ -7,7 +7,7 @@ import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, dateHeure } from '../lib/format';
 import type { Commande, Constat, Dossier, Etape, Expedition, Inspection, NonConformite, Profil } from '../lib/types';
-import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
+import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
 import { useNoms } from '../lib/referentiels';
 import { Depot as Depotx } from '../components/Depot';
 import { FicheNc } from './NonConformites';
@@ -15,37 +15,78 @@ import { PackDocumentaire } from './PackDocumentaire';
 import { TransitaireExpedition } from './Transitaires';
 
 // ============================================================================ Inspections
+type InspectionListe = Inspection & { commandes: { fournisseur_id: string } | null };
+const initiales = (nom: string | undefined) => (nom ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('') || '—';
+
+/** Planning des inspections (maquette INS) : à valider, planifiées, à venir ; non-conformités qui bloquent la libération. */
 export function Inspections() {
   const { t } = useTranslation();
   const nav = useNavigate();
   const [params] = useSearchParams();
-  const { langue, profil } = useAuth();
+  const { profil } = useAuth();
   const dossiers = useNoms('dossiers');
   const profils = useNoms('profils');
+  const fournisseurs = useNoms('fournisseurs');
   const [creer, setCreer] = useState(Boolean(params.get('commande')));
-  const l = useAsync(async () => ok(await supabase.from('inspections').select('*').order('date_prevue', { ascending: true, nullsFirst: false }).limit(500)) as Inspection[], []);
+  const l = useAsync(async () => ok(await supabase.from('inspections').select('*, commandes(fournisseur_id)')
+    .order('date_prevue', { ascending: true, nullsFirst: false }).limit(500)) as unknown as InspectionListe[], []);
+  const ncs = useAsync(async () => ok(await supabase.from('non_conformites').select('id, statut').neq('statut', 'close').limit(1000)) as { id: string; statut: string }[], []);
   const ecrit = ['admin', 'achats_chine'].includes(profil?.role ?? '');
-  const n = (s: string) => (l.data ?? []).filter((i) => i.statut === s).length;
+  const tous = l.data ?? [];
+  const jour = new Date().toISOString().slice(0, 10);
+  const finSemaine = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const aValider = tous.filter((i) => i.statut === 'realisee');
+  const planifiees = tous.filter((i) => i.statut === 'planifiee' && i.date_prevue && i.date_prevue >= jour && i.date_prevue <= finSemaine);
+  const sansDate = tous.filter((i) => i.statut === 'planifiee' && !i.date_prevue);
+  const mois = jour.slice(0, 7);
+  const joursMois = new Set(tous.filter((i) => (i.date_realisee ?? '').startsWith(mois)).map((i) => `${i.inspecteur_id}|${i.date_realisee}`)).size;
+  const aVenir = tous.filter((i) => i.statut === 'planifiee' && i.date_prevue).slice(0, 8);
+  const ordre = ['realisee', 'planifiee', 'refusee', 'validee'];
+  const liste = [...tous].sort((x, y) => ordre.indexOf(x.statut) - ordre.indexOf(y.statut) || (x.date_prevue ?? '9').localeCompare(y.date_prevue ?? '9'));
+  const ddmm = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
+  const ddmmaaaa = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : '—');
+  const titre = [t('inspections.titre_valider', { n: aValider.length }), t('inspections.titre_semaine', { n: planifiees.length })].join(', ')
+    + ((ncs.data ?? []).length ? ` ; ${t('inspections.titre_nc', { n: (ncs.data ?? []).length })}` : '');
+  const objet = (i: InspectionListe) => i.produit ?? (dossiers[i.dossier_id] ?? '—');
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.qualite')} · M8`} titre={t('inspections.titre', { n: (l.data ?? []).length })}
+      <Entete surtitre={`${t('modules.qualite')} · ${t('inspections.surtitre')} · INS`} titre={l.data ? titre : t('ecrans.inspections')}
         actions={ecrit && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('inspections.planifier')}</Bouton>} />
       <Kpis items={[
-        { lib: t('statuts_inspection.planifiee'), val: n('planifiee') }, { lib: t('statuts_inspection.realisee'), val: n('realisee'), sous: t('inspections.a_valider') },
-        { lib: t('statuts_inspection.validee'), val: n('validee'), sous: t('inspections.liberees') }, { lib: t('statuts_inspection.refusee'), val: n('refusee') },
+        { lib: t('inspections.k_valider'), val: aValider.length, sous: t('inspections.k_valider_sous') },
+        { lib: t('inspections.k_planifiees'), val: planifiees.length, sous: t('inspections.k_planifiees_sous') },
+        { lib: t('inspections.k_sans_date'), val: sansDate.length, sous: t('inspections.k_sans_date_sous') },
+        { lib: t('inspections.k_jours'), val: joursMois, sous: t('inspections.k_jours_sous') },
       ]} />
-      <Bandeau type="err">{l.erreur}</Bandeau>
-      <CadreTableau>
-        {l.chargement ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('inspections.aucune')}</Vide> : (
-          <table className="t"><thead><tr><th>{t('champs.reference')}</th><th>{t('champs.dossier')}</th><th>{t('champs.type')}</th><th>{t('inspections.inspecteur')}</th><th>{t('champs.date')}</th><th className="num">{t('inspections.lot')}</th><th>{t('inspections.decision_proposee')}</th><th>{t('champs.statut')}</th></tr></thead>
-            <tbody>{(l.data ?? []).map((i) => (
-              <tr key={i.id} className="cliquable" onClick={() => nav(`/inspections/${i.id}`)}>
-                <td className="ref">{i.reference}</td><td className="ref">{dossiers[i.dossier_id]}</td><td>{t(`types_inspection.${i.type}`)}</td>
-                <td className="sec">{i.inspecteur_id ? profils[i.inspecteur_id] : '—'}</td><td className="ref">{date(i.date_realisee ?? i.date_prevue, langue)}</td>
-                <td className="num">{i.taille_lot}</td><td>{i.decision_proposee ? <Statut statut={i.decision_proposee} libelle={t(`decisions.${i.decision_proposee}`)} /> : '—'}</td>
-                <td><Statut statut={i.statut} libelle={t(`statuts_inspection.${i.statut}`)} /></td></tr>))}</tbody></table>
-        )}
-      </CadreTableau>
+      <Bandeau type="err">{l.erreur ?? ncs.erreur}</Bandeau>
+      <div className="fiche-grille">
+        <div className="cadre fiche-principal">
+          {l.chargement && !l.data ? <Chargement /> : tous.length === 0 ? <Vide>{t('inspections.aucune')}</Vide> : (
+            <table className="t"><thead><tr><th>{t('inspections.inspection')}</th><th>{t('inspections.objet_fabricant_type')}</th><th>{t('champs.date')}</th>
+              <th>{t('inspections.insp')}</th><th className="num">{t('inspections.lot')}</th><th>{t('champs.statut')}</th></tr></thead>
+              <tbody>{liste.map((i) => (
+                <tr key={i.id} className="cliquable" onClick={() => nav(`/inspections/${i.id}`)}>
+                  <td className="ref">{i.reference}</td>
+                  <td><div style={{ fontWeight: 500 }}>{objet(i)}</div>
+                    <div className="mute">{[i.commandes ? fournisseurs[i.commandes.fournisseur_id] : null, t(`types_inspection.${i.type}`)].filter(Boolean).join(' · ')}</div></td>
+                  <td className="ref">{ddmmaaaa(i.date_realisee ?? i.date_prevue)}</td>
+                  <td className="sec" title={i.inspecteur_id ? profils[i.inspecteur_id] : undefined}>{i.inspecteur_id ? initiales(profils[i.inspecteur_id]) : '—'}</td>
+                  <td className="num">{i.taille_lot}</td>
+                  <td><Statut statut={i.statut} libelle={i.statut === 'validee' && i.decision ? `${t('statuts_inspection.validee')} · ${t(`inspections.decisions_finales.${i.decision}`)}` : i.statut === 'realisee' ? t('inspections.k_valider') : t(`statuts_inspection.${i.statut}`)} /></td>
+                </tr>))}</tbody></table>
+          )}
+        </div>
+        <aside className="fiche-cote">
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('inspections.a_venir')}</div>
+            {aVenir.length === 0 ? <span className="mute">{t('inspections.aucune_a_venir')}</span> : aVenir.map((i) => (
+              <div key={i.id} className="ao-cal cliquable" onClick={() => nav(`/inspections/${i.id}`)}>
+                <span className={'ref' + (i.date_prevue! <= jour ? ' txt-err' : '')}>{ddmm(i.date_prevue)}</span>
+                <span><b>{objet(i)}</b><br /><span className="mute">{t(`types_inspection.${i.type}`)} · {i.inspecteur_id ? initiales(profils[i.inspecteur_id]) : '—'}</span></span>
+              </div>))}
+          </section>
+        </aside>
+      </div>
       {creer && <NouvelleInspection commandeInitiale={params.get('commande')} onClose={() => setCreer(false)} onOk={(id) => nav(`/inspections/${id}`)} />}
     </div>
   );
@@ -116,6 +157,8 @@ export function RapportInspection() {
   const [nc, setNc] = useState({ gravite: 'majeur', description: '', delai: '' });
   const [ncPhotos, setNcPhotos] = useState<string[]>([]);
   const [ficheNc, setFicheNc] = useState<string | null>(null);
+  const [mesuresEtat, setMesuresEtat] = useState<Record<string, string>>({});
+  const profils = useNoms('profils');
   const ref = useAsync(async () => {
     const aid = (i.data as (Inspection & { approbation_id?: string | null }) | null)?.approbation_id;
     return aid ? ok(await supabase.from('approbations_techniques').select('version, objet, echantillon_description, documents').eq('id', aid).maybeSingle()) as
@@ -160,43 +203,43 @@ export function RapportInspection() {
     if (await a.executer(async () => ok(await supabase.rpc('valider_inspection', { p_inspection: x.id, p_decision: decision, p_motif: motif.trim() || null })))) { setDecision(null); recharger(); }
   };
   const plan = x.plan;
+  const points = cs.data ?? [];
+  const renseignes = points.filter((p) => p.resultat !== 'na' || p.mesure).length;
+  const ncOuvertes = (ncs.data ?? []).filter((n) => n.statut !== 'close');
+  const nbPhotos = points.reduce((n, p) => n + (p.photos ?? []).length, 0);
+  const majConstat = async (p: Constat, champs: Record<string, unknown>) => {
+    if (await a.executer(async () => ok(await supabase.from('constats').update(champs).eq('id', p.id)))) void cs.recharger();
+  };
+  const resultat = (p: Constat, r: 'conforme' | 'nc' | 'na') => void majConstat(p, r === 'nc' ? { resultat: r, gravite: p.gravite ?? 'majeur', nombre: Math.max(p.nombre, 1) } : { resultat: r, gravite: null, nombre: 0 });
+  const ddmmaaaa = (v: string | null) => (v ? `${v.slice(8, 10)}.${v.slice(5, 7)}.${v.slice(0, 4)}` : '—');
   return (
-    <div className="screen">
-      <Entete surtitre={`${t('modules.qualite')} · ${t(`types_inspection.${x.type}`)} · ISO 2859-1`} titre={`${x.reference} — ${x.produit ?? ''}`}
-        actions={<>
-          <Statut statut={x.statut} libelle={t(`statuts_inspection.${x.statut}`)} />
-          <Link className="btn" to={`/imprimer/inspection/${x.id}`}>{t('commun.imprimer')}</Link>
-          {validateur && x.statut === 'realisee' && <><Bouton variante="primaire" onClick={() => setDecision('liberation')}>{t('inspections.liberer')}</Bouton>
-            <Bouton variante="danger" onClick={() => setDecision('refus')}>{t('inspections.refuser')}</Bouton></>}
-        </>} />
-      {plan && (
-        <Kpis items={(['critique', 'majeur', 'mineur'] as const).map((k) => ({
-          lib: `${t(`gravites.${k}`)} · NQA ${k === 'critique' ? x.nqa_critique : k === 'majeur' ? x.nqa_majeur : x.nqa_mineur}`,
-          val: `${k === 'critique' ? x.defauts_critiques : k === 'majeur' ? x.defauts_majeurs : x.defauts_mineurs} / ${plan[k].ac}`,
-          sous: t('inspections.plan', { l: plan[k].lettre, n: plan[k].n, ac: plan[k].ac, re: plan[k].re }),
-        })).concat([{ lib: t('inspections.decision_proposee'), val: x.decision_proposee ? t(`decisions.${x.decision_proposee}`) : '—', sous: t('inspections.lot_niveau', { lot: x.taille_lot, n: x.niveau }) }])} />
-      )}
-      {ref.data && <p className="mute">{t('approbation.reference_inspection', { v: ref.data.version, objet: ref.data.objet })}{ref.data.echantillon_description ? ` · ${t('approbation.echantillon')} : ${ref.data.echantillon_description}` : ''}</p>}
+    <div className="screen" style={{ overflow: 'auto' }}>
+      <Entete surtitre={`${t('modules.qualite')} · ${t('inspections.fiche')} · ${x.reference} · INS`}
+        titre={<>{x.produit ?? x.reference} <span className="h1-statut"><Statut statut={x.statut} libelle={x.statut === 'realisee' ? t('inspections.k_valider') : t(`statuts_inspection.${x.statut}`)} /></span></>} />
+      <div className="sec" style={{ marginTop: -10 }}>{[t(`types_inspection.${x.type}`), ddmmaaaa(x.date_realisee ?? x.date_prevue), x.inspecteur_id ? profils[x.inspecteur_id] : null,
+        t('inspections.lot_niveau', { lot: x.taille_lot, n: x.niveau }), `NQA ${x.nqa_majeur}`].filter(Boolean).join(' · ')}</div>
+      {ref.data && <p className="mute" style={{ margin: 0 }}>{t('approbation.reference_inspection', { v: ref.data.version, objet: ref.data.objet })}{ref.data.echantillon_description ? ` · ${t('approbation.echantillon')} : ${ref.data.echantillon_description}` : ''}</p>}
       <Bandeau type="err">{a.erreur}</Bandeau>
-      <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {saisit && (
-          <section className="grille3" style={{ alignItems: 'end', gridTemplateColumns: 'repeat(3, minmax(0,1fr)) auto auto' }}>
-            <Champ label={t('inspections.defauts_critiques')}><input inputMode="numeric" value={d.c} onChange={(e) => setDefauts({ ...d, c: e.target.value.replace(/\D/g, '') })} /></Champ>
-            <Champ label={t('inspections.defauts_majeurs')}><input inputMode="numeric" value={d.ma} onChange={(e) => setDefauts({ ...d, ma: e.target.value.replace(/\D/g, '') })} /></Champ>
-            <Champ label={t('inspections.defauts_mineurs')}><input inputMode="numeric" value={d.mi} onChange={(e) => setDefauts({ ...d, mi: e.target.value.replace(/\D/g, '') })} /></Champ>
-            <Bouton onClick={() => void enregistrerDefauts(false)}>{t('commun.enregistrer')}</Bouton>
-            {x.statut === 'planifiee' && <Bouton variante="primaire" onClick={() => void enregistrerDefauts(true)}>{t('inspections.terminer')}</Bouton>}
-          </section>
-        )}
-        <section>
-          <div className="section-titre">{t('inspections.points')}</div>
-          <table className="t"><thead><tr><th>#</th><th>{t('inspections.point')}</th><th>{t('inspections.exigence')}</th><th>{t('inspections.mesure')}</th><th>{t('inspections.resultat')}</th><th>{t('inspections.gravite')}</th></tr></thead>
-            <tbody>{(cs.data ?? []).map((p) => (
-              <tr key={p.id}><td>{p.ordre}</td><td>{p.point}</td><td className="sec">{p.exigence ?? '—'}</td><td className="sec">{p.mesure ?? '—'}</td>
-                <td><Statut statut={p.resultat === 'conforme' ? 'validee' : p.resultat === 'nc' ? 'refusee' : 'annulee'} libelle={t(`resultats.${p.resultat}`)} /></td>
-                <td className="sec">{p.gravite ? `${t(`gravites.${p.gravite}`)} × ${p.nombre}` : '—'}</td></tr>))}</tbody></table>
+      <div className="fiche-grille">
+        <div className="fiche-principal" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="ins-avancement"><span className="cmd-barre"><span style={{ width: `${points.length ? (renseignes / points.length) * 100 : 0}%`, background: 'var(--ink)' }} /></span>
+            <span className="mute">{t('inspections.points_renseignes', { n: renseignes, total: points.length })}</span></div>
+          {points.length === 0 ? <span className="mute">{t('inspections.aucun_point')}</span> : points.map((p) => (
+            <div key={p.id} className={'ins-point' + (p.resultat === 'nc' ? ' nc' : '')}>
+              <div><b>{p.point}</b><div className="mute">{t('inspections.attendu', { v: p.exigence ?? '—' })}</div>
+                {p.resultat === 'nc' && p.gravite && <div className="txt-err" style={{ fontSize: 13 }}>{t(`gravites.${p.gravite}`)} × {p.nombre}</div>}</div>
+              <input value={mesuresEtat[p.id] ?? p.mesure ?? ''} maxLength={200} placeholder={t('inspections.mesure_relevee')} disabled={!saisit} aria-label={t('inspections.mesure')}
+                onChange={(e) => setMesuresEtat({ ...mesuresEtat, [p.id]: e.target.value })}
+                onBlur={() => { const v = (mesuresEtat[p.id] ?? '').trim(); if (mesuresEtat[p.id] !== undefined && v !== (p.mesure ?? '')) void majConstat(p, { mesure: v || null }); }} />
+              <span className="ins-choix" role="group" aria-label={t('inspections.resultat')}>
+                {(['conforme', 'nc', 'na'] as const).map((r) => (
+                  <button key={r} type="button" disabled={!saisit || a.enCours} aria-pressed={p.resultat === r}
+                    className={'ins-c ' + r + (p.resultat === r ? ' actif' : '')} onClick={() => resultat(p, r)} data-sans-glose>{t(`inspections.court.${r}`)}</button>))}
+              </span>
+              <span className="mute ins-photos">{t('inspections.n_photos', { n: (p.photos ?? []).length })}</span>
+            </div>))}
           {saisit && (
-            <div className="grille3" style={{ alignItems: 'end', marginTop: 8, gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr auto' }}>
+            <div className="grille3" style={{ alignItems: 'end', gridTemplateColumns: '2fr 1.5fr 1fr 1fr 1fr auto' }}>
               <Champ label={t('inspections.point')}><input value={point.point} maxLength={300} onChange={(e) => setPoint({ ...point, point: e.target.value })} /></Champ>
               <Champ label={t('inspections.exigence')}><input value={point.exigence} maxLength={500} onChange={(e) => setPoint({ ...point, exigence: e.target.value })} /></Champ>
               <Champ label={t('inspections.mesure')}><input value={point.mesure} maxLength={200} onChange={(e) => setPoint({ ...point, mesure: e.target.value })} /></Champ>
@@ -204,30 +247,69 @@ export function RapportInspection() {
                 {['conforme', 'nc', 'na'].map((r) => <option key={r} value={r}>{t(`resultats.${r}`)}</option>)}</select></Champ>
               <Champ label={t('inspections.gravite')}><select value={point.gravite} onChange={(e) => setPoint({ ...point, gravite: e.target.value })}>
                 <option value="">—</option>{['critique', 'majeur', 'mineur'].map((g) => <option key={g} value={g}>{t(`gravites.${g}`)}</option>)}</select></Champ>
-              <Bouton onClick={() => void ajouterPoint()}>{t('commun.ajouter')}</Bouton>
+              <Bouton onClick={() => void ajouterPoint()}>{t('inspections.ajouter_point')}</Bouton>
             </div>
-          )}
-        </section>
-        <section>
-          <div className="section-titre">{t('inspections.non_conformites')}</div>
-          {(ncs.data ?? []).length === 0 ? <span className="mute">{t('inspections.aucune_nc')}</span> : (
-            <table className="t"><tbody>{(ncs.data ?? []).map((n) => (
-              <tr key={n.id}><td className="ref">{n.reference}</td><td>{t(`gravites.${n.gravite}`)}</td><td>{n.description}</td><td className="ref">{date(n.delai, langue)}</td>
-                <td><Statut statut={n.statut} libelle={t(`statuts_nc.${n.statut}`)} /></td>
-                <td className="num"><Bouton petit onClick={() => setFicheNc(n.id)}>{t('nc.ouvrir_fiche')}</Bouton></td></tr>))}</tbody></table>
           )}
           {saisit && (
-            <div className="grille3" style={{ alignItems: 'end', marginTop: 8, gridTemplateColumns: '1fr 3fr 1fr auto' }}>
-              <Champ label={t('inspections.gravite')}><select value={nc.gravite} onChange={(e) => setNc({ ...nc, gravite: e.target.value })}>{['critique', 'majeur', 'mineur'].map((g) => <option key={g} value={g}>{t(`gravites.${g}`)}</option>)}</select></Champ>
-              <Champ label={t('champs.description')}><input value={nc.description} maxLength={4000} onChange={(e) => setNc({ ...nc, description: e.target.value })} /></Champ>
-              <Champ label={t('inspections.delai')}><input type="date" value={nc.delai} onChange={(e) => setNc({ ...nc, delai: e.target.value })} /></Champ>
-              <Bouton onClick={() => void ajouterNc()}>{t('commun.ajouter')}</Bouton>
-            </div>
+            <section className="fiche-bloc">
+              <div className="surtitre">{t('inspections.defauts_echantillon')}</div>
+              <div className="grille3" style={{ alignItems: 'end', gridTemplateColumns: 'repeat(3, minmax(0,1fr)) auto auto' }}>
+                <Champ label={t('inspections.defauts_critiques')}><input inputMode="numeric" value={d.c} onChange={(e) => setDefauts({ ...d, c: e.target.value.replace(/\D/g, '') })} /></Champ>
+                <Champ label={t('inspections.defauts_majeurs')}><input inputMode="numeric" value={d.ma} onChange={(e) => setDefauts({ ...d, ma: e.target.value.replace(/\D/g, '') })} /></Champ>
+                <Champ label={t('inspections.defauts_mineurs')}><input inputMode="numeric" value={d.mi} onChange={(e) => setDefauts({ ...d, mi: e.target.value.replace(/\D/g, '') })} /></Champ>
+                <Bouton onClick={() => void enregistrerDefauts(false)}>{t('commun.enregistrer')}</Bouton>
+                {x.statut === 'planifiee' && <Bouton variante="primaire" onClick={() => void enregistrerDefauts(true)}>{t('inspections.terminer')}</Bouton>}
+              </div>
+            </section>
           )}
-          {saisit && <div className="actions" style={{ marginTop: 6 }}><Depotx dossierId={x.dossier_id} valeur={null} onChange={(c) => setNcPhotos((p) => (p.length < 20 ? [...p, c] : p))} />
-            {ncPhotos.length > 0 && <span className="mute">{t('nc.photos_jointes', { n: ncPhotos.length })}</span>}</div>}
-          {ficheNc && <FicheNc id={ficheNc} onClose={() => setFicheNc(null)} onChange={recharger} />}
-        </section>
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('inspections.non_conformites')}</div>
+            {(ncs.data ?? []).length === 0 ? <span className="mute">{t('inspections.aucune_nc')}</span> : (
+              <table className="t"><tbody>{(ncs.data ?? []).map((n) => (
+                <tr key={n.id}><td className="ref">{n.reference}</td><td>{t(`gravites.${n.gravite}`)}</td><td>{n.description}</td><td className="ref">{date(n.delai, langue)}</td>
+                  <td><Statut statut={n.statut} libelle={t(`statuts_nc.${n.statut}`)} /></td>
+                  <td className="num"><Bouton petit onClick={() => setFicheNc(n.id)}>{t('nc.ouvrir_fiche')}</Bouton></td></tr>))}</tbody></table>
+            )}
+            {saisit && (
+              <div className="grille3" style={{ alignItems: 'end', gridTemplateColumns: '1fr 3fr 1fr auto' }}>
+                <Champ label={t('inspections.gravite')}><select value={nc.gravite} onChange={(e) => setNc({ ...nc, gravite: e.target.value })}>{['critique', 'majeur', 'mineur'].map((g) => <option key={g} value={g}>{t(`gravites.${g}`)}</option>)}</select></Champ>
+                <Champ label={t('champs.description')}><input value={nc.description} maxLength={4000} onChange={(e) => setNc({ ...nc, description: e.target.value })} /></Champ>
+                <Champ label={t('inspections.delai')}><input type="date" value={nc.delai} onChange={(e) => setNc({ ...nc, delai: e.target.value })} /></Champ>
+                <Bouton onClick={() => void ajouterNc()}>{t('commun.ajouter')}</Bouton>
+              </div>
+            )}
+            {saisit && <div className="actions"><Depotx dossierId={x.dossier_id} valeur={null} onChange={(c) => setNcPhotos((q) => (q.length < 20 ? [...q, c] : q))} />
+              {ncPhotos.length > 0 && <span className="mute">{t('nc.photos_jointes', { n: ncPhotos.length })}</span>}</div>}
+            {ficheNc && <FicheNc id={ficheNc} onClose={() => setFicheNc(null)} onChange={recharger} />}
+          </section>
+        </div>
+        <aside className="fiche-cote">
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('inspections.decision')}</div>
+            {ncOuvertes.length > 0 ? <span className="txt-err">{t('inspections.nc_a_lever', { n: ncOuvertes.length })}</span>
+              : <span className="mute">{x.decision ? t(`inspections.decisions_finales.${x.decision}`) : t('inspections.aucune_nc_ouverte')}</span>}
+            {validateur && x.statut === 'realisee' && <div className="actions">
+              <Bouton variante="danger" onClick={() => setDecision('refus')}>{t('inspections.refuser')}</Bouton>
+              <Bouton variante="primaire" onClick={() => setDecision('liberation')}>{t('inspections.liberer')}</Bouton></div>}
+          </section>
+          {plan && (
+            <section className="fiche-bloc">
+              <div className="surtitre">{t('inspections.plan_aql')}</div>
+              {(['critique', 'majeur', 'mineur'] as const).map((k) => (
+                <div key={k} className="ligne-montant"><span>{t(`gravites.${k}`)} · NQA {k === 'critique' ? x.nqa_critique : k === 'majeur' ? x.nqa_majeur : x.nqa_mineur}<br />
+                  <span className="mute">{t('inspections.plan', { l: plan[k].lettre, n: plan[k].n, ac: plan[k].ac, re: plan[k].re })}</span></span>
+                  <b>{k === 'critique' ? x.defauts_critiques : k === 'majeur' ? x.defauts_majeurs : x.defauts_mineurs} / {plan[k].ac}</b></div>))}
+              <div className="ligne-montant"><span>{t('inspections.decision_proposee')}</span><b>{x.decision_proposee ? t(`decisions.${x.decision_proposee}`) : '—'}</b></div>
+            </section>
+          )}
+          <section className="fiche-bloc">
+            <div className="surtitre">{t('inspections.rapport_pdf')}</div>
+            <div className="ligne-montant"><span>{t('inspections.points_controles')}</span><b>{points.length}</b></div>
+            <div className="ligne-montant"><span>{t('inspections.non_conformites')}</span><b>{(ncs.data ?? []).length}</b></div>
+            <div className="ligne-montant"><span>{t('inspections.photos')}</span><b>{nbPhotos}</b></div>
+            <Link className="btn" style={{ justifyContent: 'center' }} to={`/imprimer/inspection/${x.id}`}>{t('inspections.generer_rapport')}</Link>
+          </section>
+        </aside>
       </div>
       {decision && (
         <Tiroir titre={decision === 'liberation' ? t('inspections.liberer') : t('inspections.refuser')} onClose={() => setDecision(null)}>
@@ -242,29 +324,58 @@ export function RapportInspection() {
 }
 
 // ============================================================================ Expéditions
+type ExpeditionListe = Expedition & { eta_initiale: string | null; dossiers: { reference: string; clients: { raison_sociale: string } | null } | null };
+
+/** Suivi des expéditions (maquette EXP) : arrivées reportées et jours de franchise dépassés au port. */
 export function Expeditions() {
   const { t } = useTranslation();
   const nav = useNavigate();
-  const { langue, profil } = useAuth();
-  const dossiers = useNoms('dossiers');
+  const { profil } = useAuth();
   const [creer, setCreer] = useState(false);
-  const l = useAsync(async () => ok(await supabase.from('expeditions').select('*').order('cree_le', { ascending: false }).limit(500)) as Expedition[], []);
+  const l = useAsync(async () => ok(await supabase.from('expeditions').select('*, dossiers(reference, clients(raison_sociale))')
+    .order('cree_le', { ascending: false }).limit(500)) as unknown as ExpeditionListe[], []);
+  const ids = (l.data ?? []).map((e) => e.id);
+  const arr = useAsync(async () => (ids.length ? ok(await supabase.from('expedition_etapes').select('expedition_id, survenue_le').eq('etape', 'arrivee_port').in('expedition_id', ids)) as
+    { expedition_id: string; survenue_le: string }[] : []), [ids.join(',')]);
   const ecrit = ['admin', 'achats_chine'].includes(profil?.role ?? '');
+  const tous = l.data ?? [];
+  const jour = new Date().toISOString().slice(0, 10);
+  const reportee = (e: ExpeditionListe) => Boolean(e.eta && e.eta_initiale && e.eta > e.eta_initiale) && ['preparation', 'remise_transporteur', 'expediee', 'en_transit'].includes(e.statut);
+  // Franchise : jours passés au port depuis l'arrivée réelle, au-delà des jours de franchise, tant que la marchandise n'est pas livrée.
+  const depassement = (e: ExpeditionListe) => {
+    const a = (arr.data ?? []).find((x) => x.expedition_id === e.id)?.survenue_le.slice(0, 10);
+    if (!a || e.jours_franchise === null || e.statut === 'livree') return null;
+    return Math.round((Date.parse(jour) - Date.parse(a)) / 86400000) - e.jours_franchise;
+  };
+  const reportees = tous.filter(reportee);
+  const franchises = tous.filter((e) => (depassement(e) ?? 0) > 0);
+  const alertes = [...new Set([...reportees.map((e) => t('expeditions.alerte_report', { port: e.port_arrivee ?? '—' })), ...franchises.map((e) => t('expeditions.alerte_franchise', { port: e.port_arrivee ?? '—' }))])];
+  const titre = t('expeditions.titre_suivies', { n: tous.filter((e) => e.statut !== 'livree').length }) + (alertes.length ? ` ; ${t('expeditions.titre_alertes', { n: alertes.length, liste: alertes.join(t('expeditions.et')) })}` : '');
+  const ddmm = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.logistique')} · M9`} titre={t('expeditions.titre', { n: (l.data ?? []).length })}
+      <Entete surtitre={`${t('modules.logistique')} · ${t('expeditions.surtitre')} · EXP`} titre={l.data ? titre : t('ecrans.expeditions')}
         actions={ecrit && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('expeditions.nouvelle')}</Bouton>} />
-      <Bandeau type="err">{l.erreur}</Bandeau>
-      <CadreTableau>
-        {l.chargement ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('expeditions.aucune')}</Vide> : (
-          <table className="t"><thead><tr><th>{t('champs.reference')}</th><th>{t('champs.dossier')}</th><th>{t('expeditions.mode')}</th><th>{t('expeditions.trajet')}</th><th>ETD</th><th>ETA</th><th>{t('expeditions.bordereau')}</th><th>{t('champs.statut')}</th></tr></thead>
-            <tbody>{(l.data ?? []).map((e) => (
-              <tr key={e.id} className="cliquable" onClick={() => nav(`/expeditions/${e.id}`)}>
-                <td className="ref">{e.reference}</td><td className="ref">{dossiers[e.dossier_id]}</td><td>{t(`modes_exp.${e.mode}`)}</td>
-                <td className="sec">{e.port_depart ?? '—'} → {e.port_arrivee ?? e.pays_destination}</td><td className="ref">{date(e.etd, langue)}</td><td className="ref">{date(e.eta, langue)}</td>
-                <td className="sec">{e.bordereau_reference ?? '—'}</td><td><Statut statut={e.statut} libelle={t(`statuts_exp.${e.statut}`)} /></td></tr>))}</tbody></table>
+      <Bandeau type="err">{l.erreur ?? arr.erreur}</Bandeau>
+      <div className="cadre">
+        {l.chargement && !l.data ? <Chargement /> : tous.length === 0 ? <Vide>{t('expeditions.aucune')}</Vide> : (
+          <table className="t"><thead><tr><th>{t('expeditions.expedition')}</th><th>{t('expeditions.client')}</th><th>{t('expeditions.conteneur')}</th>
+            <th>{t('expeditions.trajet')}</th><th>{t('expeditions.arrivee')}</th><th>{t('champs.statut')}</th><th>{t('expeditions.franchise_court')}</th></tr></thead>
+            <tbody>{tous.map((e) => {
+              const r = reportee(e), d = depassement(e);
+              return (
+                <tr key={e.id} className="cliquable" onClick={() => nav(`/expeditions/${e.id}`)}>
+                  <td className="ref">{e.reference}<div className="mute">{e.dossiers?.reference}</div></td>
+                  <td>{e.dossiers?.clients?.raison_sociale ?? '—'}</td>
+                  <td className="sec">{e.conteneurs.length ? e.conteneurs.join(', ') : <span className="mute">{t('expeditions.a_affecter')}</span>}</td>
+                  <td className="sec">{e.port_depart ?? '—'} → {e.port_arrivee ?? e.pays_destination}</td>
+                  <td className="ref"><span className={r ? 'txt-err' : ''}>{ddmm(e.eta)}</span>{r && <div className="mute">{t('expeditions.prevue', { d: ddmm(e.eta_initiale) })}</div>}</td>
+                  <td><Statut statut={r ? 'att' : e.statut} libelle={`${t(`statuts_exp.${e.statut}`)}${r ? ` · ${t('expeditions.retard')}` : ''}`} /></td>
+                  <td className={d !== null && d > 0 ? 'txt-err' : 'mute'}>{d === null ? '—' : d > 0 ? t('expeditions.jours_depasses', { n: d }) : t('expeditions.jours_restants', { n: -d })}</td>
+                </tr>);
+            })}</tbody></table>
         )}
-      </CadreTableau>
+      </div>
       {creer && <NouvelleExpedition onClose={() => setCreer(false)} onOk={(id) => nav(`/expeditions/${id}`)} />}
     </div>
   );
@@ -306,23 +417,30 @@ function NouvelleExpedition({ onClose, onOk }: { onClose: () => void; onOk: (id:
 
 const ORDRE_EXP = ['preparation', 'remise_transporteur', 'expediee', 'en_transit', 'arrivee', 'mise_a_disposition', 'livree'];
 
+const FRISE_EXP = ['remise_transporteur', 'depart_port', 'transbordement', 'arrivee_port', 'mise_a_disposition', 'livraison'];
+
+/** Fiche d'une expédition (maquette EXP) : infos de transport, frise des étapes, franchise au port comptée depuis l'arrivée réelle. */
 export function FicheExpedition() {
   const { id = '' } = useParams();
   const { t } = useTranslation();
   const { profil, langue, fuseau } = useAuth();
   const role = profil?.role ?? '';
-  const e = useAsync(async () => ok(await supabase.from('expeditions').select('*').eq('id', id).maybeSingle()) as Expedition | null, [id]);
+  const e = useAsync(async () => ok(await supabase.from('expeditions').select('*, dossiers(reference, clients(raison_sociale))').eq('id', id).maybeSingle()) as unknown as ExpeditionListe | null, [id]);
   const etapes = useAsync(async () => ok(await supabase.from('expedition_etapes').select('*').eq('expedition_id', id).order('survenue_le')) as Etape[], [id]);
   const liees = useAsync(async () => (['admin', 'achats_chine'].includes(role) ? ok(await supabase.from('expedition_commandes').select('commande_id').eq('expedition_id', id)) as { commande_id: string }[] : []), [id, role]);
   const cmds = useAsync(async () => (e.data && ['admin', 'achats_chine'].includes(role) ? ok(await supabase.from('commandes').select('id, reference, statut').eq('dossier_id', e.data.dossier_id).neq('statut', 'annulee')) as Commande[] : []), [e.data?.dossier_id, role]);
   const a = useAction();
   const [docs, setDocs] = useState<Partial<Expedition> | null>(null);
+  const [retard, setRetard] = useState<string | null>(null);
   const [etape, setEtape] = useState({ etape: 'depart_port', lieu: '', survenue_le: '', commentaire: '' });
   const x = e.data;
-  if (e.chargement) return <div className="screen"><Chargement /></div>;
+  if (e.chargement && !x) return <div className="screen"><Chargement /></div>;
   if (!x) return <div className="screen"><Vide>{e.erreur ?? t('expeditions.introuvable')}</Vide></div>;
   const ecrit = ['admin', 'achats_chine'].includes(role);
   const suivant = ORDRE_EXP[ORDRE_EXP.indexOf(x.statut) + 1];
+  const enRoute = ['preparation', 'remise_transporteur', 'expediee', 'en_transit'].includes(x.statut);
+  const reportee = Boolean(x.eta && x.eta_initiale && x.eta > x.eta_initiale) && enRoute;
+  const liste = etapes.data ?? [];
   const recharger = () => { void e.recharger(); void etapes.recharger(); void liees.recharger(); };
   const avancer = async () => { if (suivant && await a.executer(async () => ok(await supabase.rpc('changer_statut_expedition', { p_expedition: x.id, p_statut: suivant })))) recharger(); };
   const lier = async (cid: string) => { if (await a.executer(async () => ok(await supabase.from('expedition_commandes').insert({ expedition_id: x.id, commande_id: cid })))) recharger(); };
@@ -336,6 +454,12 @@ export function FicheExpedition() {
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.from('expeditions').update(v.data).eq('id', x.id)))) { setDocs(null); recharger(); }
   };
+  // Retard : nouvelle arrivée prévue ; l'arrivée initiale reste conservée par la base.
+  const signalerRetard = async () => {
+    const v = z.object({ eta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).strict().safeParse({ eta: retard ?? '' });
+    if (!v.success || (x.eta && v.data.eta <= x.eta)) { a.setErreur(t('expeditions.retard_date')); return; }
+    if (await a.executer(async () => ok(await supabase.from('expeditions').update(v.data).eq('id', x.id)))) { setRetard(null); recharger(); }
+  };
   const ajouterEtape = async () => {
     const v = z.object({ etape: z.enum(['remise_transporteur', 'depart_port', 'transbordement', 'arrivee_port', 'dechargement', 'mise_a_disposition', 'livraison', 'autre']),
       lieu: z.string().max(120).nullable(), survenue_le: z.string().min(10), commentaire: z.string().max(1000).nullable() }).strict()
@@ -343,57 +467,107 @@ export function FicheExpedition() {
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.from('expedition_etapes').insert({ ...v.data, expedition_id: x.id })))) { setEtape({ etape: 'depart_port', lieu: '', survenue_le: '', commentaire: '' }); recharger(); }
   };
-  const franchiseFin = x.eta && x.jours_franchise !== null ? new Date(new Date(x.eta).getTime() + x.jours_franchise * 86400000).toISOString() : null;
+  // Frise : première occurrence de chaque étape ; le transbordement n'apparaît que s'il a eu lieu.
+  const premiere = (k: string) => liste.find((s) => s.etape === k) ?? null;
+  const frise = FRISE_EXP.filter((k) => k !== 'transbordement' || premiere(k));
+  const derniere = Math.max(-1, ...frise.map((k, i) => (premiere(k) ? i : -1)));
+  // Franchise : démarre à l'arrivée réelle au port (étape saisie), jamais à l'arrivée prévue.
+  const arrivee = premiere('arrivee_port')?.survenue_le.slice(0, 10) ?? null;
+  const finFranchise = arrivee && x.jours_franchise !== null ? new Date(Date.parse(arrivee) + x.jours_franchise * 86400000).toISOString().slice(0, 10) : null;
+  const reste = finFranchise && x.statut !== 'livree' ? Math.round((Date.parse(finFranchise) - Date.parse(new Date().toISOString().slice(0, 10))) / 86400000) : null;
+  const pays = x.pays_destination === 'CI' ? 'BSC' : x.pays_destination === 'CM' ? 'BESC' : x.pays_destination === 'GA' ? 'BIETC' : null;
+  const info = (lib: string, val: ReactNode) => <div><span>{lib}</span><b>{val}</b></div>;
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.logistique')} · ${t(`modes_exp.${x.mode}`)} · ${x.pays_destination}`} titre={`${x.reference} — ${x.port_depart ?? '?'} → ${x.port_arrivee ?? x.pays_destination}`}
+      <Entete surtitre={`${t('modules.logistique')} · ${t('expeditions.surtitre_fiche')} · ${x.reference} · EXP`}
+        titre={<span className="exp-titre">{x.dossiers?.clients?.raison_sociale ?? x.reference}
+          <Statut statut={reportee ? 'att' : x.statut} libelle={`${t(`statuts_exp.${x.statut}`)}${reportee ? ` · ${t('expeditions.retard')}` : ''}`} /></span>}
         actions={<>
-          <Statut statut={x.statut} libelle={t(`statuts_exp.${x.statut}`)} />
-          {suivant && (ecrit || (role === 'hub_afrique' && ['arrivee', 'mise_a_disposition', 'livree'].includes(suivant))) &&
-            <Bouton variante="primaire" onClick={() => void avancer()}>{t('expeditions.passer', { s: t(`statuts_exp.${suivant}`) })}</Bouton>}
+          {ecrit && enRoute && <Bouton onClick={() => setRetard(x.eta ?? '')}>{t('expeditions.signaler_retard')}</Bouton>}
           {ecrit && <Bouton onClick={() => setDocs({ bordereau_reference: x.bordereau_reference, numero_connaissement: x.numero_connaissement, type_connaissement: x.type_connaissement as Expedition['type_connaissement'], navire: x.navire, eta: x.eta, conteneurs: x.conteneurs, plombs: x.plombs })}>{t('expeditions.documents')}</Bouton>}
+          {suivant && (ecrit || (role === 'hub_afrique' && ['arrivee', 'mise_a_disposition', 'livree'].includes(suivant))) &&
+            <Bouton variante="primaire" disabled={a.enCours} onClick={() => void avancer()}>{t('expeditions.confirmer', { s: t(`statuts_exp.${suivant}`) })}</Bouton>}
         </>} />
-      <Kpis items={[
-        { lib: 'ETA', val: date(x.eta, langue), sous: x.navire ?? '—' },
-        { lib: t('expeditions.bordereau'), texte: true, val: x.bordereau_reference ?? t('expeditions.manquant'), sous: x.pays_destination === 'CI' ? 'BSC' : x.pays_destination === 'CM' ? 'BESC' : x.pays_destination === 'GA' ? 'BIETC' : '—' },
-        { lib: t('expeditions.connaissement'), texte: true, val: x.numero_connaissement ?? '—', sous: x.type_connaissement ? t(`connaissements.${x.type_connaissement}`) : '—' },
-        { lib: t('expeditions.fin_franchise'), val: franchiseFin ? date(franchiseFin, langue) : '—', sous: t('expeditions.franchise_jours', { n: x.jours_franchise ?? 0 }) },
-      ]} />
-      <Bandeau type="err">{a.erreur}</Bandeau>
-      <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {ecrit && (
-          <section>
-            <div className="section-titre">{t('expeditions.commandes')}</div>
-            <div className="actions">
-              {(cmds.data ?? []).map((c) => {
-                const lie = (liees.data ?? []).some((l) => l.commande_id === c.id);
-                return lie ? <span key={c.id} className="chip info">{c.reference}</span>
-                  : x.statut === 'preparation' ? <Bouton key={c.id} petit onClick={() => void lier(c.id)}>+ {c.reference}</Bouton> : null;
-              })}
-            </div>
-          </section>
-        )}
-        {['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role) && <PackDocumentaire expeditionId={x.id} dossierId={x.dossier_id} />}
-        {['admin', 'achats_chine', 'hub_afrique'].includes(role) && x.statut !== 'livree' && <TransitaireExpedition expeditionId={x.id} transitaire={x.transitaire} onChange={recharger} />}
-        <section>
-          <div className="section-titre">{t('expeditions.etapes')}</div>
-          {(etapes.data ?? []).length === 0 ? <span className="mute">{t('expeditions.aucune_etape')}</span> : (
-            <table className="t"><tbody>{(etapes.data ?? []).map((s) => (
-              <tr key={s.id}><td className="ref">{dateHeure(s.survenue_le, langue, fuseau)}</td><td>{t(`etapes.${s.etape}`)}</td><td className="sec">{s.lieu ?? ''}</td><td className="sec">{s.commentaire ?? ''}</td></tr>))}</tbody></table>
+      <p className="exp-sous">{[x.dossiers?.reference, x.conteneurs.join(', ') || null, t(`modes_exp.${x.mode}`)].filter(Boolean).join(' · ')}</p>
+      <Bandeau type="err">{a.erreur ?? e.erreur ?? etapes.erreur}</Bandeau>
+      <div className="fiche-grille">
+        <div className="exp-principal">
+          <div className="exp-infos">
+            {info(t('expeditions.connaissement'), <>{x.numero_connaissement ?? '—'}{x.type_connaissement && <small> · {t(`connaissements.${x.type_connaissement}`)}</small>}</>)}
+            {info(t('expeditions.navire'), x.navire ?? '—')}
+            {info(t('expeditions.port_chargement'), x.port_depart ?? '—')}
+            {info(t('expeditions.port_destination'), `${x.port_arrivee ?? '—'} · ${x.pays_destination}`)}
+            {info(t('expeditions.arrivee_prevue'), <span className={reportee ? 'txt-err' : ''}>{date(x.eta, langue)}{reportee && <small> ({t('expeditions.initiale', { d: date(x.eta_initiale, langue) })})</small>}</span>)}
+            {info(t('expeditions.bordereau'), x.bordereau_reference ? `${x.bordereau_reference}${pays ? ` · ${pays}` : ''}` : <span className="txt-err">{t('expeditions.manquant')}</span>)}
+          </div>
+          <ol className="exp-frise">
+            {frise.map((k, i) => {
+              const s = premiere(k);
+              return (
+                <li key={k} className={s ? (i === derniere && x.statut !== 'livree' ? 'courante' : 'faite') : ''}>
+                  <span className="pt" /><span className="nom">{t(`etapes.${k}`)}</span><span className="dt">{s ? date(s.survenue_le, langue) : k === 'arrivee_port' && x.eta ? t('expeditions.prevue', { d: date(x.eta, langue) }) : '—'}</span>
+                </li>);
+            })}
+          </ol>
+          {ecrit && (
+            <section>
+              <div className="section-titre">{t('expeditions.commandes')}</div>
+              <div className="actions">
+                {(cmds.data ?? []).map((c) => {
+                  const lie = (liees.data ?? []).some((l) => l.commande_id === c.id);
+                  return lie ? <span key={c.id} className="chip info">{c.reference}</span>
+                    : x.statut === 'preparation' ? <Bouton key={c.id} petit onClick={() => void lier(c.id)}>+ {c.reference}</Bouton> : null;
+                })}
+                {(cmds.data ?? []).length === 0 && <span className="mute">—</span>}
+              </div>
+            </section>
           )}
+          {['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role) && <PackDocumentaire expeditionId={x.id} dossierId={x.dossier_id} />}
           {(ecrit || role === 'hub_afrique') && (
-            <div className="grille3" style={{ alignItems: 'end', marginTop: 8, gridTemplateColumns: '1fr 1fr 1fr 2fr auto' }}>
-              <Champ label={t('expeditions.etape')}><select value={etape.etape} onChange={(ev) => setEtape({ ...etape, etape: ev.target.value })}>
-                {['remise_transporteur', 'depart_port', 'transbordement', 'arrivee_port', 'dechargement', 'mise_a_disposition', 'livraison', 'autre'].map((s) => <option key={s} value={s}>{t(`etapes.${s}`)}</option>)}</select></Champ>
-              <Champ label={t('inspections.lieu')}><input value={etape.lieu} maxLength={120} onChange={(ev) => setEtape({ ...etape, lieu: ev.target.value })} /></Champ>
-              <Champ label={t('champs.date')}><input type="datetime-local" value={etape.survenue_le} onChange={(ev) => setEtape({ ...etape, survenue_le: ev.target.value })} /></Champ>
-              <Champ label={t('champs.commentaire')}><input value={etape.commentaire} maxLength={1000} onChange={(ev) => setEtape({ ...etape, commentaire: ev.target.value })} /></Champ>
-              <Bouton onClick={() => void ajouterEtape()}>{t('commun.ajouter')}</Bouton>
-            </div>
+            <section>
+              <div className="section-titre">{t('expeditions.ajouter_etape')}</div>
+              <div className="grille3" style={{ alignItems: 'end', gridTemplateColumns: '1fr 1fr 1fr 2fr auto' }}>
+                <Champ label={t('expeditions.etape')}><select value={etape.etape} onChange={(ev) => setEtape({ ...etape, etape: ev.target.value })}>
+                  {['remise_transporteur', 'depart_port', 'transbordement', 'arrivee_port', 'dechargement', 'mise_a_disposition', 'livraison', 'autre'].map((s) => <option key={s} value={s}>{t(`etapes.${s}`)}</option>)}</select></Champ>
+                <Champ label={t('inspections.lieu')}><input value={etape.lieu} maxLength={120} onChange={(ev) => setEtape({ ...etape, lieu: ev.target.value })} /></Champ>
+                <Champ label={t('champs.date')}><input type="datetime-local" value={etape.survenue_le} onChange={(ev) => setEtape({ ...etape, survenue_le: ev.target.value })} /></Champ>
+                <Champ label={t('champs.commentaire')}><input value={etape.commentaire} maxLength={1000} onChange={(ev) => setEtape({ ...etape, commentaire: ev.target.value })} /></Champ>
+                <Bouton disabled={a.enCours} onClick={() => void ajouterEtape()}>{t('commun.ajouter')}</Bouton>
+              </div>
+            </section>
           )}
-        </section>
-        <p className="mute">{t('expeditions.aide_verrous')}</p>
+          {['admin', 'achats_chine', 'hub_afrique'].includes(role) && x.statut !== 'livree' && <TransitaireExpedition expeditionId={x.id} transitaire={x.transitaire} onChange={recharger} />}
+          <p className="mute">{t('expeditions.aide_verrous')}</p>
+        </div>
+        <aside className="exp-aside">
+          <section>
+            <div className="surtitre">{t('expeditions.franchise_titre')}</div>
+            {x.jours_franchise === null ? <p className="mute">{t('expeditions.franchise_inconnue')}</p>
+              : !arrivee ? <p>{t('expeditions.franchise_demarre', { n: x.jours_franchise })}</p>
+                : <>
+                  <p>{t('expeditions.franchise_fin', { d: date(finFranchise, langue), n: x.jours_franchise })}</p>
+                  {reste !== null && <b className={'exp-reste' + (reste < 0 ? ' txt-err' : reste <= 2 ? ' txt-att' : '')}>{reste < 0 ? t('expeditions.jours_depasses', { n: -reste }) : t('expeditions.jours_restants', { n: reste })}</b>}
+                </>}
+          </section>
+          <section>
+            <div className="surtitre">{t('expeditions.journal')}</div>
+            {liste.length === 0 ? <p className="mute">{t('expeditions.aucune_etape')}</p> : [...liste].reverse().map((s) => (
+              <div key={s.id} className="exp-jrn">
+                <span className="mute">{dateHeure(s.survenue_le, langue, fuseau)}</span>
+                <span>{t(`etapes.${s.etape}`)}{s.lieu ? ` · ${s.lieu}` : ''}</span>
+                {s.commentaire && <span className="sec">{s.commentaire}</span>}
+              </div>))}
+          </section>
+        </aside>
       </div>
+      {retard !== null && (
+        <Tiroir titre={t('expeditions.signaler_retard')} onClose={() => setRetard(null)}>
+          <p className="sec">{t('expeditions.aide_retard', { d: date(x.eta_initiale ?? x.eta, langue) })}</p>
+          <Champ label={t('expeditions.nouvelle_arrivee')}><input type="date" value={retard} min={x.eta ?? undefined} onChange={(ev) => setRetard(ev.target.value)} /></Champ>
+          <Bandeau type="err">{a.erreur}</Bandeau>
+          <Bouton variante="primaire" disabled={a.enCours} onClick={() => void signalerRetard()}>{t('commun.enregistrer')}</Bouton>
+        </Tiroir>
+      )}
       {docs && (
         <Tiroir titre={t('expeditions.documents')} onClose={() => setDocs(null)}>
           <div className="grille2">

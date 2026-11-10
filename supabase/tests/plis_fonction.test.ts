@@ -1,7 +1,7 @@
 // M17, M5 et M16, lot 1 : logique pure de la fonction serveur gbs-fournisseur (plis fermés, pièces de due diligence).
 import { createHash, randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { chiffrer, cle, contenuPli, dechiffrer, empreinte, lireDemande, lireOffre } from '../functions/_shared/plis';
+import { chiffrer, cle, contenuPli, dechiffrer, empreinte, lireDemande, lireDemandeCompte, lireOffre } from '../functions/_shared/plis';
 import { lireDepotPiece, TAILLE_PIECE_MAX } from '../functions/_shared/piecesdd';
 
 const J = 'A'.repeat(43);
@@ -32,6 +32,15 @@ describe('fonction gbs-fournisseur : offre et plis', () => {
     expect(lireDemande({ action: 'lire', jeton: 'court' })).toBeNull();
     expect(lireDemande({ action: 'question', jeton: J, question: 'Ok ?' })).toBeNull();
     expect(lireDemande({ action: 'question', jeton: J, question: 'Marque du compresseur imposée ?' })?.action).toBe('question');
+  });
+
+  it('dépôt depuis le compte : action, consultation (UUID) et offre seulement ; jamais de jeton', () => {
+    const c = '0b6f5a52-3c1e-4d8a-9f3b-2a7c9e1d4f60';
+    expect(lireDemandeCompte({ action: 'repondre_compte', consultation: c, offre })).toEqual({ consultation: c, offre });
+    expect(lireDemandeCompte({ action: 'repondre_compte', consultation: c, offre, jeton: J })).toBeNull();
+    expect(lireDemandeCompte({ action: 'repondre_compte', consultation: "x' or 1=1", offre })).toBeNull();
+    expect(lireDemandeCompte({ action: 'repondre', consultation: c, offre })).toBeNull();
+    expect(lireDemandeCompte([])).toBeNull();
   });
 
   it('chiffrement AES-256-GCM : aller-retour, clé ou pli altéré refusés ; empreinte salée', async () => {

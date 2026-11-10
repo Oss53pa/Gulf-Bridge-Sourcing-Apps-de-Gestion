@@ -1,26 +1,53 @@
-import { useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { date, dateHeure } from '../lib/format';
+import { date, dateHeure, montant } from '../lib/format';
 import type { Audit, Parametre, Profil } from '../lib/types';
-import { Bandeau, Bouton, CadreTableau, Champ, Entete, Onglets, Statut, Tiroir, Vide } from '../components/ui';
-import { useNoms } from '../lib/referentiels';
+import { Bandeau, Bouton, Champ, Chargement, Entete, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { CalendrierParam, DelaisCiblesParam } from './Delais';
+
+// Module de chaque table journalisée (filtre « module » du journal).
+const MODULES_AUDIT: Record<string, string[]> = {
+  commercial: ['prospects', 'prospects_actions', 'clients', 'verifications_clients', 'appels_offres', 'appels_offres_pieces', 'appels_offres_questions', 'fiches_reference', 'satisfactions', 'devis', 'devis_pieces'],
+  dossiers: ['dossiers', 'pieces', 'derogations', 'dossier_phases', 'points_bloquants', 'taches', 'phase_attentes', 'echeances_projet', 'avenants', 'calendrier', 'delais_cibles', 'modeles_dossier', 'pieces_modele'],
+  achats: ['commandes', 'lignes_commande', 'fournisseurs', 'comptes_paiement', 'beneficiaires_effectifs', 'liens_fournisseurs', 'liens_due_diligence', 'pieces_due_diligence', 'due_diligences',
+    'questions_consultation', 'rapports_offres', 'plis', 'registre_presentations', 'echantillons'],
+  qualite: ['inspections', 'non_conformites', 'dossiers_qualite_emis', 'listes_qualite_client'],
+  logistique: ['expeditions', 'expedition_etapes', 'expedition_commandes', 'liens_transitaires', 'documents_transitaires', 'receptions', 'reserves_reception', 'lettres_credit', 'certificats_lc'],
+  finance: ['factures', 'lignes_facture', 'encaissements', 'paiements_fournisseurs', 'couts', 'couts_repartition', 'partages', 'series_factures', 'releves_bancaires', 'lignes_releve',
+    'releves_valides', 'comptes_bancaires', 'taux_change', 'mensualites_cadre'],
+  apres_vente: ['interventions', 'numeros_serie', 'pieces_rechange'],
+  parametrage: ['parametres', 'profils', 'societes', 'rattachements_pays'],
+};
+const moduleDe = (table: string) => Object.entries(MODULES_AUDIT).find(([, ts]) => ts.includes(table))?.[0] ?? 'parametrage';
+// Validation : passage d'un statut vers un état validé, approuvé ou libéré.
+const VALIDES = ['validee', 'valide', 'validees', 'approuvee', 'approuve', 'accepte', 'acceptee', 'liberation', 'signee', 'definitive', 'payee', 'verifie', 'agree', 'emise'];
+const statutDe = (v: unknown) => (v && typeof v === 'object' && 'statut' in v ? String((v as { statut: unknown }).statut) : null);
+const objetDe = (v: unknown) => {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  for (const k of ['reference', 'numero', 'raison_sociale', 'libelle', 'cle', 'nom', 'intitule']) if (typeof o[k] === 'string' && o[k]) return String(o[k]);
+  return null;
+};
+const lisible = (x: string) => x.replace(/_/g, ' ');
 
 export function Journal() {
   const { t } = useTranslation();
   const { langue, fuseau } = useAuth();
-  const profils = useNoms('profils');
-  const [table, setTable] = useState('');
+  const [module, setModule] = useState('');
+  const [type, setType] = useState<'tout' | 'validations' | 'derogations'>('tout');
+  const [q, setQ] = useState('');
   const [sel, setSel] = useState<Audit | null>(null);
+  const profils = useAsync(async () => ok(await supabase.from('profils').select('id, nom, role')) as { id: string; nom: string; role: string }[], []);
   const l = useAsync(async () => {
     let r = supabase.from('journal_audit').select('*').order('id', { ascending: false }).limit(500);
-    if (table) r = r.eq('table_nom', table);
+    if (type === 'derogations') r = r.eq('table_nom', 'derogations');
+    else if (module) r = r.in('table_nom', MODULES_AUDIT[module] ?? []);
     return ok(await r) as Audit[];
-  }, [table]);
+  }, [module, type]);
   const a = useAction();
   const [verif, setVerif] = useState<{ premiere_ligne_alteree: number | null; lignes_verifiees: number } | null>(null);
   const verifier = async () => {
@@ -29,58 +56,87 @@ export function Journal() {
       setVerif(r[0] ?? null);
     });
   };
+  useEffect(() => { void verifier(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const qui = (u: string | null) => {
+    const p = u ? (profils.data ?? []).find((x) => x.id === u) : null;
+    return u ? (p ? `${p.nom} · ${t(`roles.${p.role}`)}` : '…') : t('journal.systeme');
+  };
+  const action = (j: Audit) => {
+    const av = statutDe(j.avant), ap = statutDe(j.apres);
+    if (j.action === 'update' && av !== ap && ap) return t('journal.statut_change', { objet: t(`tables.${j.table_nom}`, { defaultValue: lisible(j.table_nom) }), de: lisible(av ?? '—'), a: lisible(ap) });
+    return `${t(`journal.actions.${j.action}`, { defaultValue: j.action })} · ${t(`tables.${j.table_nom}`, { defaultValue: lisible(j.table_nom) })}`;
+  };
+  const estValidation = (j: Audit) => { const ap = statutDe(j.apres); return j.action === 'update' && ap !== statutDe(j.avant) && ap !== null && VALIDES.includes(ap); };
+  const terme = q.trim().toLowerCase();
+  const liste = (l.data ?? []).filter((j) => (type !== 'validations' || estValidation(j))
+    && (!terme || [qui(j.utilisateur), action(j), objetDe(j.apres) ?? objetDe(j.avant) ?? '', j.motif ?? ''].join(' ').toLowerCase().includes(terme)));
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.supervision')} · ${t('journal.ajout_seul')}`} titre={t('journal.titre')}
-        actions={<>
-          <select className="search" style={{ width: 220 }} value={table} onChange={(e) => setTable(e.target.value)} aria-label={t('journal.filtre_table')}>
-            <option value="">{t('journal.toutes_tables')}</option>
-            {['dossiers', 'pieces', 'derogations', 'commandes', 'paiements_fournisseurs', 'comptes_paiement', 'factures', 'encaissements', 'inspections', 'parametres', 'profils', 'fournisseurs'].map((x) =>
-              <option key={x} value={x}>{t(`tables.${x}`, { defaultValue: x })}</option>)}
-          </select>
-          <Bouton variante="primaire" onClick={() => void verifier()}>{t('journal.verifier')}</Bouton>
-        </>} />
-      {verif && (verif.premiere_ligne_alteree === null
-        ? <Bandeau type="ok">{t('journal.chaine_ok', { n: verif.lignes_verifiees })}</Bandeau>
-        : <Bandeau type="err">{t('journal.chaine_ko', { id: verif.premiere_ligne_alteree })}</Bandeau>)}
-      <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
-      <div className="liste-detail">
-        <div className="liste"><CadreTableau>
-          {(l.data ?? []).length === 0 ? <Vide>{t('journal.vide')}</Vide> : (
-            <table className="t"><thead><tr><th>#</th><th>{t('champs.horodatage')}</th><th>{t('champs.utilisateur')}</th><th>{t('champs.action')}</th><th>{t('champs.objet')}</th><th>{t('champs.motif')}</th></tr></thead>
-              <tbody>{(l.data ?? []).map((j) => (
-                <tr key={j.id} className="cliquable" aria-selected={sel?.id === j.id} onClick={() => setSel(j)}>
-                  <td className="ref">{j.id}</td><td className="ref">{dateHeure(j.horodatage, langue, fuseau)}</td>
-                  <td>{j.utilisateur ? profils[j.utilisateur] ?? '…' : t('journal.systeme')}</td>
-                  <td className="sec">{t(`journal.actions.${j.action}`, { defaultValue: j.action })}</td>
-                  <td className="sec">{t(`tables.${j.table_nom}`, { defaultValue: j.table_nom })}</td><td>{j.motif ?? ''}</td></tr>))}</tbody></table>
-          )}
-        </CadreTableau></div>
-        <aside className="detail">
-          {!sel ? <Vide>{t('journal.choisir')}</Vide> : (<>
-            <div className="surtitre">#{sel.id} · {t(`tables.${sel.table_nom}`, { defaultValue: sel.table_nom })}</div>
-            <dl className="dl"><dt>{t('journal.empreinte')}</dt><dd style={{ wordBreak: 'break-all' }}><code>{sel.empreinte}</code></dd></dl>
-            <div className="section-titre">{t('journal.avant')}</div>
-            <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{sel.avant ? JSON.stringify(sel.avant, null, 2) : '—'}</pre>
-            <div className="section-titre">{t('journal.apres')}</div>
-            <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{sel.apres ? JSON.stringify(sel.apres, null, 2) : '—'}</pre>
-          </>)}
-        </aside>
+      <Entete surtitre={`${t('modules.supervision')} · ${t('journal.non_modifiable')}`} titre={t('journal.titre_court')} />
+      <p className="sec" style={{ marginTop: -8 }}>{t('journal.aide')}</p>
+      {verif ? (verif.premiere_ligne_alteree === null
+        ? <div className="aud-integrite ok"><span className="pt" />{t('journal.integre', { n: verif.lignes_verifiees })}</div>
+        : <Bandeau type="err">{t('journal.chaine_ko', { id: verif.premiere_ligne_alteree })}</Bandeau>)
+        : <Bouton disabled={a.enCours} onClick={() => void verifier()}>{t('journal.verifier')}</Bouton>}
+      <Bandeau type="err">{l.erreur ?? profils.erreur ?? a.erreur}</Bandeau>
+      <div className="aud-filtres">
+        <div className="segment">
+          {['', ...Object.keys(MODULES_AUDIT)].map((m) => <button key={m || 'tous'} type="button" aria-pressed={module === m} disabled={type === 'derogations'} onClick={() => setModule(m)}>{m ? t(`modules.${m}`) : t('journal.tous')}</button>)}
+        </div>
+        <div className="segment">
+          {(['tout', 'validations', 'derogations'] as const).map((x) => <button key={x} type="button" aria-pressed={type === x} onClick={() => setType(x)}>{t(`journal.types.${x}`)}</button>)}
+        </div>
       </div>
+      <div className="aud-recherche">
+        <input className="search" value={q} maxLength={100} placeholder={t('journal.rechercher')} onChange={(e) => setQ(e.target.value)} aria-label={t('journal.rechercher')} />
+        <span className="mute">{t('journal.entrees', { n: liste.length })}</span>
+      </div>
+      <div className="cadre">
+        {l.chargement && !l.data ? <Chargement /> : liste.length === 0 ? <Vide>{t('journal.vide')}</Vide> : (
+          <table className="t aud-table"><thead><tr><th>{t('champs.horodatage')}</th><th>{t('champs.utilisateur')}</th><th>{t('journal.module')}</th><th>{t('champs.action')}</th>
+            <th className="num">{t('journal.empreinte_court')}</th></tr></thead>
+            <tbody>{liste.map((j) => {
+              const derog = j.table_nom === 'derogations';
+              const objet = objetDe(j.apres) ?? objetDe(j.avant);
+              return (
+                <tr key={j.id} className={'cliquable' + (derog ? ' aud-derog' : '')} onClick={() => setSel(j)}>
+                  <td className="ref">{dateHeure(j.horodatage, langue, fuseau)}</td>
+                  <td>{qui(j.utilisateur)}</td>
+                  <td className="aud-module">{t(`modules.${moduleDe(j.table_nom)}`)}</td>
+                  <td><b className={derog ? 'txt-err' : ''}>{action(j)}</b>
+                    {objet && <div className="sec">{objet}</div>}
+                    {j.motif && <div>{t('journal.motif', { m: j.motif })}</div>}</td>
+                  <td className="num ref mute">{j.empreinte.slice(0, 8)}</td>
+                </tr>);
+            })}</tbody></table>
+        )}
+      </div>
+      {sel && (
+        <Tiroir titre={`#${sel.id} · ${action(sel)}`} onClose={() => setSel(null)}>
+          <dl className="dl"><dt>{t('champs.horodatage')}</dt><dd>{dateHeure(sel.horodatage, langue, fuseau)}</dd>
+            <dt>{t('champs.utilisateur')}</dt><dd>{qui(sel.utilisateur)}</dd>
+            <dt>{t('journal.empreinte')}</dt><dd style={{ wordBreak: 'break-all' }}><code>{sel.empreinte}</code></dd></dl>
+          <div className="section-titre">{t('journal.avant')}</div>
+          <pre className="aud-json">{sel.avant ? JSON.stringify(sel.avant, null, 2) : '—'}</pre>
+          <div className="section-titre">{t('journal.apres')}</div>
+          <pre className="aud-json">{sel.apres ? JSON.stringify(sel.apres, null, 2) : '—'}</pre>
+        </Tiroir>
+      )}
     </div>
   );
 }
 
-type OngletParam = 'parametres' | 'taux' | 'calendrier' | 'delais' | 'utilisateurs' | 'societes';
+type OngletParam = 'grille' | 'parametres' | 'taux' | 'calendrier' | 'delais' | 'utilisateurs' | 'societes';
 
 export function Parametrage() {
   const { t } = useTranslation();
-  const [onglet, setOnglet] = useState<OngletParam>('parametres');
+  const [onglet, setOnglet] = useState<OngletParam>('grille');
   return (
     <div className="screen">
       <Entete surtitre={`${t('modules.parametrage')} · ${t('parametrage.dates')}`} titre={t('parametrage.titre')} />
-      <Onglets actif={onglet} onChange={setOnglet} items={(['parametres', 'taux', 'calendrier', 'delais', 'utilisateurs', 'societes'] as OngletParam[]).map((id) => ({ id, lib: t(`parametrage.onglets.${id}`) }))} />
+      <Onglets actif={onglet} onChange={setOnglet} items={(['grille', 'parametres', 'taux', 'calendrier', 'delais', 'utilisateurs', 'societes'] as OngletParam[]).map((id) => ({ id, lib: t(`parametrage.onglets.${id}`) }))} />
       <div className="cadre">
+        {onglet === 'grille' && <GrilleTarifaire />}
         {onglet === 'parametres' && <Parametres />}
         {onglet === 'taux' && <Taux />}
         {onglet === 'calendrier' && <CalendrierParam />}
@@ -88,6 +144,104 @@ export function Parametrage() {
         {onglet === 'utilisateurs' && <Utilisateurs />}
         {onglet === 'societes' && <Societes />}
       </div>
+    </div>
+  );
+}
+
+interface Tranche { jusqu_a: number | null; taux: number }
+
+/** Grille tarifaire (maquette « Services et barèmes ») : barème de commission par tranches, règles d'application,
+ *  autres tarifs et versions datées. Une nouvelle version s'enregistre comme un paramètre daté ; la base la valide. */
+function GrilleTarifaire() {
+  const { t } = useTranslation();
+  const { langue, profil } = useAuth();
+  const admin = profil?.role === 'admin';
+  const cat = useAsync(async () => ok(await supabase.rpc('catalogue_parametres')) as ParamCatalogue[], []);
+  const versions = useAsync(async () => ok(await supabase.from('parametres').select('id, valeur, date_effet, commentaire, cree_par').eq('cle', 'commission.bareme')
+    .order('date_effet', { ascending: false })) as { id: string; valeur: unknown; date_effet: string; commentaire: string | null; cree_par: string | null }[], []);
+  const noms = useAsync(async () => ok(await supabase.from('profils').select('id, nom')) as { id: string; nom: string }[], []);
+  const a = useAction();
+  const [ed, setEd] = useState<{ tranches: { jusqu_a: string; taux: string }[]; date_effet: string; commentaire: string } | null>(null);
+  const val = (cle: string) => (cat.data ?? []).find((p) => p.cle === cle);
+  const bareme = (Array.isArray(val('commission.bareme')?.valeur) ? val('commission.bareme')!.valeur : []) as Tranche[];
+  const mx = (n: number) => montant(n, 'XOF', langue);
+  const pct = (n: number) => `${(n * 100).toLocaleString(langue, { maximumFractionDigits: 2 })} %`;
+  const enVigueur = (versions.data ?? []).findIndex((v) => v.date_effet <= new Date().toISOString().slice(0, 10));
+  const nbV = (versions.data ?? []).length;
+  const regles: { cle: string; lib: string; aide: string; aff: (v: number) => string }[] = [
+    { cle: 'commission.majoration_sur_mesure', lib: t('grille.sur_mesure'), aide: t('grille.sur_mesure_aide'), aff: (v) => `+${(v * 100).toLocaleString(langue)} ${t('grille.points')}` },
+    { cle: 'commission.minimum_xof', lib: t('grille.minimum'), aide: t('grille.minimum_aide'), aff: mx },
+    { cle: 'commission.reduction_reassort', lib: t('grille.reassort'), aide: t('grille.reassort_aide'), aff: (v) => `−${pct(v)}` },
+    { cle: 'commission.part_premiere_facture', lib: t('grille.premiere_facture'), aide: t('grille.premiere_facture_aide'), aff: pct },
+  ];
+  const tarifs = (cat.data ?? []).filter((p) => p.cle.startsWith('tarif.'));
+  const preparer = () => setEd({ date_effet: new Date(Date.now() + 86400000).toISOString().slice(0, 10), commentaire: '',
+    tranches: bareme.map((x) => ({ jusqu_a: x.jusqu_a === null ? '' : String(x.jusqu_a), taux: String(Number((x.taux * 100).toFixed(4))) })) });
+  const enregistrer = async () => {
+    if (!ed) return;
+    const tranches = ed.tranches.map((x, i) => ({ jusqu_a: i === ed.tranches.length - 1 ? null : Number(x.jusqu_a.replace(/\s/g, '')), taux: Number((Number(x.taux.replace(',', '.')) / 100).toFixed(6)) }));
+    // Contrôle de saisie : bornes croissantes, dernière tranche ouverte, taux entre 0 et 100 % ; la base revalide (validateur bareme_commission).
+    const v = z.object({ cle: z.literal('commission.bareme'), valeur: z.array(z.object({ jusqu_a: z.number().positive().max(1e13).nullable(), taux: z.number().min(0).max(1) }).strict()).min(1).max(20),
+      date_effet: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), commentaire: z.string().trim().min(3).max(500) }).strict()
+      .refine((x) => x.valeur.every((y, i) => i === 0 || y.jusqu_a === null || (x.valeur[i - 1].jusqu_a ?? Infinity) < y.jusqu_a))
+      .safeParse({ cle: 'commission.bareme', valeur: tranches, date_effet: ed.date_effet, commentaire: ed.commentaire });
+    if (!v.success) { a.setErreur(t('grille.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.from('parametres').insert(v.data)))) { setEd(null); void cat.recharger(); void versions.recharger(); }
+  };
+  let bas = 0;
+  return (
+    <div className="grl">
+      <p className="mute">{t('grille.aide')}</p>
+      <Bandeau type="err">{cat.erreur ?? versions.erreur ?? a.erreur}</Bandeau>
+      <div className="grl-grille">
+        <section className="grl-carte">
+          <div className="liv-pv"><b className="liv-client">{t('grille.commission')}</b>
+            {enVigueur >= 0 && <span className="mute">{t('grille.version', { v: nbV - enVigueur, d: date(versions.data![enVigueur].date_effet, langue) })}</span>}</div>
+          <table className="t"><thead><tr><th>{t('grille.valeur_fob')}</th><th className="num">{t('grille.taux')}</th></tr></thead>
+            <tbody>{bareme.map((x, i) => {
+              const lib = x.jusqu_a === null ? t('grille.au_dela', { m: mx(bas) }) : i === 0 ? t('grille.jusqu_a', { m: mx(x.jusqu_a) }) : t('grille.de_a', { de: mx(bas), a: mx(x.jusqu_a) });
+              if (x.jusqu_a !== null) bas = x.jusqu_a;
+              return <tr key={i}><td>{lib}</td><td className="num"><b>{pct(x.taux)}</b></td></tr>;
+            })}</tbody></table>
+          <p className="mute">{t('grille.lecture')}</p>
+          <div className="section-titre">{t('grille.regles')}</div>
+          {regles.map((r) => { const p = val(r.cle); return (
+            <div key={r.cle} className="grl-regle"><span><b>{r.lib}</b><span className="mute">{r.aide}</span></span><b>{p && typeof p.valeur === 'number' ? r.aff(p.valeur) : '—'}</b></div>); })}
+          {admin && <Bouton variante="primaire" onClick={preparer}>{t('grille.preparer')}</Bouton>}
+        </section>
+        <aside className="exp-aside">
+          <section>
+            <div className="surtitre">{t('grille.historique')}</div>
+            {(versions.data ?? []).map((v, i) => (
+              <div key={v.id} className="grl-version"><b>v{nbV - i}</b><span>{date(v.date_effet, langue)}{i === enVigueur && <> · <span className="txt-ok">{t('grille.en_vigueur')}</span></>}
+                {v.date_effet > new Date().toISOString().slice(0, 10) && <> · <span className="txt-att">{t('grille.a_venir')}</span></>}
+                <span className="mute">{v.commentaire ?? ''}{v.cree_par ? ` · ${(noms.data ?? []).find((n) => n.id === v.cree_par)?.nom ?? ''}` : ''}</span></span></div>))}
+          </section>
+          <section>
+            <div className="surtitre">{t('grille.autres_tarifs')}</div>
+            {tarifs.map((p) => <div key={p.cle} className="grl-regle"><span>{p.libelle}</span><b>{afficherParam(p, langue)}</b></div>)}
+            <span className="mute">{t('grille.modifier_ailleurs')}</span>
+          </section>
+        </aside>
+      </div>
+      {ed && (
+        <Tiroir titre={t('grille.preparer')} onClose={() => setEd(null)}>
+          <p className="sec">{t('grille.aide_version')}</p>
+          {ed.tranches.map((x, i) => (
+            <div key={i} className="grille3" style={{ gridTemplateColumns: '1fr 120px auto', alignItems: 'end' }}>
+              <Champ label={i === ed.tranches.length - 1 ? t('grille.tranche_ouverte') : t('grille.jusqu_a_xof')}>
+                <input inputMode="numeric" disabled={i === ed.tranches.length - 1} value={i === ed.tranches.length - 1 ? '' : x.jusqu_a}
+                  onChange={(e) => setEd({ ...ed, tranches: ed.tranches.map((y, j) => (j === i ? { ...y, jusqu_a: e.target.value.replace(/[^\d\s]/g, '') } : y)) })} /></Champ>
+              <Champ label={t('grille.taux_pct')}><input inputMode="decimal" value={x.taux} onChange={(e) => setEd({ ...ed, tranches: ed.tranches.map((y, j) => (j === i ? { ...y, taux: e.target.value } : y)) })} /></Champ>
+              <Bouton petit disabled={ed.tranches.length <= 1} onClick={() => setEd({ ...ed, tranches: ed.tranches.filter((_, j) => j !== i) })}>{t('grille.retirer')}</Bouton>
+            </div>))}
+          <Bouton petit disabled={ed.tranches.length >= 20} onClick={() => setEd({ ...ed, tranches: [...ed.tranches.slice(0, -1), { jusqu_a: '', taux: '' }, ...ed.tranches.slice(-1)] })}>{t('grille.ajouter_tranche')}</Bouton>
+          <Champ label={t('parametrage.date_effet')}><input type="date" value={ed.date_effet} onChange={(e) => setEd({ ...ed, date_effet: e.target.value })} /></Champ>
+          <Champ label={t('grille.motif')}><input value={ed.commentaire} maxLength={500} onChange={(e) => setEd({ ...ed, commentaire: e.target.value })} /></Champ>
+          <Bandeau type="err">{a.erreur}</Bandeau>
+          <Bouton variante="primaire" disabled={a.enCours} onClick={() => void enregistrer()}>{t('commun.enregistrer')}</Bouton>
+        </Tiroir>
+      )}
     </div>
   );
 }
@@ -210,6 +364,43 @@ function Taux() {
 }
 
 const ROLES = ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'inspecteur', 'comptable'] as const;
+const SOUS_ROLES = { client: ['demandeur', 'technique', 'valideur', 'finance'], fournisseur: ['commercial', 'qualite', 'logistique', 'finance'] } as const;
+
+/** Rattachement d'un compte à un client ou à un fournisseur (portails) ; la base contrôle droits et valeurs. */
+function CompteExterne({ p, onFait }: { p: Profil; onFait: () => void }) {
+  const { t } = useTranslation();
+  const a = useAction();
+  const [type, setType] = useState<'client' | 'fournisseur'>(p.role === 'fournisseur' ? 'fournisseur' : 'client');
+  const [cible, setCible] = useState(p.client_id ?? p.fournisseur_id ?? '');
+  const [sr, setSr] = useState(p.sous_role ?? '');
+  const l = useAsync(async () => (type === 'client'
+    ? (ok(await supabase.from('clients').select('id, raison_sociale').order('raison_sociale').limit(1000)) as { id: string; raison_sociale: string }[]).map((x) => ({ id: x.id, nom: x.raison_sociale }))
+    : (ok(await supabase.from('fournisseurs').select('id, raison_sociale_en').order('raison_sociale_en').limit(1000)) as { id: string; raison_sociale_en: string }[]).map((x) => ({ id: x.id, nom: x.raison_sociale_en }))), [type]);
+  const rattacher = async () => {
+    const v = z.object({ p_user: z.string().uuid(), cible: z.string().uuid(), p_sous_role: z.enum([...SOUS_ROLES.client, ...SOUS_ROLES.fournisseur] as [string, ...string[]]) }).strict()
+      .safeParse({ p_user: p.id, cible, p_sous_role: sr });
+    if (!v.success || !(SOUS_ROLES[type] as readonly string[]).includes(sr)) { a.setErreur(t('formulaire.invalide')); return; }
+    const fn = type === 'client' ? 'admin_compte_client' : 'admin_compte_fournisseur';
+    const args = type === 'client' ? { p_user: p.id, p_client: cible, p_sous_role: sr } : { p_user: p.id, p_fournisseur: cible, p_sous_role: sr };
+    if (await a.executer(async () => ok(await supabase.rpc(fn, args)))) onFait();
+  };
+  return (
+    <fieldset className="cpt-ext">
+      <legend className="section-titre">{t('parametrage.compte_externe')}</legend>
+      <p className="mute">{t('parametrage.aide_compte_externe')}</p>
+      <div className="grille2">
+        <Champ label={t('parametrage.type_compte')}><select value={type} onChange={(e) => { setType(e.target.value as 'client' | 'fournisseur'); setCible(''); setSr(''); }}>
+          <option value="client">{t('roles.client')}</option><option value="fournisseur">{t('roles.fournisseur')}</option></select></Champ>
+        <Champ label={t('parametrage.sous_role')}><select value={sr} onChange={(e) => setSr(e.target.value)}>
+          <option value="">—</option>{SOUS_ROLES[type].map((x) => <option key={x} value={x}>{t(`sous_roles.${x}`)}</option>)}</select></Champ>
+      </div>
+      <Champ label={type === 'client' ? t('roles.client') : t('roles.fournisseur')}><select value={cible} onChange={(e) => setCible(e.target.value)}>
+        <option value="">—</option>{(l.data ?? []).map((x) => <option key={x.id} value={x.id}>{x.nom}</option>)}</select></Champ>
+      <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
+      <Bouton disabled={a.enCours || !cible || !sr} onClick={() => void rattacher()}>{t('parametrage.rattacher')}</Bouton>
+    </fieldset>
+  );
+}
 
 function Utilisateurs() {
   const { t } = useTranslation();
@@ -230,7 +421,7 @@ function Utilisateurs() {
       <Bandeau type="err">{l.erreur}</Bandeau>
       <table className="t"><thead><tr><th>{t('champs.nom')}</th><th>E-mail</th><th>{t('parametrage.role')}</th><th>{t('parametrage.societes')}</th><th>{t('parametrage.delegue')}</th><th>{t('champs.statut')}</th></tr></thead>
         <tbody>{(l.data ?? []).map((p) => (
-          <tr key={p.id} className="cliquable" onClick={() => setSel({ ...p })}><td>{p.nom}</td><td className="sec">{p.email}</td><td>{p.role ? t(`roles.${p.role}`) : t('parametrage.sans_role')}</td>
+          <tr key={p.id} className="cliquable" onClick={() => setSel({ ...p })}><td>{p.nom}</td><td className="sec">{p.email}</td><td>{p.role ? t(`roles.${p.role}`) : t('parametrage.sans_role')}{p.sous_role && <div className="mute">{t(`sous_roles.${p.sous_role}`, { defaultValue: p.sous_role })}</div>}</td>
             <td className="sec">{p.societes.map((s) => societes.find((x) => x.id === s)?.code).filter(Boolean).join(', ')}</td><td>{p.delegue_validation ? t('commun.oui') : '—'}</td>
             <td><Statut statut={p.actif ? 'validee' : 'annulee'} libelle={p.actif ? t('parametrage.actif') : t('parametrage.inactif')} /></td></tr>))}</tbody></table>
       {sel && (
@@ -250,6 +441,7 @@ function Utilisateurs() {
           <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}><input type="checkbox" checked={sel.actif} onChange={(e) => setSel({ ...sel, actif: e.target.checked })} />{t('parametrage.actif')}</label>
           <Bandeau type="err">{a.erreur}</Bandeau>
           <Bouton variante="primaire" disabled={a.enCours} onClick={() => void enregistrer()}>{t('commun.enregistrer')}</Bouton>
+          <CompteExterne p={sel} onFait={() => { setSel(null); void l.recharger(); }} />
         </Tiroir>
       )}
     </div>
@@ -263,6 +455,15 @@ function Societes() {
   const r = useAsync(async () => ok(await supabase.from('rattachements_pays').select('*').order('pays').order('date_effet', { ascending: false })) as
     { id: string; pays: string; societe_id: string; date_effet: string; commentaire: string | null }[], []);
   const a = useAction();
+  // Fiche complète (forme, identifiants fiscaux), séries de factures et comptes bancaires : lecture filtrée par la base selon le rôle.
+  const fiches = useAsync(async () => ok(await supabase.from('societes').select('id, code, raison_sociale, pays, devise, forme, date_creation, identifiants_fiscaux, fne').order('code')) as
+    { id: string; code: string; raison_sociale: string; pays: string; devise: string; forme: string | null; date_creation: string; identifiants_fiscaux: Record<string, unknown>; fne: boolean }[], []);
+  const series = useAsync(async () => { const x = await supabase.from('series_factures').select('societe_id, serie, annee, dernier, largeur').order('annee', { ascending: false });
+    return x.error ? [] : x.data as { societe_id: string; serie: string; annee: number; dernier: number; largeur: number }[]; }, []);
+  const comptes = useAsync(async () => { const x = await supabase.from('comptes_bancaires').select('id, societe_id, libelle, banque, numero, devise, actif').order('libelle');
+    return x.error ? [] : x.data as { id: string; societe_id: string; libelle: string; banque: string; numero: string; devise: string; actif: boolean }[]; }, []);
+  const [sel, setSel] = useState<string | null>(null);
+  const soc = (fiches.data ?? []).find((x) => x.id === sel) ?? fiches.data?.[0] ?? null;
   const [f, setF] = useState({ pays: '', societe_id: '', date_effet: new Date().toISOString().slice(0, 10), commentaire: '' });
   const ajouter = async () => {
     const v = z.object({ pays: z.string().regex(/^([A-Z]{2}|defaut)$/), societe_id: z.string().uuid(), date_effet: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -273,8 +474,40 @@ function Societes() {
   };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <table className="t"><thead><tr><th>{t('champs.raison_sociale')}</th><th>{t('champs.pays')}</th><th>{t('champs.devise')}</th><th>{t('parametrage.creee_le')}</th><th>FNE</th></tr></thead>
-        <tbody>{societes.map((s) => <tr key={s.id}><td>{s.raison_sociale}</td><td>{s.pays}</td><td>{s.devise}</td><td className="ref">{date(s.date_creation, langue)}</td><td>{s.fne ? t('commun.oui') : '—'}</td></tr>)}</tbody></table>
+      <Bandeau type="err">{fiches.erreur}</Bandeau>
+      <div className="soc-cartes">
+        {(fiches.data ?? []).map((x) => (
+          <button key={x.id} type="button" className={'soc-carte' + (soc?.id === x.id ? ' choisi' : '')} onClick={() => setSel(x.id)}>
+            <b>{x.raison_sociale}</b><span className="sec">{[x.pays, x.devise, x.forme].filter(Boolean).join(' · ')}</span></button>))}
+      </div>
+      {soc && (
+        <div className="soc-grille">
+          <section className="soc-bloc">
+            <div className="surtitre">{t('parametrage.fiche')}</div>
+            <dl className="dl">
+              <dt>{t('parametrage.forme')}</dt><dd>{soc.forme ?? '—'}</dd>
+              <dt>{t('champs.pays')}</dt><dd>{soc.pays}</dd>
+              <dt>{t('champs.devise')}</dt><dd>{soc.devise}</dd>
+              <dt>{t('parametrage.creee_le')}</dt><dd>{date(soc.date_creation, langue)}</dd>
+              {Object.entries(soc.identifiants_fiscaux ?? {}).map(([k, v]) => <Fragment key={k}><dt>{k.toUpperCase()}</dt><dd className="ref">{String(v)}</dd></Fragment>)}
+              {Object.keys(soc.identifiants_fiscaux ?? {}).length === 0 && <><dt>{t('parametrage.identifiants')}</dt><dd className="txt-att">{t('parametrage.identifiants_manquants')}</dd></>}
+              <dt>FNE</dt><dd>{soc.fne ? t('parametrage.fne_oui') : '—'}</dd>
+            </dl>
+          </section>
+          <section className="soc-bloc">
+            <div className="surtitre">{t('parametrage.numerotation')}</div>
+            {(series.data ?? []).filter((x) => x.societe_id === soc.id).length === 0 ? <span className="mute">—</span>
+              : (series.data ?? []).filter((x) => x.societe_id === soc.id).map((x) => (
+                <div key={`${x.serie}-${x.annee}`} className="grl-regle"><span className="ref">{`${x.serie}-${x.annee}-${'N'.repeat(x.largeur)}`}</span>
+                  <span className="mute">{t('parametrage.dernier_numero', { n: x.dernier })}</span></div>))}
+            <div className="surtitre" style={{ marginTop: 12 }}>{t('parametrage.comptes_bancaires')}</div>
+            {(comptes.data ?? []).filter((x) => x.societe_id === soc.id).length === 0 ? <span className="mute">{t('parametrage.comptes_aucun')}</span>
+              : (comptes.data ?? []).filter((x) => x.societe_id === soc.id).map((x) => (
+                <div key={x.id} className="grl-regle"><span><b>{x.banque}</b><span className="mute">{x.libelle} · •••• {x.numero.slice(-4)} · {x.devise}</span></span>
+                  <Statut statut={x.actif ? 'ok' : 'neutre'} libelle={t(x.actif ? 'parametrage.actif' : 'parametrage.inactif')} /></div>))}
+          </section>
+        </div>
+      )}
       <div className="section-titre">{t('parametrage.rattachements')}</div>
       <p className="mute">{t('parametrage.aide_rattachements')}</p>
       <Bandeau type="err">{r.erreur ?? a.erreur}</Bandeau>

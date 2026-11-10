@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { date, dateHeure, montant } from '../lib/format';
+import { date, dateHeure, montant, nombre } from '../lib/format';
+import { normaliser } from '../lib/droits';
 import type { Article, Commande, Compte, Dossier, Fournisseur, Inspection, LigneCommande, Paiement } from '../lib/types';
-import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
+import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { PlisConsultation } from './PlisFournisseurs';
 import { ApprobationEssais } from './ApprobationEssais';
 import { CataloguePieces } from './PiecesRechange';
@@ -199,44 +200,66 @@ function SaisieOffre({ rfq, invites, onClose, onOk }: { rfq: Rfq; invites: strin
 }
 
 // ============================================================================ Commandes
+const EN_COURS_CMD = ['brouillon', 'contrat_signe', 'en_production', 'production_terminee'];
+
+/** Commandes fournisseurs (maquette CMD) : étape du dossier achat et retards ouvrant droit à pénalité. */
 export function Commandes() {
   const { t } = useTranslation();
   const nav = useNavigate();
   const [params] = useSearchParams();
   const { langue, profil, societeActive } = useAuth();
   const fournisseurs = useNoms('fournisseurs');
-  const dossiers = useNoms('dossiers');
   const [creer, setCreer] = useState(Boolean(params.get('dossier')));
   const l = useAsync(async () => ok(await supabase.from('commandes').select('*').order('cree_le', { ascending: false }).limit(500)) as Commande[], [societeActive]);
-  const totaux = useMemo(() => {
-    const prod = (l.data ?? []).filter((c) => c.statut === 'en_production').length;
-    const brouillon = (l.data ?? []).filter((c) => c.statut === 'brouillon').length;
-    return { prod, brouillon, tot: (l.data ?? []).length };
-  }, [l.data]);
+  const ids = [...new Set((l.data ?? []).map((c) => c.dossier_id))];
+  const ds = useAsync(async () => (ids.length ? ok(await supabase.from('dossiers').select('id, reference, intitule, phase_courante').in('id', ids)) as
+    { id: string; reference: string; intitule: string; phase_courante: string | null }[] : []), [ids.join(',')]);
+  const ph = useAsync(async () => (ids.length ? ok(await supabase.from('dossier_phases').select('dossier_id, phase, ordre').in('dossier_id', ids)) as
+    { dossier_id: string; phase: string; ordre: number }[] : []), [ids.join(',')]);
+  const jour = new Date().toISOString().slice(0, 10);
+  const enCours = (l.data ?? []).filter((c) => EN_COURS_CMD.includes(c.statut));
+  const enRetard = (c: Commande) => EN_COURS_CMD.includes(c.statut) && Boolean(c.date_livraison_promise) && c.date_livraison_promise! < jour;
+  const retards = enCours.filter(enRetard);
   const ecrit = ['admin', 'achats_chine'].includes(profil?.role ?? '');
+  const etape = (c: Commande) => {
+    const d = (ds.data ?? []).find((x) => x.id === c.dossier_id);
+    const phases = (ph.data ?? []).filter((x) => x.dossier_id === c.dossier_id).sort((a, b) => a.ordre - b.ordre);
+    const rang = phases.findIndex((x) => x.phase === d?.phase_courante) + 1;
+    return { d, rang, total: phases.length };
+  };
+  const titre = t('commandes.titre_en_cours', { n: enCours.length }) + (retards.length ? ` ; ${t('commandes.titre_retard', { n: retards.length })}` : '');
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.achats')} · M7`} titre={t('commandes.titre', { n: totaux.tot, p: totaux.prod })}
-        actions={ecrit && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('commandes.nouvelle')}</Bouton>} />
-      <Kpis items={[
-        { lib: t('commandes.total'), val: totaux.tot },
-        { lib: t('statuts_commande.brouillon'), val: totaux.brouillon, sous: t('commandes.attente_contrat') },
-        { lib: t('statuts_commande.en_production'), val: totaux.prod, sous: t('commandes.verrou1_leve') },
-        { lib: t('statuts_commande.expediee'), val: (l.data ?? []).filter((c) => c.statut === 'expediee').length, sous: t('commandes.verrou2_leve') },
-      ]} />
-      <Bandeau type="err">{l.erreur}</Bandeau>
-      <CadreTableau>
-        {l.chargement ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('commandes.aucune')}</Vide> : (
-          <table className="t"><thead><tr><th>{t('champs.reference')}</th><th>{t('champs.dossier')}</th><th>{t('champs.fournisseur')}</th><th>{t('champs.incoterm')}</th>
-            <th className="num">{t('champs.montant')}</th><th className="num">{t('champs.fob')}</th><th>{t('champs.statut')}</th></tr></thead>
-            <tbody>{(l.data ?? []).map((c) => (
-              <tr key={c.id} className="cliquable" onClick={() => nav(`/commandes/${c.id}`)}>
-                <td className="ref">{c.reference}{c.sur_mesure && <div className="mute">{t('commandes.sur_mesure')}</div>}</td><td className="ref">{dossiers[c.dossier_id]}</td>
-                <td>{fournisseurs[c.fournisseur_id]}</td><td>{c.incoterm} {c.lieu}</td>
-                <td className="num">{montant(c.montant_marchandise, c.devise, langue)}</td><td className="num">{montant(c.fob_montant, c.devise, langue)}</td>
-                <td><Statut statut={c.statut} libelle={t(`statuts_commande.${c.statut}`)} /></td></tr>))}</tbody></table>
+      <Entete surtitre={`${t('modules.achats')} · ${t('commandes.surtitre')} · CMD`} titre={l.data ? titre : t('ecrans.commandes')}
+        actions={<>
+          {['admin', 'achats_chine', 'comptable'].includes(profil?.role ?? '') && <Bouton onClick={() => nav('/paiements')}>{t('commandes.verrous')}</Bouton>}
+          {ecrit && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('commandes.nouvelle')}</Bouton>}
+        </>} />
+      <Bandeau type="err">{l.erreur ?? ds.erreur ?? ph.erreur}</Bandeau>
+      <div className="cadre">
+        {l.chargement && !l.data ? <Chargement /> : (l.data ?? []).length === 0 ? <Vide>{t('commandes.aucune')}</Vide> : (
+          <table className="t"><thead><tr><th>{t('commandes.commande')}</th><th>{t('commandes.fabricant')}</th><th>{t('commandes.objet')}</th><th>{t('champs.incoterm')}</th>
+            <th className="num">{t('commandes.valeur')}</th><th>{t('champs.statut')}</th><th>{t('commandes.etape')}</th></tr></thead>
+            <tbody>{(l.data ?? []).map((c) => {
+              const e = etape(c), retard = enRetard(c);
+              return (
+                <tr key={c.id} className="cliquable" onClick={() => nav(`/commandes/${c.id}`)}>
+                  <td className="ref">{c.reference}{c.sur_mesure && <div className="mute">{t('commandes.sur_mesure')}</div>}</td>
+                  <td>{fournisseurs[c.fournisseur_id]}</td>
+                  <td>{e.d?.intitule ?? '—'}<div className="mute ref">{e.d?.reference}</div></td>
+                  <td className="sec">{c.incoterm} {c.lieu}</td>
+                  <td className="num">{montant(c.fob_montant || c.montant_marchandise, c.devise, langue)}</td>
+                  <td><Statut statut={c.statut} libelle={t(`statuts_commande.${c.statut}`)} /></td>
+                  <td>{e.d?.phase_courante ? <div className="cmd-etape">
+                    <span>{String(e.rang).padStart(2, '0')} · {t(`phases.${e.d.phase_courante}`)}</span>
+                    <span className="cmd-barre"><span style={{ width: `${e.total ? (e.rang / e.total) * 100 : 0}%` }} /></span>
+                    <span className={retard ? 'txt-err' : 'mute'} style={{ fontSize: 12 }}>
+                      {t('commandes.etape_n', { r: e.rang, n: e.total })}{retard ? ` · ${t('commandes.livraison_depassee', { d: c.date_livraison_promise!.split('-').reverse().join('.') })}` : ''}</span>
+                  </div> : '—'}</td>
+                </tr>);
+            })}</tbody></table>
         )}
-      </CadreTableau>
+      </div>
       {creer && <NouvelleCommande dossierInitial={params.get('dossier')} onClose={() => setCreer(false)} onOk={(id) => nav(`/commandes/${id}`)} />}
     </div>
   );
@@ -300,6 +323,9 @@ export function FicheCommande() {
   const [exec, setExec] = useState<Paiement | null>(null);
   const [motif, setMotif] = useState('');
   const [annuler, setAnnuler] = useState(false);
+  const [onglet, setOnglet] = useState<'dossier' | 'lignes' | 'approbation' | 'paiements' | 'contrat'>('dossier');
+  const phases = useAsync(async () => (c.data ? ok(await supabase.from('dossier_phases').select('phase, ordre, statut, reelle_debut, reelle_fin, prevue_fin')
+    .eq('dossier_id', c.data.dossier_id).order('ordre')) as { phase: string; ordre: number; statut: string; reelle_debut: string | null; reelle_fin: string | null; prevue_fin: string | null }[] : []), [c.data?.dossier_id]);
   const cmd = c.data;
   if (c.chargement) return <div className="screen"><Chargement /></div>;
   if (!cmd) return <div className="screen"><Vide>{c.erreur ?? t('commandes.introuvable')}</Vide></div>;
@@ -320,25 +346,65 @@ export function FicheCommande() {
   const refuserPaiement = async (p: Paiement) => { const m = window.prompt(t('paiements.motif_refus'))?.trim(); if (m && await a.executer(async () => ok(await supabase.rpc('refuser_paiement', { p_paiement: p.id, p_motif: m.slice(0, 1000) })))) recharger(); };
   const fob = Number(cmd.fob_montant);
   const validateur = role === 'admin' || profil?.delegue_validation;
+  const jourISO = new Date().toISOString().slice(0, 10);
+  const enCoursCmd = ['contrat_signe', 'en_production', 'production_terminee'].includes(cmd.statut);
+  const retardJ = enCoursCmd && cmd.date_livraison_promise && cmd.date_livraison_promise < jourISO
+    ? Math.round((Date.parse(jourISO) - Date.parse(cmd.date_livraison_promise)) / 86400000) : 0;
+  const faites = (phases.data ?? []).filter((x) => ['complete', 'validee'].includes(x.statut)).length;
+  const GROUPES: [string, string[]][] = [['A', ['consultation', 'verification', 'mise_en_concurrence', 'devis_mandat']], ['B', ['contrat', 'approbation_technique']],
+    ['C', ['production', 'inspection', 'expedition']], ['D', ['livraison', 'cloture']]];
+  const jjmmaaaa = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : '');
 
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.achats')} · ${dossier.data?.reference ?? ''} · ${t(`modes.${dossier.data?.mode_financier ?? 'accompagne'}`)}`}
-        titre={`${cmd.reference} — ${fournisseurs[cmd.fournisseur_id] ?? ''}`}
+      <Entete surtitre={`${t('modules.achats')} · ${t('commandes.fiche')} · ${cmd.reference} · ${dossier.data?.reference ?? ''} · CMD`}
+        titre={<>{dossier.data?.intitule ?? cmd.reference} <span className="h1-statut"><Statut statut={cmd.statut} libelle={t(`statuts_commande.${cmd.statut}`)} /></span></>}
         actions={<>
-          <Statut statut={cmd.statut} libelle={t(`statuts_commande.${cmd.statut}`)} />
           {ecrit && cmd.statut === 'contrat_signe' && <Bouton variante="primaire" onClick={() => void statut('en_production')}>{t('commandes.lancer_production')}</Bouton>}
           {ecrit && cmd.statut === 'en_production' && <Bouton onClick={() => void statut('production_terminee')}>{t('commandes.production_terminee')}</Bouton>}
           {role === 'admin' && !['annulee', 'livree', 'expediee'].includes(cmd.statut) && <Bouton variante="danger" onClick={() => setAnnuler(true)}>{t('commandes.annuler')}</Bouton>}
         </>} />
+      <div className="sec" style={{ marginTop: -10 }}>{fournisseurs[cmd.fournisseur_id] ?? ''} · {t(`modes.${dossier.data?.mode_financier ?? 'accompagne'}`)}</div>
       <Kpis items={[
-        { lib: t('champs.montant'), val: montant(cmd.montant_marchandise, cmd.devise, langue), sous: `${cmd.incoterm} ${cmd.lieu}` },
-        { lib: t('champs.fob'), val: montant(fob, cmd.devise, langue), sous: t('commandes.base_commission') },
+        { lib: t('commandes.valeur'), val: montant(fob || cmd.montant_marchandise, cmd.devise, langue), sous: `${cmd.incoterm} ${cmd.lieu}` },
+        { lib: t('commandes.prochain_jalon'), val: cmd.date_livraison_promise ? `${cmd.date_livraison_promise.slice(8, 10)}.${cmd.date_livraison_promise.slice(5, 7)}` : '—', sous: t('commandes.livraison_promise') },
+        { lib: t('commandes.retard'), val: t('commandes.jours', { n: retardJ }), sous: retardJ > 0 ? t('commandes.retard_constate') : t('commandes.aucun_retard') },
         { lib: t('commandes.contrat'), texte: true, val: cmd.contrat_valide_le ? t('commandes.signe') : t('commandes.non_signe'), sous: cmd.contrat_signe_le ? `${date(cmd.contrat_signe_le, langue)} · ${t(`modes_contrat.${cmd.contrat_mode}`)}` : t('commandes.verrou1') },
-        { lib: t('commandes.risque'), texte: true, val: cmd.transfert_risque ?? cmd.incoterm, sous: t('commandes.inspection_avant') },
       ]} />
+      <Onglets actif={onglet} onChange={setOnglet} items={[
+        { id: 'dossier', lib: `${t('commandes.o_dossier')} · ${faites}/${(phases.data ?? []).length}` },
+        { id: 'lignes', lib: `${t('commandes.lignes')} · ${(lignes.data ?? []).length}` },
+        { id: 'approbation', lib: t('commandes.o_approbation') },
+        { id: 'paiements', lib: `${t('commandes.o_paiements')} · ${(paiements.data ?? []).length}` },
+        { id: 'contrat', lib: t('commandes.o_contrat') }]} />
       <Bandeau type="err">{a.erreur}</Bandeau>
       <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {onglet === 'dossier' && <>
+          <div className="cmd-plan">
+            {GROUPES.map(([g, codes]) => {
+              const items = (phases.data ?? []).filter((x) => codes.includes(x.phase));
+              if (items.length === 0) return null;
+              return (
+                <div key={g} className="cmd-col">
+                  <div className="cmd-col-tete"><span><b className="bronze">{g}</b> {t(`commandes.groupes.${g}`)}</span>
+                    <span className="mute">{items.filter((x) => ['complete', 'validee'].includes(x.statut)).length}/{items.length}</span></div>
+                  {items.map((x) => (
+                    <div key={x.phase} className={'cmd-pas ' + (['complete', 'validee'].includes(x.statut) ? 'fait' : x.phase === dossier.data?.phase_courante ? 'courant' : '')}>
+                      <span className="ref">{String(x.ordre).padStart(2, '0')}</span>
+                      <span><b>{t(`phases.${x.phase}`)}</b><br /><span className="mute">{['complete', 'validee'].includes(x.statut)
+                        ? (x.reelle_fin ? t('commandes.pas_valide', { d: jjmmaaaa(x.reelle_fin) }) : t('commandes.pas_valide_sans_date')) : x.phase === dossier.data?.phase_courante ? t('commandes.pas_en_cours')
+                          : x.prevue_fin ? t('commandes.pas_prevu', { d: jjmmaaaa(x.prevue_fin) }) : t('commandes.pas_a_venir')}</span></span>
+                    </div>))}
+                </div>);
+            })}
+          </div>
+          {(phases.data ?? []).length > 0 && <div className="cmd-avancement"><span className="surtitre">{t('commandes.avancement')}</span>
+            <b>{Math.round((faites / (phases.data ?? []).length) * 100)} %</b>
+            <span className="cmd-barre"><span style={{ width: `${(faites / (phases.data ?? []).length) * 100}%` }} /></span>
+            <span className="mute">{t('commandes.etapes_validees', { n: faites, total: (phases.data ?? []).length })}</span>
+            <Link className="btn petit" to={`/dossiers/${cmd.dossier_id}`}>{t('commandes.ouvrir_dossier')}</Link></div>}
+        </>}
+        {onglet === 'lignes' && <>
         <section>
           <div className="section-titre">{t('commandes.lignes')}</div>
           <table className="t"><thead><tr><th>{t('champs.article')}</th><th className="num">{t('champs.quantite')}</th><th className="num">{t('commandes.pu')}</th><th className="num">{t('champs.montant')}</th><th>{t('commandes.options')}</th><th /></tr></thead>
@@ -364,9 +430,19 @@ export function FicheCommande() {
           {cmd.approbation_valide_le && <Statut statut="validee" libelle={t('commandes.approbation_ok')} />}
           {cmd.sur_mesure && !cmd.approbation_valide_le && <Statut statut="att" libelle={t('approbation.requise')} />}
         </section>
-        {ecrit && <ApprobationEssais commandeId={cmd.id} dossierId={cmd.dossier_id} statutCommande={cmd.statut} onChange={recharger} />}
-        {cmd.date_livraison_promise && <PenaliteCommande commande={cmd} peutDater={ecrit} onChange={recharger} />}
-        {ecrit && <CataloguePieces dossierId={cmd.dossier_id} fournisseurId={cmd.fournisseur_id} />}
+          {ecrit && <CataloguePieces dossierId={cmd.dossier_id} fournisseurId={cmd.fournisseur_id} />}
+        </>}
+        {onglet === 'approbation' && (ecrit ? <ApprobationEssais commandeId={cmd.id} dossierId={cmd.dossier_id} statutCommande={cmd.statut} onChange={recharger} />
+          : <span className="mute">{t('commandes.reserve_achats')}</span>)}
+        {onglet === 'contrat' && <>
+          <div className="pf-champs" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+            <div><span>{t('commandes.contrat')}</span><b>{cmd.contrat_valide_le ? t('commandes.signe') : t('commandes.non_signe')}</b></div>
+            <div><span>{t('commandes.risque')}</span><b>{cmd.transfert_risque ?? cmd.incoterm}</b></div>
+            <div><span>{t('commandes.livraison_promise')}</span><b>{cmd.date_livraison_promise ? date(cmd.date_livraison_promise, langue) : '—'}</b></div>
+          </div>
+          {cmd.date_livraison_promise ? <PenaliteCommande commande={cmd} peutDater={ecrit} onChange={recharger} /> : <span className="mute">{t('commandes.sans_date_promise')}</span>}
+        </>}
+        {onglet === 'paiements' && <>
         <section>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="section-titre">{t('commandes.paiements')}</span>
@@ -398,6 +474,7 @@ export function FicheCommande() {
                 <td><Statut statut={i.statut} libelle={t(`statuts_inspection.${i.statut}`)} /></td></tr>))}</tbody></table>
           )}
         </section>
+        </>}
       </div>
       {contrat && (
         <Tiroir titre={t('commandes.valider_contrat')} onClose={() => setContrat(null)}>
@@ -520,5 +597,88 @@ function ExecuterPaiement({ paiement, dossierId, onClose, onOk }: { paiement: Pa
       <Bandeau type="err">{a.erreur}</Bandeau>
       <Bouton variante="primaire" disabled={a.enCours} onClick={() => void envoyer()}>{t('commun.valider')}</Bouton>
     </Tiroir>
+  );
+}
+
+interface PrixReleve {
+  id: string; article_id: string; prix_unitaire: number; quantite: number; reassort: boolean; cree_le: string;
+  commandes: { reference: string | null; fournisseur_id: string; devise: string; incoterm: string; lieu: string; statut: string; contrat_signe_le: string | null } | null;
+}
+
+/** Historique des prix par produit et par fournisseur (maquette PRX), à partir des lignes de commande. */
+export function HistoriquePrix() {
+  const { t } = useTranslation();
+  const nav = useNavigate();
+  const { langue } = useAuth();
+  const fournisseurs = useNoms('fournisseurs');
+  const [q, setQ] = useState('');
+  const [sel, setSel] = useState<string | null>(null);
+  const l = useAsync(async () => ok(await supabase.from('lignes_commande')
+    .select('id, article_id, prix_unitaire, quantite, reassort, cree_le, commandes(reference, fournisseur_id, devise, incoterm, lieu, statut, contrat_signe_le)')
+    .order('cree_le', { ascending: true }).limit(5000)) as unknown as PrixReleve[], []);
+  const arts = useAsync(async () => ok(await supabase.from('articles').select('id, reference, designation, designation_zh, categorie, unite')) as Article[], []);
+  const fos = useAsync(async () => ok(await supabase.from('fournisseurs').select('id, statut_agrement')) as { id: string; statut_agrement: string }[], []);
+  const releves = (l.data ?? []).filter((x) => x.commandes && x.commandes.statut !== 'annulee');
+  const dateRel = (x: PrixReleve) => (x.commandes?.contrat_signe_le ?? x.cree_le).slice(0, 10);
+  const produits = (arts.data ?? []).map((a) => {
+    const rs = releves.filter((x) => x.article_id === a.id).sort((x, y) => dateRel(x).localeCompare(dateRel(y)));
+    const dernier = rs[rs.length - 1], precedent = rs[rs.length - 2];
+    const ecart = dernier && precedent && precedent.commandes?.devise === dernier.commandes?.devise && Number(precedent.prix_unitaire) > 0
+      ? (Number(dernier.prix_unitaire) - Number(precedent.prix_unitaire)) / Number(precedent.prix_unitaire) : null;
+    const agree = dernier ? (fos.data ?? []).find((f) => f.id === dernier.commandes?.fournisseur_id)?.statut_agrement === 'agree' : false;
+    return { a, rs, dernier, ecart, reassort: Boolean(dernier) && agree };
+  }).filter((p) => p.rs.length > 0);
+  const n = normaliser(q.trim());
+  const liste = produits.filter((p) => !n || normaliser(`${p.a.designation} ${p.a.designation_zh ?? ''} ${p.a.categorie} ${fournisseurs[p.dernier?.commandes?.fournisseur_id ?? ''] ?? ''}`).includes(n));
+  const x = liste.find((p) => p.a.id === sel) ?? liste[0] ?? null;
+  const reassortables = produits.filter((p) => p.reassort).length;
+  const mmaaaa = (d: string) => `${d.slice(5, 7)}.${d.slice(0, 4)}`;
+  const maxPrix = x ? Math.max(...x.rs.map((r) => Number(r.prix_unitaire))) : 0;
+  return (
+    <div className="screen">
+      <Entete surtitre={`${t('modules.achats')} · ${t('prix.surtitre')} · PRX`} titre={l.data ? t('prix.titre', { n: reassortables }) : t('ecrans.historique_prix')}
+        actions={<input className="pf-recherche" placeholder={t('prix.filtrer')} value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} aria-label={t('prix.filtrer')} />} />
+      <Bandeau type="err">{l.erreur ?? arts.erreur ?? fos.erreur}</Bandeau>
+      <div className="ref-grille prix-grille">
+        <div className="cadre">
+          {l.chargement && !l.data ? <Chargement /> : liste.length === 0 ? <Vide>{t('prix.aucun')}</Vide> : (
+            <table className="t"><thead><tr><th>{t('prix.produit')}</th><th>{t('prix.dernier_fournisseur')}</th><th className="num">{t('prix.dernier_prix')}</th>
+              <th className="num">{t('prix.ecart')}</th><th>{t('prix.reassort')}</th></tr></thead>
+              <tbody>{liste.map((p) => (
+                <tr key={p.a.id} className={'cliquable' + (x?.a.id === p.a.id ? ' choisi' : '')} onClick={() => setSel(p.a.id)}>
+                  <td><div style={{ fontWeight: 500 }}>{p.a.designation}{p.a.designation_zh && <span className="mute"> · {p.a.designation_zh}</span>}</div>
+                    <div className="mute">{p.a.categorie} · {t('prix.n_releves', { n: p.rs.length })}</div></td>
+                  <td>{fournisseurs[p.dernier?.commandes?.fournisseur_id ?? ''] ?? '—'}</td>
+                  <td className="num">{p.dernier ? nombre(Number(p.dernier.prix_unitaire), langue, Number(p.dernier.prix_unitaire) < 100 ? 2 : 0) : '—'}</td>
+                  <td className={'num ' + (p.ecart === null ? 'mute' : p.ecart > 0 ? 'txt-err' : 'txt-ok')}>{p.ecart === null ? '—' : `${p.ecart > 0 ? '+' : ''}${nombre(p.ecart * 100, langue, 1)} %`}</td>
+                  <td>{p.reassort ? <Statut statut="ok" libelle={t('prix.reassort_possible')} /> : <Statut statut="neutre" libelle={t('prix.nouvelle_consultation')} />}</td>
+                </tr>))}</tbody></table>
+          )}
+        </div>
+        {x && (
+          <div className="ref-detail">
+            <div className="mute">{x.a.categorie} · {x.dernier?.commandes?.devise} / {x.a.unite}</div>
+            <div className="cons-action">{x.a.designation}</div>
+            <div className="prix-barres" role="img" aria-label={t('prix.graphique', { n: x.rs.length })}>
+              {x.rs.map((r) => (
+                <div key={r.id} className="prix-barre">
+                  <span className="ref">{nombre(Number(r.prix_unitaire), langue, Number(r.prix_unitaire) < 100 ? 2 : 0)}</span>
+                  <span className="prix-col" style={{ height: `${maxPrix ? Math.max(8, (Number(r.prix_unitaire) / maxPrix) * 120) : 8}px` }} />
+                  <span className="mute">{mmaaaa(dateRel(r))}</span>
+                </div>))}
+            </div>
+            {[...x.rs].reverse().map((r) => (
+              <div key={r.id} className="ligne-montant">
+                <span><span className="ref">{mmaaaa(dateRel(r))}</span> · <b>{fournisseurs[r.commandes?.fournisseur_id ?? ''] ?? '—'}</b><br />
+                  <span className="mute">{r.commandes?.reference} · {r.commandes?.incoterm} {r.commandes?.lieu}{r.reassort ? ` · ${t('prix.en_reassort')}` : ''}</span></span>
+                <b>{nombre(Number(r.prix_unitaire), langue, Number(r.prix_unitaire) < 100 ? 2 : 0)} {r.commandes?.devise}</b>
+              </div>))}
+            <p className="mute" style={{ margin: 0 }}>{x.reassort ? t('prix.aide_reassort') : t('prix.aide_consultation')}</p>
+            <Bouton variante={x.reassort ? 'primaire' : undefined} data-sans-glose style={{ width: '100%', justifyContent: 'center' }}
+              onClick={() => nav(x.reassort ? '/commandes' : '/mise-en-concurrence')}>{x.reassort ? t('prix.commander_reassort') : t('prix.lancer_consultation')}</Bouton>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

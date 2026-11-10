@@ -20,7 +20,8 @@ interface DonneesSuivi {
   phases: { phase: string; ordre: number; statut: 'terminee' | 'en_cours' | 'a_venir'; debut: string | null; fin: string | null; fin_prevue: string | null }[];
   pieces_attendues: { libelle: string; phase: string; statut: string; demandee_le: string | null }[];
   documents: { libelle: string; phase: string; date: string | null; url: string }[];
-  points_bloquants: { description: string; categorie: string; resolu: boolean; echeance: string }[];
+  points_bloquants: { description: string; categorie: string; partie?: string; impact_jours?: number; resolu: boolean; echeance: string }[];
+  retards?: { partie: string; jours_attente: number; attente_en_cours: boolean; jours_impact: number; points_ouverts: number }[];
   expeditions: { reference: string; mode: string; statut: string; port_arrivee: string | null; etd: string | null; eta: string | null;
     etapes: { etape: string; lieu: string | null; survenue_le: string; commentaire: string | null }[] }[];
   factures: { numero: string; objet: string; type: string; date_emission: string; echeance: string | null; devise: string;
@@ -28,6 +29,39 @@ interface DonneesSuivi {
 }
 
 const STATUT_PHASE = { terminee: 'ok', en_cours: 'info', a_venir: 'neutre' } as const;
+
+/** Retards par partie prenante : jours d'attente mesurés (horloge arrêtée) et jours d'impact des points rendus visibles. */
+function RetardsParPartie({ retards }: { retards: NonNullable<DonneesSuivi['retards']> }) {
+  const { t } = useTranslation();
+  const total = (r: (typeof retards)[number]) => r.jours_attente + r.jours_impact;
+  const max = Math.max(1, ...retards.map(total));
+  const somme = retards.reduce((s, r) => s + total(r), 0);
+  return (
+    <section className="cadre retards">
+      <div className="section-titre">{t('suivi.retards_titre')}</div>
+      {somme === 0 ? <p className="mute">{t('suivi.retards_aucun')}</p> : (
+        <>
+          <p className="sec">{t('suivi.retards_total', { n: somme })}</p>
+          <div className="retards-l">
+            {retards.map((r) => (
+              <div key={r.partie} className="retard">
+                <span className="lib"><b>{t(`suivi.parties.${r.partie}`)}</b>
+                  {r.attente_en_cours && <span className="mute"> · {t('suivi.attente_en_cours')}</span>}
+                  {r.points_ouverts > 0 && <span className="mute"> · {t('suivi.points_ouverts', { n: r.points_ouverts })}</span>}</span>
+                <span className="piste" aria-hidden="true">
+                  <span className="attente" style={{ width: `${(r.jours_attente / max) * 100}%` }} />
+                  <span className="impact" style={{ width: `${(r.jours_impact / max) * 100}%` }} />
+                </span>
+                <span className="num">{total(r) ? t('suivi.jours', { n: total(r) }) : '—'}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mute"><span className="pastille-l attente" /> {t('suivi.legende_attente')} · <span className="pastille-l impact" /> {t('suivi.legende_impact')}</p>
+        </>
+      )}
+    </section>
+  );
+}
 
 export function PageSuivi() {
   const { t, i18n } = useTranslation();
@@ -84,6 +118,8 @@ export function PageSuivi() {
         </section>
       )}
 
+      {d.retards && <RetardsParPartie retards={d.retards} />}
+
       <section className="cadre">
         <div className="section-titre">{t('suivi.jalons')}</div>
         <div style={{ overflowX: 'auto' }}><table className="t"><thead><tr><th>{t('champs.phase')}</th><th>{t('champs.statut')}</th><th>{t('suivi.debut')}</th><th>{t('suivi.fin')}</th></tr></thead>
@@ -99,7 +135,9 @@ export function PageSuivi() {
         <section className="cadre">
           <div className="section-titre">{t('suivi.points_attention')}</div>
           <ul>{d.points_bloquants.map((b, i) => (
-            <li key={i}>{b.description} — {b.resolu ? t('suivi.resolu') : t('suivi.echeance', { date: date(b.echeance, langue) })}</li>))}</ul>
+            <li key={i}>{b.partie && <b>{t(`suivi.parties.${b.partie}`)} · </b>}{b.description}
+              {b.impact_jours ? <span className="mute"> · {t('suivi.impact', { n: b.impact_jours })}</span> : null}
+              {' — '}{b.resolu ? t('suivi.resolu') : t('suivi.echeance', { date: date(b.echeance, langue) })}</li>))}</ul>
         </section>
       )}
 

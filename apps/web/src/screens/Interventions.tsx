@@ -16,6 +16,9 @@ import { Depot } from '../components/Depot';
 interface Intervention { id: string; reference: string; dossier_id: string; type: string; objet: string; lieu: string; date_debut: string; date_fin: string;
   habilitations_requises: string[]; permis_requis: string[]; analyse_risques: { danger: string; mesure: string }[]; epi: string[];
   statut: 'planifiee' | 'en_cours' | 'terminee' | 'facturee' | 'annulee'; compte_rendu: string | null; pv_document: string | null; facture_id: string | null }
+type InterventionListe = Intervention & { dossiers: { reference: string; clients: { raison_sociale: string } | null } | null;
+  intervention_techniciens: { technicien_id: string }[]; intervention_temps: { heures: number }[] };
+interface Cout { temps_xof: number; frais_xof: number; cout_reel_xof: number; majoration: number; a_facturer_xof: number }
 interface Temps { id: string; technicien_id: string; date_travail: string; heures: number; taux_horaire_xof: number; cout_xof: number; travaux: string }
 interface Incident { id: string; reference: string; intervention_id: string; survenu_le: string; nature: string; description: string; mesures: string }
 interface Permis { id: string; type: string; numero: string; delivre_par: string; valide_du: string; valide_au: string }
@@ -36,27 +39,57 @@ export function Interventions() {
   const [onglet, setOnglet] = useState<'planning' | 'habilitations' | 'hse'>('planning');
   const [fiche, setFiche] = useState<string | null>(null);
   const dossiers = useNoms('dossiers');
-  const l = useAsync(async () => ok(await supabase.from('interventions').select('*').order('date_debut', { ascending: false }).limit(500)) as Intervention[], []);
+  const l = useAsync(async () => ok(await supabase.from('interventions')
+    .select('*, dossiers(reference, clients(raison_sociale)), intervention_techniciens(technicien_id), intervention_temps(heures)')
+    .order('date_debut', { ascending: false }).limit(500)) as unknown as InterventionListe[], []);
+  // Coût réel et montant à facturer calculés en base (temps + frais, majoration paramétrée), pour qui gère les interventions.
+  const couts = useAsync(async () => {
+    const ids = gere ? (l.data ?? []).filter((x) => x.intervention_temps.length > 0 && x.statut !== 'annulee').map((x) => x.id) : [];
+    const out: Record<string, Cout> = {};
+    for (let i = 0; i < ids.length; i += 8) {
+      await Promise.all(ids.slice(i, i + 8).map(async (id) => { const r = await supabase.rpc('cout_intervention', { p_intervention: id }); if (!r.error) out[id] = r.data as Cout; }));
+    }
+    return out;
+  }, [gere, (l.data ?? []).map((x) => x.id).join(',')]);
+  const noms = useNoms('profils');
   const h = useAsync(async () => (gere ? ok(await supabase.rpc('habilitations_a_renouveler', { p_jours: null })) as Habilitation[] : []), [gere]);
   const r = useAsync(async () => ok(await supabase.from('incidents_hse').select('*').order('survenu_le', { ascending: false }).limit(500)) as Incident[], []);
+  const aRealiser = (l.data ?? []).filter((x) => ['planifiee', 'en_cours'].includes(x.statut)).length;
+  const aFacturer = (l.data ?? []).filter((x) => x.statut === 'terminee').length;
+  const majoration = Object.values(couts.data ?? {})[0]?.majoration ?? null;
   const items: { id: 'planning' | 'habilitations' | 'hse'; lib: string }[] = [{ id: 'planning', lib: t('interventions.planning') }, { id: 'hse', lib: t('interventions.registre_hse') }];
   if (gere) items.splice(1, 0, { id: 'habilitations', lib: t('interventions.habilitations') });
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.logistique')} · M37`} titre={t('interventions.titre')} />
+      <Entete surtitre={`${t('modules.apres_vente')} · ${t('interventions.surtitre')} · INT`}
+        titre={l.data ? t('interventions.titre_synthese', { p: aRealiser, f: aFacturer }) : t('interventions.titre')} />
       <Onglets items={items} actif={onglet} onChange={setOnglet} />
-      <Bandeau type="err">{l.erreur ?? h.erreur ?? r.erreur}</Bandeau>
+      <Bandeau type="err">{l.erreur ?? couts.erreur ?? h.erreur ?? r.erreur}</Bandeau>
       {onglet === 'planning' && (
-        <CadreTableau titre={t('interventions.planning')}>
+        <div className="cadre">
           {(l.data ?? []).length === 0 ? <Vide>{t('interventions.aucune')}</Vide> : (
-            <table className="t"><tbody>{(l.data ?? []).map((x) => (
-              <tr key={x.id} className="cliquable" onClick={() => setFiche(x.id)}><td className="ref">{x.reference}</td>
-                <td className="ref"><Link to={`/dossiers/${x.dossier_id}`} onClick={(e) => e.stopPropagation()}>{dossiers[x.dossier_id] ?? '—'}</Link></td>
-                <td>{t(`interventions.types.${x.type}`)}<div className="mute">{x.objet}</div></td><td>{x.lieu}</td>
-                <td className="ref">{date(x.date_debut, langue)} → {date(x.date_fin, langue)}</td>
-                <td><Statut statut={STATUT[x.statut]} libelle={t(`interventions.statuts.${x.statut}`)} /></td></tr>))}</tbody></table>
+            <div style={{ overflowX: 'auto' }}><table className="t"><thead><tr><th>{t('interventions.interv')}</th><th>{t('interventions.client')}</th><th>{t('interventions.objet')}</th>
+              <th>{t('champs.date')}</th><th>{t('interventions.techniciens')}</th><th className="num">{t('interventions.temps')}</th>
+              {gere && <><th className="num">{t('interventions.cout_reel')}</th><th className="num">{t('interventions.a_facturer')}</th></>}<th>{t('champs.statut')}</th></tr></thead>
+              <tbody>{(l.data ?? []).map((x) => {
+                const heures = x.intervention_temps.reduce((n, y) => n + Number(y.heures), 0);
+                const c = couts.data?.[x.id];
+                return (
+                  <tr key={x.id} className="cliquable" onClick={() => setFiche(x.id)}>
+                    <td className="ref">{x.reference}</td>
+                    <td>{x.dossiers?.clients?.raison_sociale ?? '—'}<div className="mute"><Link to={`/dossiers/${x.dossier_id}`} onClick={(e) => e.stopPropagation()}>{x.dossiers?.reference ?? dossiers[x.dossier_id] ?? '—'}</Link></div></td>
+                    <td>{x.objet}<div className="mute">{t(`interventions.types.${x.type}`)} · {x.lieu}</div></td>
+                    <td className="ref">{date(x.date_debut, langue)}{x.date_fin !== x.date_debut && <div className="mute">→ {date(x.date_fin, langue)}</div>}</td>
+                    <td>{x.intervention_techniciens.map((y) => noms[y.technicien_id] ?? '…').join(', ') || <span className="mute">—</span>}</td>
+                    <td className="num">{heures > 0 ? t('interventions.nb_heures', { n: heures }) : '—'}</td>
+                    {gere && <><td className="num">{c ? montant(Number(c.cout_reel_xof), 'XOF', langue) : '—'}</td>
+                      <td className="num">{c && ['terminee', 'facturee'].includes(x.statut) ? montant(Number(c.a_facturer_xof), 'XOF', langue) : '—'}</td></>}
+                    <td><Statut statut={STATUT[x.statut]} libelle={t(`interventions.statuts.${x.statut}`)} /></td>
+                  </tr>);
+              })}</tbody></table></div>
           )}
-        </CadreTableau>
+          {gere && <p className="mute" style={{ marginTop: 12 }}>{t('interventions.aide_cout', { p: majoration === null ? '—' : `${Math.round(majoration * 100)} %` })}</p>}
+        </div>
       )}
       {onglet === 'habilitations' && gere && <Habilitations alertes={h.data ?? []} onChange={() => void h.recharger()} />}
       {onglet === 'hse' && (

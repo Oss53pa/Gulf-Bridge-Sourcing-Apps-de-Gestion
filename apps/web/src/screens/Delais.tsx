@@ -3,15 +3,15 @@
 // ne fait que valider la saisie avant envoi.
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { date } from '../lib/format';
+import { date, dateHeure } from '../lib/format';
 import { useNoms } from '../lib/referentiels';
 import type { Dossier, Phase } from '../lib/types';
-import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Statut, Tiroir, Vide } from '../components/ui';
+import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 
 const PHASES = ['consultation', 'verification', 'mise_en_concurrence', 'devis_mandat', 'contrat', 'approbation_technique',
   'production', 'inspection', 'expedition', 'livraison', 'cloture'] as const;
@@ -214,47 +214,108 @@ function PlanningOuvertureDossier({ dossier, peutAppliquer, onChange }: { dossie
 }
 
 // ----------------------------------------------------------------------------- mes tâches
+type FiltreTaches = 'toutes' | 'retard' | 'aujourdhui' | 'semaine' | 'terminees';
+
 export function MesTaches() {
   const { t } = useTranslation();
-  const { profil, langue } = useAuth();
+  const { profil, langue, fuseau } = useAuth();
   const equipe = useEquipe();
+  const nav = useNavigate();
   const l = useAsync(async () => ok(await supabase.rpc('mes_taches')) as ElementMesTaches[], []);
+  // Lundi de la semaine en cours, dans le fuseau de l'utilisateur.
+  const aujourdhui = new Intl.DateTimeFormat('en-CA', { timeZone: fuseau }).format(new Date());
+  const j = new Date(`${aujourdhui}T12:00:00Z`);
+  const lundi = new Date(j); lundi.setUTCDate(j.getUTCDate() - ((j.getUTCDay() + 6) % 7));
+  const dimanche = new Date(lundi); dimanche.setUTCDate(lundi.getUTCDate() + 6);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const faites = useAsync(async () => (profil
+    ? ok(await supabase.from('taches').select('id, libelle, dossier_id, echeance, faite_le').eq('assigne_a', profil.id).eq('statut', 'faite')
+      .gte('faite_le', `${iso(lundi)}T00:00:00Z`).order('faite_le', { ascending: false }).limit(200)) as { id: string; libelle: string; dossier_id: string | null; echeance: string | null; faite_le: string }[]
+    : []), [profil?.id, iso(lundi)]);
+  const ids = [...new Set([...(l.data ?? []).map((x) => x.dossier_id), ...(faites.data ?? []).map((x) => x.dossier_id)].filter((x): x is string => Boolean(x)))];
+  const dossiers = useAsync(async () => (ids.length
+    ? ok(await supabase.from('dossiers').select('id, reference, client_id').in('id', ids)) as { id: string; reference: string; client_id: string }[]
+    : []), [ids.join(',')]);
+  const clients = useNoms('clients');
   const a = useAction();
   const [nouvelle, setNouvelle] = useState(false);
   const [absence, setAbsence] = useState(false);
+  const [filtre, setFiltre] = useState<FiltreTaches>('toutes');
   const items = [...(l.data ?? [])].sort((x, y) => x.urgence - y.urgence || (x.echeance ?? '9999').localeCompare(y.echeance ?? '9999'));
-  const compte = (n: ElementMesTaches['nature']) => items.filter((x) => x.nature === n).length;
+  const enRetard = items.filter((x) => x.echeance && x.echeance < aujourdhui);
+  const duJour = items.filter((x) => x.echeance === aujourdhui || (x.urgence === 1 && !(x.echeance && x.echeance < aujourdhui)));
+  const semaine = items.filter((x) => x.echeance && x.echeance > aujourdhui && x.echeance <= iso(dimanche) && !duJour.includes(x));
+  const plusTard = items.filter((x) => !enRetard.includes(x) && !duJour.includes(x) && !semaine.includes(x));
   const terminer = async (id: string) => {
-    if (await a.executer(async () => ok(await supabase.from('taches').update({ statut: 'faite' }).eq('id', UUID.parse(id))))) void l.recharger();
+    if (await a.executer(async () => ok(await supabase.from('taches').update({ statut: 'faite' }).eq('id', UUID.parse(id))))) { void l.recharger(); void faites.recharger(); }
   };
+  const ddmm = (d: string | null) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—');
+  const dossier = (id: string | null) => dossiers.data?.find((x) => x.id === id);
+  const sousTitre = (id: string | null, ref: string | null) => {
+    const d = dossier(id);
+    return [d?.reference ?? ref, d ? clients[d.client_id] : null].filter(Boolean).join(' · ');
+  };
+  const libelle = (x: ElementMesTaches) => (x.nature === 'delai' ? t('delais.phase_en_retard', { phase: t(`phases.${x.libelle}`) })
+    : x.nature === 'ouverture' ? t('ouverture.intenable_tache', { n: Math.abs(Number(x.libelle)) }) : x.libelle);
+  const initiales = (profil?.nom ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((m) => m[0]?.toUpperCase()).join('');
+  const ligne = (x: ElementMesTaches) => (
+    <div key={x.nature + x.objet_id} className="tache">
+      {x.nature === 'tache'
+        ? <button className="tache-case" aria-label={t('delais.marquer_faite')} title={t('delais.marquer_faite')} disabled={a.enCours} onClick={() => void terminer(x.objet_id)} />
+        : <span className="tache-case vide" aria-hidden="true" />}
+      <div className="tache-txt">
+        <div className="tache-lib">{x.urgence === 1 && <span className="tache-urgent" aria-label={t('delais.urgence_1')} />}{libelle(x)}</div>
+        <div className="sec">{sousTitre(x.dossier_id, x.dossier_reference) || '—'}</div>
+      </div>
+      <span className="tache-nat sec">{t(`delais.nature.${x.nature}`)}</span>
+      <span className={'tache-date' + (x.echeance && x.echeance < aujourdhui ? ' retard' : '')}>{ddmm(x.echeance)}</span>
+      <span className="tache-qui sec">{initiales}</span>
+      <span className="tache-act">{x.dossier_id && <Bouton petit onClick={() => nav(`/dossiers/${x.dossier_id}`)}>{t('delais.ouvrir')}</Bouton>}</span>
+    </div>
+  );
+  const groupe = (titre: string, lst: ElementMesTaches[]) => (lst.length === 0 ? null : (
+    <section key={titre} className="taches-groupe"><div className="surtitre">{titre}</div>{lst.map(ligne)}</section>));
+  const titre = t('delais.titre_taches', { n: items.length }) + (duJour.length ? ` ; ${t('delais.titre_aujourdhui', { n: duJour.length })}` : '')
+    + (enRetard.length ? ` ; ${t('delais.titre_retard', { n: enRetard.length })}` : '');
+
   return (
     <div className="screen">
-      <Entete surtitre={t('modules.dossiers')} titre={t('ecrans.mes_taches')}
+      <Entete surtitre={`${t('modules.dossiers')} · ${t('ecrans.mes_taches')} · TAC`} titre={l.data ? titre : t('ecrans.mes_taches')}
         actions={<>
           <Bouton onClick={() => setAbsence(true)}>{t('delais.deleguer')}</Bouton>
           <Bouton variante="primaire" onClick={() => setNouvelle(true)}>{t('delais.nouvelle_tache')}</Bouton>
         </>} />
       <Kpis items={[
-        { lib: t('delais.nature.tache'), val: compte('tache') },
-        { lib: t('delais.nature.delai'), val: compte('delai') + compte('ouverture') },
-        { lib: t('delais.nature.point_bloquant'), val: compte('point_bloquant') },
-        { lib: t('delais.nature.piece'), val: compte('piece') },
+        { lib: t('delais.k_ouvertes'), val: items.length, sous: profil?.nom ?? '' },
+        { lib: t('delais.k_retard'), val: enRetard.length, sous: t('delais.k_retard_sous') },
+        { lib: t('delais.k_aujourdhui'), val: duJour.length, sous: date(aujourdhui, langue) },
+        { lib: t('delais.k_terminees'), val: (faites.data ?? []).length, sous: t('delais.k_terminees_sous') },
       ]} />
+      <Onglets actif={filtre} onChange={setFiltre} items={[
+        { id: 'toutes', lib: t('delais.f_toutes') }, { id: 'retard', lib: t('delais.f_retard') }, { id: 'aujourdhui', lib: t('delais.f_aujourdhui') },
+        { id: 'semaine', lib: t('delais.f_semaine') }, { id: 'terminees', lib: t('delais.f_terminees') }]} />
       <div className="cadre">
         <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
-        {l.chargement && !l.data ? <Chargement /> : items.length === 0 ? <Vide>{t('delais.rien_a_faire')}</Vide> : (
-          <table className="t"><thead><tr><th>{t('delais.urgence')}</th><th>{t('delais.nature_col')}</th><th>{t('delais.tache')}</th>
-            <th>{t('champs.dossier')}</th><th>{t('delais.echeance')}</th><th /></tr></thead>
-            <tbody>{items.map((x) => (
-              <tr key={x.nature + x.objet_id}>
-                <td><Statut statut={x.urgence === 1 ? 'err' : x.urgence === 2 ? 'att' : 'info'} libelle={t(`delais.urgence_${x.urgence}`)} /></td>
-                <td>{t(`delais.nature.${x.nature}`)}</td>
-                <td>{x.nature === 'delai' ? t('delais.phase_en_retard', { phase: t(`phases.${x.libelle}`) })
-                  : x.nature === 'ouverture' ? t('ouverture.intenable_tache', { n: Math.abs(Number(x.libelle)) }) : x.libelle}</td>
-                <td className="ref">{x.dossier_id ? <Link to={`/dossiers/${x.dossier_id}`}>{x.dossier_reference}</Link> : '—'}</td>
-                <td className="ref">{x.echeance ? date(x.echeance, langue) : '—'}</td>
-                <td className="num">{x.nature === 'tache' && <Bouton petit disabled={a.enCours} onClick={() => void terminer(x.objet_id)}>{t('delais.marquer_faite')}</Bouton>}</td>
-              </tr>))}</tbody></table>
+        {l.chargement && !l.data ? <Chargement /> : filtre === 'terminees' ? (
+          (faites.data ?? []).length === 0 ? <Vide>{t('delais.aucune_terminee')}</Vide> : (
+            <section className="taches-groupe">
+              {(faites.data ?? []).map((x) => (
+                <div key={x.id} className="tache faite">
+                  <span className="tache-case coche" aria-hidden="true">✓</span>
+                  <div className="tache-txt"><div className="tache-lib">{x.libelle}</div><div className="sec">{sousTitre(x.dossier_id, null) || '—'}</div></div>
+                  <span className="tache-nat sec">{t('delais.nature.tache')}</span>
+                  <span className="tache-date">{dateHeure(x.faite_le, langue, fuseau).slice(0, 5)}</span>
+                  <span className="tache-qui sec">{initiales}</span>
+                  <span className="tache-act" />
+                </div>))}
+            </section>)
+        ) : items.length === 0 ? <Vide>{t('delais.rien_a_faire')}</Vide> : (
+          <>
+            {(filtre === 'toutes' || filtre === 'retard') && groupe(t('delais.g_retard'), enRetard)}
+            {(filtre === 'toutes' || filtre === 'aujourdhui') && groupe(t('delais.g_aujourdhui'), duJour)}
+            {(filtre === 'toutes' || filtre === 'semaine') && groupe(t('delais.g_semaine'), semaine)}
+            {filtre === 'toutes' && groupe(t('delais.g_plus_tard'), plusTard)}
+          </>
         )}
       </div>
       {nouvelle && <NouvelleTache dossierId={null} phase={null} equipe={equipe.data ?? []}

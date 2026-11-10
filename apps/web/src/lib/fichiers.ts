@@ -51,6 +51,23 @@ export async function deposer(dossierId: string | null, f: File): Promise<{ chem
   return r.data as { chemin: string; empreinte: string };
 }
 
+/** Pièce attendue transmise par un compte client (droits et enregistrement vérifiés côté serveur). */
+export async function deposerPieceClient(pieceId: string, f: File): Promise<void> {
+  if (f.size === 0 || f.size > TAILLE_MAX) throw new FichierRefuse('taille');
+  if (!(await detecterType(f))) throw new FichierRefuse('type');
+  const corps = new FormData();
+  corps.append('cible', 'piece_client');
+  corps.append('piece_id', pieceId);
+  corps.append('fichier', f);
+  const r = await supabase.functions.invoke('gbs-depot', { body: corps });
+  if (r.error) {
+    const code = await (r.error as { context?: Response }).context?.json?.().then((x: { erreur?: string }) => x.erreur).catch(() => undefined);
+    if (code === 'GBS_FICHIER_TYPE') throw new FichierRefuse('type');
+    if (code === 'GBS_FICHIER_TAILLE') throw new FichierRefuse('taille');
+    throw new Error(code ?? 'GBS_DEPOT_ECHEC');
+  }
+}
+
 /** URL signée de courte durée (aucun fichier public). */
 export async function urlSignee(chemin: string): Promise<string | null> {
   const r = await supabase.storage.from('gbs-documents').createSignedUrl(chemin, 300);

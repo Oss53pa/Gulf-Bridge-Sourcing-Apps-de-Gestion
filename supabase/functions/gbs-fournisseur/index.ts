@@ -5,12 +5,14 @@
 // - Équipe achats (jeton de session) : ouvrir les plis après la date limite. La base ne livre
 //   les plis qu'après la date limite et vérifie chaque contenu déchiffré contre son empreinte.
 // - Limitation de débit par adresse ; erreurs génériques ; ni jeton ni contenu dans les journaux.
+// - Compte fournisseur (jeton de session, double facteur) : dépôt d'une offre sous pli fermé. Les
+//   droits sont vérifiés en base avec la session, puis le pli chiffré est déposé par le rôle de service.
 // - Pièces de due diligence (jeton du lien de due diligence) : lecture et dépôt d'un fichier,
 //   type vérifié sur les octets, taille bornée, nom régénéré, empreinte SHA-256.
 // Sans GBS_PLIS_CLE, le dépôt et l'ouverture des plis sont fermés (503).
 import { createClient } from 'npm:@supabase/supabase-js@2.46.1';
 import { adresseClient, Limiteur } from '../_shared/suivi.ts';
-import { chiffrer, cle, contenuPli, dechiffrer, empreinte, hex, lireDemande, lireOffre } from '../_shared/plis.ts';
+import { chiffrer, cle, contenuPli, dechiffrer, empreinte, hex, lireDemande, lireDemandeCompte, lireOffre } from '../_shared/plis.ts';
 import { lireDepotPiece, TAILLE_PIECE_MAX } from '../_shared/piecesdd.ts';
 import { detecter } from '../_shared/fichiers.ts';
 
@@ -97,6 +99,29 @@ Deno.serve(async (req) => {
     const r = await u.rpc('ouvrir_plis', { p_consultation: consultation, p_plis: contenus });
     if (r.error) return refus(409, codeErreur(r.error));
     return repondre(200, { ouverts: r.data });
+  }
+
+  // Dépôt depuis le compte fournisseur : accès vérifié en base avec la session (double facteur,
+  // invitation, sous-rôle), puis pli chiffré ici et déposé par le rôle de service.
+  if (o && o.action === 'repondre_compte') {
+    if (!k) return refus(503, 'GBS_PLIS_INDISPONIBLES');
+    const auth = req.headers.get('authorization');
+    const dc = lireDemandeCompte(corps);
+    if (!auth?.startsWith('Bearer ') || !dc) return refus(400, 'GBS_PARAMETRES_INVALIDES');
+    const u = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: auth } }, auth: { persistSession: false }, db: { schema: 'gbs' } });
+    const acces = await u.rpc('formulaire_fournisseur_compte', { p_consultation: dc.consultation });
+    if (acces.error || !(acces.data as { peut_deposer?: boolean }).peut_deposer) return refus(403, 'GBS_ACCES_REFUSE');
+    const qui = await u.auth.getUser(auth.slice(7));
+    if (qui.error || !qui.data.user) return refus(403, 'GBS_ACCES_REFUSE');
+    const lu = lireOffre(dc.offre);
+    if (!lu) return refus(400, 'GBS_OFFRE_INVALIDE');
+    const contenu = contenuPli(lu.offre);
+    const { chiffre, iv } = await chiffrer(k, contenu);
+    const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false }, db: { schema: 'gbs' } });
+    const { data, error } = await service.rpc('deposer_pli_compte', { p_user: qui.data.user.id, p_consultation: dc.consultation, p_chiffre: chiffre,
+      p_iv: iv, p_empreinte: await empreinte(contenu), p_complet: lu.complet });
+    if (error) return refus(error.code === '42501' ? 403 : 409, codeErreur(error));
+    return repondre(200, data);
   }
 
   const d = lireDemande(corps);

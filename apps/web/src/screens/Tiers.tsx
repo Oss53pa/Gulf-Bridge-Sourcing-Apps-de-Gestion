@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
@@ -10,7 +11,7 @@ import { date, nombre } from '../lib/format';
 import { normaliser } from '../lib/droits';
 import { invaliderReferentiels } from '../lib/referentiels';
 import type { Article, Client, Compte, DueDiligence, Fournisseur } from '../lib/types';
-import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Statut, Tiroir, Vide } from '../components/ui';
+import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 
 // ============================================================================ Clients
 const schemaClient = z.object({
@@ -26,55 +27,170 @@ const schemaClient = z.object({
   agent_id: z.string().uuid().nullable(),
 }).strict();
 
+const TON_VERIF: Record<string, string> = { verifie: 'ok', en_cours: 'att', non_verifie: 'err', refuse: 'err' };
+
 export function Clients() {
   const { t } = useTranslation();
-  const { profil, societes, langue } = useAuth();
+  const nav = useNavigate();
+  const { profil, langue } = useAuth();
   const role = profil?.role ?? '';
   const [q, setQ] = useState('');
-  const [sel, setSel] = useState<string | null>(null);
+  const [pays, setPays] = useState('tous');
+  const [verif, setVerif] = useState<'tous' | 'verifies' | 'a_completer'>('tous');
   const [creer, setCreer] = useState(false);
   const l = useAsync(async () => ok(await supabase.from('clients').select('*').is('archive_le', null).order('raison_sociale').limit(1000)) as Client[], []);
-  const liste = useMemo(() => (l.data ?? []).filter((c) => !q || normaliser(c.raison_sociale).includes(normaliser(q))), [l.data, q]);
-  const c = liste.find((x) => x.id === sel) ?? null;
-  const a = useAction();
+  const dos = useAsync(async () => ok(await supabase.from('dossiers').select('client_id, statut').limit(5000)) as { client_id: string; statut: string }[], []);
+  const pf = useAsync(async () => ok(await supabase.rpc('portefeuille', { p_statut: 'ouvert' })) as { client_id: string; fob_xof: number | null }[], []);
+  const tous = l.data ?? [];
+  const n = normaliser(q.trim());
+  const liste = useMemo(() => tous.filter((c) => (!n || normaliser(`${c.raison_sociale} ${c.reference ?? ''}`).includes(n))
+    && (pays === 'tous' || c.pays === pays)
+    && (verif === 'tous' || (verif === 'verifies' ? c.verification_statut === 'verifie' : c.verification_statut !== 'verifie'))), [tous, n, pays, verif]);
+  const nbDossiers = (id: string) => (dos.data ?? []).filter((d) => d.client_id === id && d.statut === 'ouvert').length;
+  const encours = (id: string | null) => { const r = (pf.data ?? []).filter((d) => id === null || d.client_id === id);
+    return r.some((d) => d.fob_xof !== null) ? r.reduce((a, d) => a + (d.fob_xof ?? 0), 0) : null; };
+  const m = (v: number | null) => (v === null ? '—' : `${nombre(v / 1e6, langue, 1)} M`);
+  const aCompleter = tous.filter((c) => c.verification_statut !== 'verifie').length;
   const peutCreer = ['admin', 'hub_afrique', 'agent_pays'].includes(role);
+  const titre = t('clients.titre_n', { n: tous.length }) + (aCompleter ? ` ; ${t('clients.titre_verif', { n: aCompleter })}` : '');
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.commercial')} · M2`} titre={t('clients.titre', { n: liste.length })}
+      <Entete surtitre={`${t('modules.commercial')} · ${t('clients.surtitre')} · CLI`} titre={l.data ? titre : t('ecrans.clients')}
         actions={peutCreer && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('clients.nouveau')}</Bouton>} />
-      <input className="search" style={{ flex: 'none' }} placeholder={t('clients.filtrer')} value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} aria-label={t('clients.filtrer')} />
-      <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
-      <div className="liste-detail">
-        <div className="liste"><CadreTableau>
-          {l.chargement ? <Chargement /> : liste.length === 0 ? <Vide>{t('clients.aucun')}</Vide> : (
-            <table className="t"><thead><tr><th>{t('champs.raison_sociale')}</th><th>{t('champs.pays')}</th><th>{t('champs.devise')}</th><th>{t('champs.societe')}</th><th>{t('champs.origine')}</th><th>{t('champs.verification')}</th></tr></thead>
-              <tbody>{liste.map((x) => (
-                <tr key={x.id} className="cliquable" aria-selected={x.id === sel} onClick={() => setSel(x.id)}>
-                  <td>{x.raison_sociale}<div className="mute">{x.segment ?? ''}</div></td><td>{x.pays}</td><td>{x.devise}</td>
-                  <td className="sec">{societes.find((s) => s.id === x.societe_id)?.raison_sociale ?? '—'}</td>
-                  <td className="sec">{t(`origines.${x.origine}`)}</td>
-                  <td><Statut statut={x.verification_statut} libelle={t(`verification.${x.verification_statut}`)} /></td>
-                </tr>))}</tbody></table>
-          )}
-        </CadreTableau></div>
-        <aside className="detail">
-          {!c ? <Vide>{t('clients.choisir')}</Vide> : (<>
-            <div className="surtitre">{c.reference ?? t('clients.fiche')}</div>
-            <h2 style={{ fontSize: 22 }}>{c.raison_sociale}</h2>
-            <dl className="dl">
-              <dt>{t('champs.pays')}</dt><dd>{c.pays}</dd>
-              <dt>{t('champs.devise')}</dt><dd>{c.devise}</dd>
-              <dt>{t('champs.specialite')}</dt><dd>{c.specialite ? t(`specialites.${c.specialite}`) : '—'}</dd>
-              <dt>{t('champs.conditions_paiement')}</dt><dd>{c.conditions_paiement ?? '—'}</dd>
-              <dt>{t('champs.langue')}</dt><dd>{c.langue.toUpperCase()}</dd>
-              <dt>{t('champs.verification')}</dt><dd>{t(`verification.${c.verification_statut}`)} {c.verification_date ? `· ${date(c.verification_date, langue)}` : ''}</dd>
-            </dl>
-            <p className="mute">{t('clients.aide_verification')}</p>
-            {['admin', 'hub_afrique', 'agent_pays'].includes(role) && <VerificationClient clientId={c.id} onChange={() => void l.recharger()} />}
-          </>)}
-        </aside>
+      <Kpis items={[
+        { lib: t('clients.k_clients'), val: tous.length, sous: [...new Set(tous.map((c) => c.pays))].join(' · ') || '—' },
+        { lib: t('clients.k_verifies'), val: tous.length - aCompleter, sous: t('clients.k_verifies_sous') },
+        { lib: t('clients.k_dossiers'), val: (dos.data ?? []).filter((d) => d.statut === 'ouvert').length, sous: t('clients.k_dossiers_sous') },
+        { lib: t('clients.k_encours'), val: m(encours(null)), sous: t('clients.k_encours_sous') },
+      ]} />
+      <div className="pf-barre">
+        <input className="pf-recherche" placeholder={t('clients.filtrer')} value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} aria-label={t('clients.filtrer')} />
+        <Onglets actif={pays} onChange={setPays} items={[{ id: 'tous', lib: t('dossiers.tous') }, ...[...new Set(tous.map((c) => c.pays))].sort().map((x) => ({ id: x, lib: x }))]} />
+        <Onglets actif={verif} onChange={setVerif} items={[{ id: 'tous', lib: t('dossiers.tous') }, { id: 'verifies', lib: t('clients.verifies') }, { id: 'a_completer', lib: t('clients.a_completer') }]} />
+        <span className="pf-droite mute">{t('prospects.x_sur_y', { x: liste.length, y: tous.length })}</span>
+      </div>
+      <Bandeau type="err">{l.erreur ?? dos.erreur}</Bandeau>
+      <div className="cadre">
+        {l.chargement ? <Chargement /> : liste.length === 0 ? <Vide>{t('clients.aucun')}</Vide> : (
+          <table className="t"><thead><tr><th>{t('clients.client')}</th><th>{t('champs.pays')}</th><th>{t('champs.devise')}</th>
+            <th>{t('clients.conditions')}</th><th className="num">{t('clients.dossiers')}</th><th className="num">{t('clients.encours')}</th><th>{t('champs.verification')}</th></tr></thead>
+            <tbody>{liste.map((x) => (
+              <tr key={x.id} className="cliquable" onClick={() => nav(`/clients/${x.id}`)}>
+                <td><div style={{ fontWeight: 500 }}>{x.raison_sociale}</div><div className="mute">{[x.segment, x.reference].filter(Boolean).join(' · ')}</div></td>
+                <td className="sec">{x.pays}</td><td className="sec">{x.devise}</td>
+                <td>{x.conditions_paiement ?? '—'}</td>
+                <td className="num">{nbDossiers(x.id)}</td>
+                <td className="num">{m(encours(x.id))}</td>
+                <td><Statut statut={TON_VERIF[x.verification_statut] ?? 'neutre'} libelle={t(`verification.${x.verification_statut}`)} /></td>
+              </tr>))}</tbody></table>
+        )}
       </div>
       {creer && <NouveauClient onClose={() => setCreer(false)} onCree={() => { setCreer(false); invaliderReferentiels(); void l.recharger(); }} />}
+    </div>
+  );
+}
+
+interface Contact { id: string; nom: string; fonction: string | null; email: string | null; telephone: string | null }
+const schemaContact = z.object({
+  client_id: z.string().uuid(), nom: z.string().trim().min(1).max(120), fonction: z.string().trim().max(120).nullable(),
+  email: z.string().trim().email().max(254).nullable(), telephone: z.string().trim().regex(/^[0-9+() .-]{6,40}$/).nullable(),
+}).strict();
+
+export function FicheClient() {
+  const { id = '' } = useParams();
+  const { t } = useTranslation();
+  const nav = useNavigate();
+  const { profil, societes, langue } = useAuth();
+  const role = profil?.role ?? '';
+  const [onglet, setOnglet] = useState<'synthese' | 'verification' | 'dossiers' | 'factures'>('synthese');
+  const [ajout, setAjout] = useState(false);
+  const [f, setF] = useState({ nom: '', fonction: '', email: '', telephone: '' });
+  const a = useAction();
+  const c = useAsync(async () => ok(await supabase.from('clients').select('*').eq('id', id).maybeSingle()) as Client | null, [id]);
+  const contacts = useAsync(async () => ok(await supabase.from('contacts').select('id, nom, fonction, email, telephone').eq('client_id', id).order('nom')) as Contact[], [id]);
+  const dossiers = useAsync(async () => ok(await supabase.from('dossiers').select('id, reference, intitule, statut, phase_courante, ouvert_le').eq('client_id', id).order('ouvert_le', { ascending: false })) as
+    { id: string; reference: string; intitule: string; statut: string; phase_courante: string; ouvert_le: string }[], [id]);
+  const pf = useAsync(async () => ok(await supabase.rpc('portefeuille', { p_statut: 'ouvert' })) as { client_id: string; fob_xof: number | null }[], []);
+  const fobs = (pf.data ?? []).filter((d) => d.client_id === id);
+  const encours = fobs.some((d) => d.fob_xof !== null) ? `${nombre(fobs.reduce((x, d) => x + (d.fob_xof ?? 0), 0) / 1e6, langue, 1)} M` : '—';
+  const factures = useAsync(async () => ok(await supabase.from('factures').select('id, numero, objet, devise, net_a_payer, encaisse, statut, echeance').eq('client_id', id).order('date_emission', { ascending: false })) as
+    { id: string; numero: string | null; objet: string; devise: string; net_a_payer: number; encaisse: number; statut: string; echeance: string | null }[], [id]);
+  const x = c.data;
+  const ajouter = async () => {
+    const v = schemaContact.safeParse({ client_id: id, nom: f.nom, fonction: f.fonction.trim() || null, email: f.email.trim() || null, telephone: f.telephone.trim() || null });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.from('contacts').insert(v.data)))) { setAjout(false); setF({ nom: '', fonction: '', email: '', telephone: '' }); void contacts.recharger(); }
+  };
+  if (!x) return <div className="screen">{c.chargement ? <Chargement /> : <Vide>{c.erreur ?? t('clients.introuvable')}</Vide>}</div>;
+  const ouverts = (dossiers.data ?? []).filter((d) => d.statut === 'ouvert').length;
+  const aPayer = (factures.data ?? []).filter((y) => ['emise', 'partiellement_payee'].includes(y.statut));
+  const peutDossier = ['admin', 'hub_afrique', 'agent_pays'].includes(role);
+  return (
+    <div className="screen">
+      <Entete surtitre={`${t('modules.commercial')} · ${t('clients.fiche')}${x.reference ? ` · ${x.reference}` : ''}`}
+        titre={<>{x.raison_sociale} <span className="h1-statut"><Statut statut={TON_VERIF[x.verification_statut] ?? 'neutre'} libelle={t(`verification.${x.verification_statut}`)} /></span></>}
+        actions={peutDossier && <>
+          <Bouton onClick={() => nav(`/consultations/nouvelle?client=${x.id}`)}>{t('consultations.nouvelle')}</Bouton>
+          <Bouton variante="primaire" onClick={() => nav('/dossiers/nouveau')}>{t('clients.ouvrir_dossier')}</Bouton>
+        </>} />
+      <div className="sec" style={{ marginTop: -10 }}>{[x.segment, x.pays, x.devise].filter(Boolean).join(' · ')}</div>
+      <Onglets actif={onglet} onChange={setOnglet} items={[
+        { id: 'synthese', lib: t('clients.o_synthese') }, { id: 'verification', lib: t('clients.o_verification') },
+        { id: 'dossiers', lib: `${t('clients.o_dossiers')} · ${(dossiers.data ?? []).length}` }, { id: 'factures', lib: `${t('clients.o_factures')} · ${aPayer.length}` }]} />
+      <Bandeau type="err">{c.erreur ?? contacts.erreur ?? a.erreur}</Bandeau>
+      <div className="cadre">
+        {onglet === 'synthese' && (
+          <div className="fiche-principal">
+            <div className="pf-champs" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', borderTop: 0 }}>
+              <div><span>{t('champs.pays')}</span><b>{x.pays}</b></div>
+              <div><span>{t('champs.segment')}</span><b>{x.segment ?? '—'}</b></div>
+              <div><span>{t('champs.specialite')}</span><b>{x.specialite ? t(`specialites.${x.specialite}`) : '—'}</b></div>
+              <div><span>{t('clients.societe_contractante')}</span><b>{societes.find((s) => s.id === x.societe_id)?.raison_sociale ?? '—'}</b></div>
+              <div><span>{t('champs.devise')}</span><b>{x.devise}</b></div>
+              <div><span>{t('champs.conditions_paiement')}</span><b>{x.conditions_paiement ?? '—'}</b></div>
+              <div><span>{t('champs.langue')}</span><b>{x.langue.toUpperCase()}</b></div>
+              <div><span>{t('clients.dossiers_ouverts')}</span><b>{ouverts}</b></div>
+              <div><span>{t('clients.encours')}</span><b>{encours}</b></div>
+            </div>
+            <section className="fiche-bloc">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="surtitre" style={{ margin: 0 }}>{t('clients.contacts')}</div>
+                {['admin', 'hub_afrique', 'agent_pays'].includes(role) && <Bouton petit onClick={() => setAjout(true)}>{t('clients.ajouter_contact')}</Bouton>}
+              </div>
+              {(contacts.data ?? []).length === 0 ? <span className="mute">{t('clients.aucun_contact')}</span> : (
+                <table className="t"><tbody>{(contacts.data ?? []).map((k) => (
+                  <tr key={k.id}><td style={{ fontWeight: 500 }}>{k.nom}</td><td className="sec">{k.fonction ?? ''}</td><td>{k.telephone ?? ''}</td><td>{k.email ?? ''}</td></tr>))}</tbody></table>
+              )}
+            </section>
+          </div>
+        )}
+        {onglet === 'verification' && (['admin', 'hub_afrique', 'agent_pays'].includes(role)
+          ? <><p className="mute">{t('clients.aide_verification')}</p><VerificationClient clientId={x.id} onChange={() => void c.recharger()} /></>
+          : <Vide>{t('acces.texte')}</Vide>)}
+        {onglet === 'dossiers' && ((dossiers.data ?? []).length === 0 ? <Vide>{t('dossiers.aucun')}</Vide> : (
+          <table className="t"><thead><tr><th>{t('champs.reference')}</th><th>{t('champs.intitule')}</th><th>{t('champs.phase')}</th><th>{t('champs.statut')}</th><th>{t('champs.ouvert_le')}</th></tr></thead>
+            <tbody>{(dossiers.data ?? []).map((d) => (
+              <tr key={d.id} className="cliquable" onClick={() => nav(`/dossiers/${d.id}`)}><td className="ref">{d.reference}</td><td>{d.intitule}</td>
+                <td>{t(`phases.${d.phase_courante}`)}</td><td className="sec">{t(`statuts_dossier.${d.statut}`)}</td><td className="ref">{date(d.ouvert_le, langue)}</td></tr>))}</tbody></table>
+        ))}
+        {onglet === 'factures' && ((factures.data ?? []).length === 0 ? <Vide>{t('clients.aucune_facture')}</Vide> : (
+          <table className="t"><thead><tr><th>{t('clients.facture')}</th><th>{t('clients.objet')}</th><th className="num">{t('clients.reste')}</th><th>{t('champs.echeance')}</th><th>{t('champs.statut')}</th></tr></thead>
+            <tbody>{(factures.data ?? []).map((y) => (
+              <tr key={y.id} className="cliquable" onClick={() => nav(`/factures/${y.id}`)}><td className="ref">{y.numero ?? '—'}</td><td>{y.objet}</td>
+                <td className="num">{nombre(Number(y.net_a_payer) - Number(y.encaisse), langue, y.devise === 'XOF' || y.devise === 'XAF' ? 0 : 2)} {y.devise}</td>
+                <td className="ref">{y.echeance ? date(y.echeance, langue) : '—'}</td><td><Statut statut={y.statut} libelle={t(`statuts_facture.${y.statut}`, { defaultValue: y.statut })} /></td></tr>))}</tbody></table>
+        ))}
+      </div>
+      {ajout && (
+        <Tiroir titre={t('clients.ajouter_contact')} onClose={() => setAjout(false)}>
+          <Champ label={t('clients.contact_nom')}><input value={f.nom} maxLength={120} onChange={(e) => setF({ ...f, nom: e.target.value })} /></Champ>
+          <Champ label={t('prospects.fonction')}><input value={f.fonction} maxLength={120} onChange={(e) => setF({ ...f, fonction: e.target.value })} /></Champ>
+          <Champ label={t('prospects.email')}><input value={f.email} maxLength={254} onChange={(e) => setF({ ...f, email: e.target.value })} /></Champ>
+          <Champ label={t('prospects.telephone')}><input value={f.telephone} maxLength={40} onChange={(e) => setF({ ...f, telephone: e.target.value })} /></Champ>
+          <Bandeau type="err">{a.erreur}</Bandeau>
+          <Bouton variante="primaire" disabled={a.enCours} onClick={() => void ajouter()}>{t('commun.enregistrer')}</Bouton>
+        </Tiroir>
+      )}
     </div>
   );
 }
@@ -120,106 +236,198 @@ const CRITERES = ['Existence légale et licence', 'Capacité d\'export', 'Audit 
   'Références', 'Litiges', 'Conformité sociale et environnementale', 'Bénéficiaires effectifs', 'Listes de sanctions',
   'Concordance du compte bancaire avec la licence'];
 
+const STATUTS_AGREMENT = ['agree', 'en_evaluation', 'sous_surveillance', 'suspendu', 'candidat'] as const;
+const dans = (d: string | null | undefined, n: number) => Boolean(d) && Date.parse(d!) - Date.now() < n * 86400000;
+const mmaaaa = (d: string) => `${d.slice(5, 7)}.${d.slice(0, 4)}`;
+
+/** Registre des fournisseurs (maquette FOU) : la fiche s'ouvre sur sa propre page. */
 export function Fournisseurs() {
   const { t } = useTranslation();
+  const nav = useNavigate();
+  const { profil } = useAuth();
+  const role = profil?.role ?? '';
+  const [q, setQ] = useState('');
+  const [statut, setStatut] = useState('tous');
+  const [creer, setCreer] = useState(false);
+  const voitComptes = ['admin', 'achats_chine'].includes(role);
+  const l = useAsync(async () => ok(await supabase.from('fournisseurs').select('*').is('archive_le', null).order('raison_sociale_en').limit(1000)) as Fournisseur[], []);
+  const dds = useAsync(async () => ok(await supabase.from('due_diligences').select('fournisseur_id, statut, valide_jusqu_au').eq('statut', 'validee').limit(5000)) as
+    { fournisseur_id: string; statut: string; valide_jusqu_au: string | null }[], []);
+  const cps = useAsync(async () => (voitComptes ? ok(await supabase.from('comptes_paiement').select('fournisseur_id, verifie').is('archive_le', null).limit(5000)) as
+    { fournisseur_id: string; verifie: boolean }[] : []), [voitComptes]);
+  const tous = l.data ?? [];
+  const validite = (id: string) => (dds.data ?? []).filter((d) => d.fournisseur_id === id && d.valide_jusqu_au).map((d) => d.valide_jusqu_au!).sort().pop() ?? null;
+  const comptes = (id: string) => (cps.data ?? []).filter((c) => c.fournisseur_id === id);
+  const agrees = tous.filter((x) => x.statut_agrement === 'agree');
+  const expirent = agrees.filter((x) => dans(validite(x.id), 45));
+  const bloques = voitComptes ? tous.filter((x) => comptes(x.id).some((c) => !c.verifie)) : [];
+  const notes = tous.map((x) => x.note).filter((v): v is number => v !== null);
+  const n = normaliser(q.trim());
+  const liste = useMemo(() => tous.filter((x) => (statut === 'tous' || x.statut_agrement === statut)
+    && (!n || normaliser(`${x.raison_sociale_en} ${x.raison_sociale_zh ?? ''} ${x.ville ?? ''} ${x.categories.join(' ')}`).includes(n))), [tous, statut, n]);
+  const suite = [expirent.length ? t('fournisseurs.titre_dd', { n: expirent.length }) : null,
+    bloques.length ? t('fournisseurs.titre_comptes', { n: bloques.length }) : null].filter(Boolean).join(', ');
+  const titre = t('fournisseurs.titre_agrees', { n: agrees.length, total: tous.length }) + (suite ? ` ; ${suite}` : '');
+  return (
+    <div className="screen">
+      <Entete surtitre={`${t('modules.achats')} · ${t('fournisseurs.surtitre')} · FOU`} titre={l.data ? titre : t('ecrans.fournisseurs')}
+        actions={voitComptes && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('fournisseurs.nouveau')}</Bouton>} />
+      <Kpis items={[
+        { lib: t('fournisseurs.k_agrees'), val: agrees.length, sous: t('fournisseurs.k_agrees_sous') },
+        { lib: t('fournisseurs.k_evaluation'), val: tous.filter((x) => ['en_evaluation', 'candidat'].includes(x.statut_agrement)).length, sous: t('fournisseurs.k_evaluation_sous') },
+        { lib: t('fournisseurs.k_surveillance'), val: tous.filter((x) => ['sous_surveillance', 'suspendu'].includes(x.statut_agrement)).length, sous: t('fournisseurs.k_surveillance_sous') },
+        { lib: t('fournisseurs.k_note'), val: notes.length ? Math.round(notes.reduce((a, b) => a + b, 0) / notes.length) : '—', sous: t('fournisseurs.k_note_sous') },
+      ]} />
+      <div className="pf-barre">
+        <input className="pf-recherche" placeholder={t('fournisseurs.filtrer')} value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} aria-label={t('fournisseurs.filtrer')} />
+        <Onglets actif={statut} onChange={setStatut} items={[{ id: 'tous', lib: t('dossiers.tous') }, ...STATUTS_AGREMENT.map((s) => ({ id: s, lib: t(`agrement.${s}`) }))]} />
+        <span className="pf-droite mute">{t('prospects.x_sur_y', { x: liste.length, y: tous.length })}</span>
+      </div>
+      <Bandeau type="err">{l.erreur ?? dds.erreur ?? cps.erreur}</Bandeau>
+      <div className="cadre">
+        {l.chargement && !l.data ? <Chargement /> : liste.length === 0 ? <Vide>{t('fournisseurs.aucun')}</Vide> : (
+          <table className="t"><thead><tr><th>{t('fournisseurs.fournisseur')}</th><th>{t('champs.categories')}</th><th>{t('champs.agrement')}</th>
+            <th className="num">{t('champs.note')}</th><th className="num">{t('fournisseurs.validite')}</th>{voitComptes && <th>{t('fournisseurs.comptes_court')}</th>}</tr></thead>
+            <tbody>{liste.map((x) => {
+              const v = validite(x.id), cs = comptes(x.id);
+              return (
+                <tr key={x.id} className="cliquable" onClick={() => nav(`/fournisseurs/${x.id}`)}>
+                  <td><div style={{ fontWeight: 500 }}>{x.raison_sociale_en}</div><div className="mute">{[x.raison_sociale_zh, x.ville].filter(Boolean).join(' · ')}</div></td>
+                  <td className="sec">{x.categories.join(' · ') || '—'}</td>
+                  <td><Statut statut={x.statut_agrement} libelle={t(`agrement.${x.statut_agrement}`)} />
+                    <div className="mute" style={{ fontSize: 12 }}>{x.engagement_non_commission_le ? t('fournisseurs.non_commission_signee') : t('fournisseurs.non_commission_absente')}</div></td>
+                  <td className="num">{x.note ?? '—'}</td>
+                  <td className={'num' + (dans(v, 45) ? ' txt-err' : '')}>{v ? (dans(v, 45) ? `${v.slice(8, 10)}.${mmaaaa(v)}` : mmaaaa(v)) : '—'}</td>
+                  {voitComptes && <td>{cs.length === 0 ? <span className="mute">—</span> : cs.every((c) => c.verifie)
+                    ? <Statut statut="verifie" libelle={t('fournisseurs.verifie')} /> : <Statut statut="err" libelle={t('fournisseurs.compte_a_verifier')} />}</td>}
+                </tr>);
+            })}</tbody></table>
+        )}
+      </div>
+      {creer && <NouveauFournisseur onClose={() => setCreer(false)} onCree={() => { setCreer(false); invaliderReferentiels(); void l.recharger(); }} />}
+    </div>
+  );
+}
+
+/** Fiche fournisseur (maquette fourFiche) : synthèse, due diligence, comptes de paiement, commandes. */
+export function FicheFournisseur() {
+  const { id = '' } = useParams();
+  const { t } = useTranslation();
+  const nav = useNavigate();
   const { profil, langue } = useAuth();
   const role = profil?.role ?? '';
-  const [sel, setSel] = useState<string | null>(null);
-  const [q, setQ] = useState('');
-  const [creer, setCreer] = useState(false);
+  const [onglet, setOnglet] = useState<'synthese' | 'dd' | 'comptes' | 'commandes'>('synthese');
   const [dd, setDd] = useState<DueDiligence | 'nouvelle' | null>(null);
   const [compte, setCompte] = useState(false);
-  const l = useAsync(async () => ok(await supabase.from('fournisseurs').select('*').is('archive_le', null).order('raison_sociale_en').limit(1000)) as Fournisseur[], []);
-  const liste = useMemo(() => (l.data ?? []).filter((f) => !q || normaliser(`${f.raison_sociale_en} ${f.raison_sociale_zh ?? ''}`).includes(normaliser(q))), [l.data, q]);
-  const f = liste.find((x) => x.id === sel) ?? null;
-  const dds = useAsync(async () => (f ? ok(await supabase.from('due_diligences').select('*').eq('fournisseur_id', f.id).order('cree_le', { ascending: false })) as DueDiligence[] : []), [f?.id]);
-  const comptes = useAsync(async () => (f && ['admin', 'achats_chine'].includes(role) ? ok(await supabase.from('comptes_paiement').select('*').eq('fournisseur_id', f.id).is('archive_le', null)) as Compte[] : []), [f?.id]);
+  const fo = useAsync(async () => ok(await supabase.from('fournisseurs').select('*').eq('id', id).maybeSingle()) as Fournisseur | null, [id]);
+  const f = fo.data;
+  const dds = useAsync(async () => ok(await supabase.from('due_diligences').select('*').eq('fournisseur_id', id).order('cree_le', { ascending: false })) as DueDiligence[], [id]);
+  const comptes = useAsync(async () => (['admin', 'achats_chine'].includes(role) ? ok(await supabase.from('comptes_paiement').select('*').eq('fournisseur_id', id).is('archive_le', null)) as Compte[] : []), [id, role]);
+  const cmds = useAsync(async () => ok(await supabase.from('commandes').select('id, reference, statut, devise, fob_montant, incoterm, cree_le').eq('fournisseur_id', id).order('cree_le', { ascending: false }).limit(200)) as
+    { id: string; reference: string | null; statut: string; devise: string; fob_montant: number | null; incoterm: string; cree_le: string }[], [id]);
+  const ids = (cmds.data ?? []).map((c) => c.id);
+  const ncs = useAsync(async () => (ids.length ? ok(await supabase.from('non_conformites').select('id, cree_le').in('commande_id', ids).limit(1000)) as { id: string; cree_le: string }[] : []), [ids.join(',')]);
   const a = useAction();
   const ecrit = ['admin', 'achats_chine'].includes(role);
-  const agreer = async () => { if (f && await a.executer(async () => ok(await supabase.rpc('agreer_fournisseur', { p_fournisseur: f.id })))) void l.recharger(); };
+  if (!f) return <div className="screen">{fo.chargement ? <Chargement /> : <Vide>{fo.erreur ?? t('fournisseurs.introuvable')}</Vide>}</div>;
+  const agreer = async () => { if (await a.executer(async () => ok(await supabase.rpc('agreer_fournisseur', { p_fournisseur: f.id })))) void fo.recharger(); };
   const statuerDd = async (x: DueDiligence, s: 'validee' | 'refusee') => { if (await a.executer(async () => ok(await supabase.rpc('valider_due_diligence', { p_dd: x.id, p_statut: s, p_conclusion: null })))) void dds.recharger(); };
   const demanderVerif = async (c: Compte) => { if (await a.executer(async () => ok(await supabase.rpc('demander_verification_compte', { p_compte: c.id })))) void comptes.recharger(); };
   const verifier = async (c: Compte) => { if (await a.executer(async () => ok(await supabase.rpc('verifier_compte', { p_compte: c.id })))) void comptes.recharger(); };
   const engagement = async () => {
-    if (!f) return;
-    if (await a.executer(async () => ok(await supabase.from('fournisseurs').update({ engagement_non_commission_le: new Date().toISOString().slice(0, 10) }).eq('id', f.id)))) void l.recharger();
+    if (await a.executer(async () => ok(await supabase.from('fournisseurs').update({ engagement_non_commission_le: new Date().toISOString().slice(0, 10) }).eq('id', f.id)))) void fo.recharger();
   };
-
+  const ddValide = (dds.data ?? []).find((x) => x.statut === 'validee');
   return (
-    <div className="screen">
-      <Entete surtitre={`${t('modules.achats')} · M4 · M16`} titre={t('fournisseurs.titre', { n: liste.length, agrees: liste.filter((x) => x.statut_agrement === 'agree').length })}
-        actions={ecrit && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('fournisseurs.nouveau')}</Bouton>} />
-      <input className="search" style={{ flex: 'none' }} placeholder={t('fournisseurs.filtrer')} value={q} maxLength={80} onChange={(e) => setQ(e.target.value)} aria-label={t('fournisseurs.filtrer')} />
-      <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
-      <div className="liste-detail">
-        <div className="liste"><CadreTableau>
-          {l.chargement ? <Chargement /> : liste.length === 0 ? <Vide>{t('fournisseurs.aucun')}</Vide> : (
-            <table className="t"><thead><tr><th>{t('champs.raison_sociale')}</th><th>{t('champs.ville')}</th><th>{t('champs.categories')}</th><th className="num">{t('champs.note')}</th><th>{t('champs.agrement')}</th></tr></thead>
-              <tbody>{liste.map((x) => (
-                <tr key={x.id} className="cliquable" aria-selected={x.id === sel} onClick={() => setSel(x.id)}>
-                  <td>{x.raison_sociale_en}<div className="mute">{x.raison_sociale_zh ?? ''}</div></td><td className="sec">{x.ville ?? '—'}</td>
-                  <td className="sec">{x.categories.join(', ')}</td><td className="num">{x.note ?? '—'}</td>
-                  <td><Statut statut={x.statut_agrement} libelle={t(`agrement.${x.statut_agrement}`)} /></td>
-                </tr>))}</tbody></table>
-          )}
-        </CadreTableau></div>
-        <aside className="detail">
-          {!f ? <Vide>{t('fournisseurs.choisir')}</Vide> : (<>
-            <div className="surtitre">{f.uscc ?? t('fournisseurs.fiche')}</div>
-            <h2 style={{ fontSize: 22 }}>{f.raison_sociale_en}</h2>
-            <dl className="dl">
-              <dt>{t('champs.agrement')}</dt><dd>{t(`agrement.${f.statut_agrement}`)}{f.agree_le ? ` · ${date(f.agree_le, langue)}` : ''}</dd>
-              <dt>{t('fournisseurs.engagement')}</dt><dd>{f.engagement_non_commission_le ? date(f.engagement_non_commission_le, langue) : t('fournisseurs.non_signe')}</dd>
-            </dl>
-            {ecrit && !f.engagement_non_commission_le && <Bouton petit onClick={() => void engagement()}>{t('fournisseurs.enregistrer_engagement')}</Bouton>}
-            {role === 'admin' && f.statut_agrement !== 'agree' && <Bouton variante="primaire" onClick={() => void agreer()}>{t('fournisseurs.agreer')}</Bouton>}
-            <div className="filet" />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="section-titre">{t('fournisseurs.due_diligence')}</span>
-              {ecrit && <Bouton petit onClick={() => setDd('nouvelle')}>{t('commun.ajouter')}</Bouton>}
-            </div>
-            {(dds.data ?? []).length === 0 ? <span className="mute">{t('fournisseurs.aucune_dd')}</span> : (dds.data ?? []).map((x) => (
-              <div key={x.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Statut statut={x.statut} libelle={`${t(`statuts_dd.${x.statut}`)} · ${x.note ?? '—'}/100`} />
-                  <span className="mute">{x.valide_jusqu_au ? t('fournisseurs.valide_jusqu', { d: date(x.valide_jusqu_au, langue) }) : t(`niveaux_dd.${x.niveau}`)}</span>
-                </div>
-                <div className="actions">
-                  <a className="btn petit" href={`/imprimer/due-diligence/${x.id}`}>{t('commun.imprimer')}</a>
-                  {ecrit && x.statut === 'en_cours' && <Bouton petit onClick={() => setDd(x)}>{t('fournisseurs.grille')}</Bouton>}
-                  {role === 'admin' && x.statut === 'en_cours' && <>
-                    <Bouton petit onClick={() => void statuerDd(x, 'validee')}>{t('fiche.valider')}</Bouton>
-                    <Bouton petit variante="danger" onClick={() => void statuerDd(x, 'refusee')}>{t('fiche.refuser')}</Bouton></>}
-                </div>
-                {ecrit && <PiecesDd ddId={x.id} enCours={x.statut === 'en_cours'} />}
+    <div className="screen" style={{ overflow: 'auto' }}>
+      <Entete surtitre={`${t('modules.achats')} · ${t('fournisseurs.fiche_surtitre')} · ${f.reference ?? ''}`}
+        titre={<>{f.raison_sociale_en} <span className="h1-statut"><Statut statut={f.statut_agrement} libelle={t(`agrement.${f.statut_agrement}`)} /></span></>}
+        actions={<>
+          {ecrit && !f.engagement_non_commission_le && <Bouton onClick={() => void engagement()}>{t('fournisseurs.enregistrer_engagement')}</Bouton>}
+          {role === 'admin' && f.statut_agrement !== 'agree' && <Bouton variante="primaire" disabled={a.enCours} onClick={() => void agreer()}>{t('fournisseurs.agreer')}</Bouton>}
+        </>} />
+      <div className="sec" style={{ marginTop: -10 }}>{[f.raison_sociale_zh, f.categories.join(' · '), f.ville].filter(Boolean).join(' · ')}</div>
+      <Bandeau type="err">{fo.erreur ?? a.erreur ?? dds.erreur}</Bandeau>
+      <div className="fou-grille">
+        <nav className="fou-nav" aria-label={t('fournisseurs.fiche_surtitre')}>
+          {([['societe', [['synthese', t('fournisseurs.o_synthese'), null]]],
+            ['suivi', [['dd', t('fournisseurs.due_diligence'), ddValide?.note ?? null],
+              ...(ecrit ? [['comptes', t('fournisseurs.comptes'), (comptes.data ?? []).length]] : []),
+              ['commandes', t('fournisseurs.o_commandes'), (cmds.data ?? []).length]]]] as [string, [typeof onglet, string, number | null][]][]).map(([g, items]) => (
+            <div key={g} className="fou-groupe">
+              <div className="surtitre">{t(`fournisseurs.groupes.${g}`)}</div>
+              {items.map(([k, lib, n]) => (
+                <button key={k} type="button" className={'fou-lien' + (onglet === k ? ' actif' : '')} aria-current={onglet === k} onClick={() => setOnglet(k)}>
+                  <span>{lib}</span>{n !== null && <span className="mute">{n}</span>}</button>))}
+            </div>))}
+        </nav>
+      <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {onglet === 'synthese' && (
+          <div className="pf-champs" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+            <div><span>{t('fournisseurs.raison_zh')}</span><b>{f.raison_sociale_zh ?? '—'}</b></div>
+            <div><span>{t('fournisseurs.uscc')}</span><b className="ref">{f.uscc ?? '—'}</b></div>
+            <div><span>{t('champs.ville')}</span><b>{f.ville ?? '—'}</b></div>
+            <div><span>{t('champs.categories')}</span><b>{f.categories.join(' · ') || '—'}</b></div>
+            <div><span>{t('champs.agrement')}</span><b>{t(`agrement.${f.statut_agrement}`)}{f.agree_le ? ` · ${date(f.agree_le, langue)}` : ''}</b></div>
+            <div><span>{t('champs.note')}</span><b>{f.note ?? '—'}</b></div>
+            <div><span>{t('fournisseurs.engagement')}</span><b>{f.engagement_non_commission_le ? date(f.engagement_non_commission_le, langue) : t('fournisseurs.non_signe')}</b></div>
+            <div><span>{t('fournisseurs.validite')}</span><b>{ddValide?.valide_jusqu_au ? date(ddValide.valide_jusqu_au, langue) : '—'}</b></div>
+            <div><span>{t('fournisseurs.apporte_client')}</span><b>{f.apporte_par_client ? t('fournisseurs.oui') : t('fournisseurs.non')}</b></div>
+          </div>
+        )}
+        {onglet === 'synthese' && <Kpis items={[
+          { lib: t('fournisseurs.k_commandes'), val: (cmds.data ?? []).length, sous: t('fournisseurs.k_commandes_sous', { n: (cmds.data ?? []).filter((c) => ['contrat_signe', 'en_production', 'production_terminee'].includes(c.statut)).length }) },
+          { lib: t('fournisseurs.k_nc'), val: (ncs.data ?? []).filter((x) => Date.parse(x.cree_le) > Date.now() - 365 * 86400000).length, sous: t('fournisseurs.k_nc_sous') },
+          { lib: t('fournisseurs.k_valeur'), val: Object.entries((cmds.data ?? []).filter((c) => c.statut !== 'annulee' && c.fob_montant !== null)
+              .reduce<Record<string, number>>((acc, c) => ({ ...acc, [c.devise]: (acc[c.devise] ?? 0) + Number(c.fob_montant) }), {}))
+              .map(([d, v]) => `${nombre(v / 1000, langue, 0)} k ${d}`).join(' · ') || '—', sous: t('fournisseurs.k_valeur_sous') },
+        ]} />}
+        {onglet === 'dd' && <>
+          {ecrit && <div><Bouton petit onClick={() => setDd('nouvelle')}>{t('fournisseurs.nouvelle_dd')}</Bouton></div>}
+          {(dds.data ?? []).length === 0 ? <span className="mute">{t('fournisseurs.aucune_dd')}</span> : (dds.data ?? []).map((x) => (
+            <section key={x.id} className="fiche-bloc">
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <Statut statut={x.statut} libelle={`${t(`statuts_dd.${x.statut}`)} · ${x.note ?? '—'}/100`} />
+                <span className="mute">{x.valide_jusqu_au ? t('fournisseurs.valide_jusqu', { d: date(x.valide_jusqu_au, langue) }) : t(`niveaux_dd.${x.niveau}`)}</span>
               </div>
-            ))}
-            {ecrit && <>
-              <div className="filet" />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="section-titre">{t('fournisseurs.comptes')}</span>
-                <Bouton petit onClick={() => setCompte(true)}>{t('commun.ajouter')}</Bouton>
+              <div className="actions">
+                <a className="btn petit" href={`/imprimer/due-diligence/${x.id}`}>{t('commun.imprimer')}</a>
+                {ecrit && x.statut === 'en_cours' && <Bouton petit onClick={() => setDd(x)}>{t('fournisseurs.grille')}</Bouton>}
+                {role === 'admin' && x.statut === 'en_cours' && <>
+                  <Bouton petit onClick={() => void statuerDd(x, 'validee')}>{t('fiche.valider')}</Bouton>
+                  <Bouton petit variante="danger" onClick={() => void statuerDd(x, 'refusee')}>{t('fiche.refuser')}</Bouton></>}
               </div>
-              {(comptes.data ?? []).map((c) => (
-                <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span>{t(`types_compte.${c.type}`)} · {c.devise} · {c.titulaire}</span>
-                  <span className="mute">{c.banque ?? ''} {c.numero.replace(/.(?=.{4})/g, '•')}</span>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {c.verifie ? <Statut statut="verifie" libelle={t('fournisseurs.verifie')} /> : <Statut statut="non_verifie" libelle={t('fournisseurs.non_verifie')} />}
-                    {!c.verifie && !c.verification_demandee_par && <Bouton petit onClick={() => void demanderVerif(c)}>{t('fournisseurs.demander_verif')}</Bouton>}
-                    {!c.verifie && c.verification_demandee_par && c.verification_demandee_par !== profil?.id && (role === 'admin' || profil?.delegue_validation) &&
-                      <Bouton petit variante="primaire" onClick={() => void verifier(c)}>{t('fournisseurs.verifier')}</Bouton>}
-                    {!c.verifie && c.verification_demandee_par === profil?.id && <span className="mute">{t('fournisseurs.attente_second')}</span>}
-                  </div>
-                </div>
-              ))}
-            </>}
-          </>)}
-        </aside>
+              {ecrit && <PiecesDd ddId={x.id} enCours={x.statut === 'en_cours'} />}
+            </section>))}
+        </>}
+        {onglet === 'comptes' && ecrit && <>
+          <DemandesComptes fournisseurId={f.id} onTraite={() => void comptes.recharger()} />
+          <div><Bouton petit onClick={() => setCompte(true)}>{t('fournisseurs.nouveau_compte')}</Bouton></div>
+          <p className="mute" style={{ margin: 0 }}>{t('fournisseurs.aide_comptes')}</p>
+          {(comptes.data ?? []).length === 0 ? <span className="mute">{t('fournisseurs.aucun_compte')}</span> : (comptes.data ?? []).map((c) => (
+            <div key={c.id} className="ligne-montant">
+              <span>{t(`types_compte.${c.type}`)} · {c.devise} · {c.titulaire}<br /><span className="mute">{c.banque ?? ''} {c.numero.replace(/.(?=.{4})/g, '•')}</span></span>
+              <span className="actions">
+                {c.verifie ? <Statut statut="verifie" libelle={t('fournisseurs.verifie')} /> : <Statut statut="non_verifie" libelle={t('fournisseurs.non_verifie')} />}
+                {!c.verifie && !c.verification_demandee_par && <Bouton petit onClick={() => void demanderVerif(c)}>{t('fournisseurs.demander_verif')}</Bouton>}
+                {!c.verifie && c.verification_demandee_par && c.verification_demandee_par !== profil?.id && (role === 'admin' || profil?.delegue_validation) &&
+                  <Bouton petit variante="primaire" onClick={() => void verifier(c)}>{t('fournisseurs.verifier')}</Bouton>}
+                {!c.verifie && c.verification_demandee_par === profil?.id && <span className="mute">{t('fournisseurs.attente_second')}</span>}
+              </span>
+            </div>))}
+        </>}
+        {onglet === 'commandes' && ((cmds.data ?? []).length === 0 ? <span className="mute">{t('fournisseurs.aucune_commande')}</span> : (
+          <table className="t"><thead><tr><th>{t('fournisseurs.commande')}</th><th>{t('fournisseurs.incoterm')}</th><th className="num">{t('fournisseurs.valeur')}</th><th>{t('fournisseurs.statut')}</th></tr></thead>
+            <tbody>{(cmds.data ?? []).map((c) => (
+              <tr key={c.id} className="cliquable" onClick={() => nav(`/commandes/${c.id}`)}>
+                <td className="ref">{c.reference ?? '—'}</td><td>{c.incoterm}</td>
+                <td className="num">{c.fob_montant === null ? '—' : `${nombre(c.fob_montant, langue)} ${c.devise}`}</td>
+                <td><Statut statut={c.statut} libelle={t(`statuts_commande.${c.statut}`, { defaultValue: c.statut })} /></td></tr>))}</tbody></table>
+        ))}
       </div>
-      {creer && <NouveauFournisseur onClose={() => setCreer(false)} onCree={() => { setCreer(false); invaliderReferentiels(); void l.recharger(); }} />}
-      {dd && f && <GrilleDd fournisseur={f} dd={dd === 'nouvelle' ? null : dd} onClose={() => setDd(null)} onOk={() => { setDd(null); void dds.recharger(); }} />}
-      {compte && f && <NouveauCompte fournisseur={f} onClose={() => setCompte(false)} onOk={() => { setCompte(false); void comptes.recharger(); }} />}
+      </div>
+      {dd && <GrilleDd fournisseur={f} dd={dd === 'nouvelle' ? null : dd} onClose={() => setDd(null)} onOk={() => { setDd(null); void dds.recharger(); }} />}
+      {compte && <NouveauCompte fournisseur={f} onClose={() => setCompte(false)} onOk={() => { setCompte(false); void comptes.recharger(); }} />}
     </div>
   );
 }
@@ -292,6 +500,43 @@ function GrilleDd({ fournisseur, dd, onClose, onOk }: { fournisseur: Fournisseur
       <Bandeau type="err">{a.erreur}</Bandeau>
       <Bouton variante="primaire" disabled={a.enCours} onClick={() => void envoyer()}>{t('commun.enregistrer')}</Bouton>
     </Tiroir>
+  );
+}
+
+interface DemandeCompte { id: string; type: string; titulaire: string; devise: string; banque: string | null; numero: string; swift: string | null; motif: string; cree_le: string }
+
+/** Demandes de changement de compte déposées depuis le portail : acceptation (compte créé non vérifié,
+ *  quatre yeux ensuite) ou refus motivé. Les coordonnées s'affichent en clair pour le rappel de contrôle. */
+function DemandesComptes({ fournisseurId, onTraite }: { fournisseurId: string; onTraite: () => void }) {
+  const { t } = useTranslation();
+  const { langue } = useAuth();
+  const l = useAsync(async () => ok(await supabase.from('demandes_comptes_fournisseurs').select('id, type, titulaire, devise, banque, numero, swift, motif, cree_le')
+    .eq('fournisseur_id', fournisseurId).eq('statut', 'nouvelle').order('cree_le')) as DemandeCompte[], [fournisseurId]);
+  const a = useAction();
+  const [motif, setMotif] = useState('');
+  const traiter = async (d: DemandeCompte, accepter: boolean) => {
+    const v = z.object({ p_demande: z.string().uuid(), p_accepter: z.boolean(), p_motif: z.string().trim().min(5).max(1000).nullable() }).strict()
+      .safeParse({ p_demande: d.id, p_accepter: accepter, p_motif: accepter ? null : motif });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('traiter_demande_compte', v.data)))) { setMotif(''); void l.recharger(); onTraite(); }
+  };
+  if (!(l.data ?? []).length) return null;
+  return (
+    <section className="carte" style={{ padding: 12 }}>
+      <div className="surtitre">{t('fournisseurs.demandes_portail')}</div>
+      <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
+      <Bandeau>{t('fournisseurs.aide_demandes_portail')}</Bandeau>
+      {(l.data ?? []).map((d) => (
+        <div key={d.id} className="ligne-montant">
+          <span>{t(`types_compte.${d.type}`)} · {d.devise} · {d.titulaire}<br /><span className="mute">{d.banque ?? ''} {d.numero}{d.swift ? ` · ${d.swift}` : ''} · {date(d.cree_le, langue)}</span>
+            <br /><span className="sec">{d.motif}</span></span>
+          <span className="actions">
+            <Bouton petit variante="primaire" disabled={a.enCours} onClick={() => void traiter(d, true)}>{t('fournisseurs.accepter_demande')}</Bouton>
+            <input aria-label={t('banque.motif')} placeholder={t('banque.motif')} maxLength={1000} value={motif} onChange={(e) => setMotif(e.target.value)} />
+            <Bouton petit disabled={a.enCours || motif.trim().length < 5} onClick={() => void traiter(d, false)}>{t('clients.refuser')}</Bouton>
+          </span>
+        </div>))}
+    </section>
   );
 }
 

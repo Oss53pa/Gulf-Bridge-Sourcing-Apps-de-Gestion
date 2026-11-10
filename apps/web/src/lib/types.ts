@@ -4,6 +4,7 @@ import type { Role } from './droits';
 export interface Profil {
   id: string; nom: string; email: string; langue: 'fr' | 'en' | 'zh'; fuseau: string; role: Role | null;
   societes: string[]; pays: string | null; delegue_validation: boolean; actif: boolean; telephone?: string | null;
+  client_id?: string | null; fournisseur_id?: string | null; sous_role?: string | null;
 }
 export interface Societe { id: string; code: 'GBS_CI' | 'GBS_CN'; raison_sociale: string; pays: string; devise: string; date_creation: string; fne: boolean; }
 export interface Client {
@@ -29,6 +30,7 @@ export interface Dossier {
   specialite: string | null; pays: string; priorite: string; ouvert_le: string; date_ouverture_site: string | null;
   statut: string; phase_courante: string; chef_id: string | null; lettre_credit: boolean; reference_domiciliation: string | null;
   forfait_consultation_ht: number | null; forfait_projet_ht: number | null; taux_commission_projet: number | null; cadre_id: string | null;
+  besoin?: string | null; quantite_besoin?: string | null;
 }
 export interface Phase {
   id: string; dossier_id: string; phase: string; ordre: number; statut: string; reelle_debut: string | null; reelle_fin: string | null;
@@ -37,7 +39,7 @@ export interface Phase {
 export interface Piece {
   id: string; dossier_id: string; phase: string; code: string; libelle: string; obligatoire: boolean; statut: string;
   fournie_par: string | null; document_chemin: string | null; statut_le: string | null; commentaire: string | null;
-  demandee_a?: string | null; demandee_le?: string | null; relances?: number;
+  demandee_a?: string | null; demandee_le?: string | null; relances?: number; statut_par?: string | null;
 }
 export interface PointBloquant {
   id: string; dossier_id: string; description: string; categorie: string; impact_jours: number | null; echeance: string;
@@ -67,7 +69,7 @@ export interface Inspection {
   defauts_critiques: number; defauts_majeurs: number; defauts_mineurs: number; decision_proposee: string | null; decision: string | null;
   statut: string; conclusion: string | null; validee_le: string | null;
 }
-export interface Constat { id: string; inspection_id: string; ordre: number; point: string; exigence: string | null; mesure: string | null; resultat: string; gravite: string | null; nombre: number; commentaire: string | null; }
+export interface Constat { id: string; inspection_id: string; ordre: number; point: string; exigence: string | null; mesure: string | null; resultat: string; gravite: string | null; nombre: number; commentaire: string | null; photos: string[]; }
 export interface NonConformite { id: string; reference: string; inspection_id: string | null; gravite: string; description: string; correction: string | null; delai: string | null; statut: string; }
 export interface Expedition {
   id: string; reference: string; dossier_id: string; mode: string; transitaire: string | null; conteneurs: string[]; plombs: string[];

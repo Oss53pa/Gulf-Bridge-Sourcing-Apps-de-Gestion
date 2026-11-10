@@ -10,7 +10,7 @@ import { useAuth } from '../lib/auth';
 import { date } from '../lib/format';
 import { useNoms } from '../lib/referentiels';
 import { urlSignee } from '../lib/fichiers';
-import { Bandeau, Bouton, CadreTableau, Champ, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
+import { Bandeau, Bouton, CadreTableau, Champ, Entete, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { Depot } from '../components/Depot';
 
 export interface FicheNcData {
@@ -18,6 +18,7 @@ export interface FicheNcData {
   gravite: 'critique' | 'majeur' | 'mineur'; description: string; photos: string[]; correction: string | null; delai: string | null;
   statut: 'ouverte' | 'corrigee' | 'close'; preuve: string | null; photos_correction: string[]; corrigee_le: string | null;
   contre_inspection_id: string | null; motif_cloture: string | null; hors_delai: boolean | null; close_le: string | null; cree_le: string;
+  libelle_client: string | null; libelle_client_le: string | null;
 }
 interface Qualite { fournisseur_id: string; fournisseur: string; nc_12_mois: number; nc_ouvertes: number; nc_en_retard: number; critiques_12_mois: number; note_qualite: number }
 type Filtre = 'a_traiter' | 'en_retard' | 'toutes';
@@ -28,7 +29,7 @@ const STATUT = { ouverte: 'att', corrigee: 'en_cours', close: 'ok' } as const;
 
 export function NonConformites() {
   const { t } = useTranslation();
-  const { langue } = useAuth();
+
   const fournisseurs = useNoms('fournisseurs');
   const dossiers = useNoms('dossiers');
   const [onglet, setOnglet] = useState<'registre' | 'fournisseurs'>('registre');
@@ -41,33 +42,32 @@ export function NonConformites() {
   const sv = seuils.data ?? { vert: 80, orange: 60 };
   const toutes = l.data ?? [];
   const liste = toutes.filter((n) => filtre === 'toutes' || (filtre === 'en_retard' ? enRetard(n) : n.statut !== 'close'));
+  const choisie = liste.find((n) => n.id === fiche) ?? liste[0] ?? null;
+  const ouvertes = toutes.filter((n) => n.statut !== 'close');
+  const titre = t('nc.titre_ouvertes', { n: ouvertes.length }) + (ouvertes.length ? ` ; ${t('nc.titre_detail', { c: ouvertes.filter((n) => n.gravite === 'critique').length, r: ouvertes.filter((n) => n.statut === 'corrigee').length })}` : '');
   return (
     <div className="screen">
-      <Entete surtitre={`${t('modules.qualite')} · M27`} titre={t('nc.titre')} />
-      <Kpis items={[
-        { lib: t('nc.ouvertes'), val: String(toutes.filter((n) => n.statut === 'ouverte').length), sous: t('nc.ouvertes_sous') },
-        { lib: t('nc.a_clore'), val: String(toutes.filter((n) => n.statut === 'corrigee').length), sous: t('nc.a_clore_sous') },
-        { lib: t('nc.en_retard'), val: String(toutes.filter((n) => enRetard(n)).length), sous: t('nc.en_retard_sous') },
-        { lib: t('nc.critiques'), val: String(toutes.filter((n) => n.gravite === 'critique' && n.statut !== 'close').length), sous: t('nc.critiques_sous') },
-      ]} />
+      <Entete surtitre={`${t('modules.qualite')} · ${t('nc.surtitre')} · NCF`} titre={l.data ? titre : t('nc.titre')} />
       <Onglets items={[{ id: 'registre', lib: t('nc.registre') }, { id: 'fournisseurs', lib: t('nc.qualite_fournisseurs') }]} actif={onglet} onChange={setOnglet} />
       <Bandeau type="err">{l.erreur ?? q.erreur}</Bandeau>
       {onglet === 'registre' && (
-        <CadreTableau titre={t('nc.registre')} outils={
-          <select value={filtre} onChange={(e) => setFiltre(e.target.value as Filtre)} aria-label={t('nc.filtre')}>
-            {(['a_traiter', 'en_retard', 'toutes'] as const).map((f) => <option key={f} value={f}>{t(`nc.filtres.${f}`)}</option>)}</select>}>
-          {liste.length === 0 ? <Vide>{t('inspections.aucune_nc')}</Vide> : (
-            <table className="t"><thead><tr><th>{t('nc.reference')}</th><th>{t('champs.dossier')}</th><th>{t('nc.fournisseur')}</th><th>{t('inspections.gravite')}</th>
-              <th>{t('champs.description')}</th><th>{t('inspections.delai')}</th><th>{t('nc.statut')}</th></tr></thead>
-              <tbody>{liste.map((n) => (
-                <tr key={n.id} className="cliquable" onClick={() => setFiche(n.id)}>
-                  <td className="ref">{n.reference}</td><td className="ref">{dossiers[n.dossier_id] ?? '—'}</td>
-                  <td>{n.fournisseur_id ? fournisseurs[n.fournisseur_id] ?? '—' : '—'}</td><td>{t(`gravites.${n.gravite}`)}</td>
-                  <td>{n.description}</td>
-                  <td className="ref">{n.delai ? date(n.delai, langue) : '—'}{enRetard(n) && <div><Statut statut="err" libelle={t('nc.retard')} /></div>}</td>
-                  <td><Statut statut={STATUT[n.statut]} libelle={t(`statuts_nc.${n.statut}`)} /></td></tr>))}</tbody></table>
-          )}
-        </CadreTableau>
+        <div className="ref-grille nc-grille">
+          <div className="cadre">
+            <Onglets actif={filtre} onChange={setFiltre} items={(['a_traiter', 'en_retard', 'toutes'] as const).map((f) => ({ id: f, lib: t(`nc.filtres.${f}`) }))} />
+            {liste.length === 0 ? <Vide>{t('inspections.aucune_nc')}</Vide> : (
+              <table className="t"><thead><tr><th>{t('nc.reference')}</th><th>{t('nc.defaut_fabricant')}</th><th>{t('inspections.gravite')}</th>
+                <th>{t('inspections.delai')}</th><th>{t('nc.statut')}</th></tr></thead>
+                <tbody>{liste.map((n) => (
+                  <tr key={n.id} className={'cliquable' + (choisie?.id === n.id ? ' choisi' : '')} onClick={() => setFiche(n.id)}>
+                    <td className="ref">{n.reference}<div className="mute">{dossiers[n.dossier_id] ?? ''}</div></td>
+                    <td><div style={{ fontWeight: 500 }}>{n.description}</div><div className="mute">{n.fournisseur_id ? fournisseurs[n.fournisseur_id] ?? '' : ''}</div></td>
+                    <td><Statut statut={n.gravite === 'critique' ? 'err' : n.gravite === 'majeur' ? 'att' : 'neutre'} libelle={t(`gravites.${n.gravite}`)} /></td>
+                    <td className={'ref' + (enRetard(n) ? ' txt-err' : '')}>{n.delai ? `${n.delai.slice(8, 10)}.${n.delai.slice(5, 7)}` : '—'}</td>
+                    <td><Statut statut={STATUT[n.statut]} libelle={t(`statuts_nc.${n.statut}`)} /></td></tr>))}</tbody></table>
+            )}
+          </div>
+          {choisie && <FicheNcContenu key={choisie.id} id={choisie.id} onChange={() => { void l.recharger(); void q.recharger(); }} />}
+        </div>
       )}
       {onglet === 'fournisseurs' && (
         <CadreTableau titre={t('nc.qualite_fournisseurs')}>
@@ -82,7 +82,6 @@ export function NonConformites() {
           <p className="mute">{t('nc.aide_note')}</p>
         </CadreTableau>
       )}
-      {fiche && <FicheNc id={fiche} onClose={() => setFiche(null)} onChange={() => { void l.recharger(); void q.recharger(); }} />}
     </div>
   );
 }
@@ -94,8 +93,16 @@ function Photos({ chemins }: { chemins: string[] }) {
   return <span className="actions" style={{ flexWrap: 'wrap' }}>{chemins.map((c, i) => <Bouton key={c} petit onClick={() => void ouvrir(c)}>{t('nc.photo', { n: i + 1 })}</Bouton>)}</span>;
 }
 
-/** Fiche d'une non-conformité et actions de son cycle, selon le statut et le rôle. */
+/** Fiche d'une non-conformité dans un tiroir (depuis le rapport d'inspection). */
 export function FicheNc({ id, onClose, onChange }: { id: string; onClose: () => void; onChange: () => void }) {
+  const { t } = useTranslation();
+  return <Tiroir titre={t('nc.titre')} onClose={onClose}><FicheNcContenu id={id} onChange={onChange} /></Tiroir>;
+}
+
+/** Contenu d'une fiche de non-conformité et actions de son cycle, selon le statut et le rôle. */
+export function FicheNcContenu({ id, onChange }: { id: string; onChange: () => void }) {
+  const fournisseurs = useNoms('fournisseurs');
+  const dossiers = useNoms('dossiers');
   const { t } = useTranslation();
   const { profil, langue } = useAuth();
   const agit = ['admin', 'achats_chine'].includes(profil?.role ?? '');
@@ -109,7 +116,7 @@ export function FicheNc({ id, onClose, onChange }: { id: string; onClose: () => 
     return ok(await r) as { id: string; reference: string; date_realisee: string | null; decision_proposee: string | null }[];
   }, [x?.id, x?.statut]);
   const a = useAction();
-  const [f, setF] = useState({ correction: '', delai: '', preuve: '', contre: '', motif: '' });
+  const [f, setF] = useState({ correction: '', delai: '', preuve: '', contre: '', motif: '', libelle: '' });
   const [photos, setPhotos] = useState<string[]>([]);
   const apres = () => { void n.recharger(); onChange(); };
   const exiger = async () => {
@@ -124,6 +131,12 @@ export function FicheNc({ id, onClose, onChange }: { id: string; onClose: () => 
     if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
     if (await a.executer(async () => ok(await supabase.rpc('declarer_correction_nc', v.data)))) { setPhotos([]); apres(); }
   };
+  const publier = async (retirer: boolean) => {
+    const v = z.object({ p_nc: z.string().uuid(), p_libelle: z.string().trim().min(10).max(1000).nullable() }).strict()
+      .safeParse({ p_nc: id, p_libelle: retirer ? null : f.libelle });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('publier_nc_client', v.data)))) { setF((g) => ({ ...g, libelle: '' })); apres(); }
+  };
   const clore = async () => {
     const v = z.object({ p_nc: z.string().uuid(), p_contre_inspection: z.string().uuid().nullable(), p_motif: z.string().trim().max(1000).nullable() }).strict()
       .safeParse({ p_nc: id, p_contre_inspection: f.contre || null, p_motif: f.motif.trim() || null });
@@ -131,13 +144,21 @@ export function FicheNc({ id, onClose, onChange }: { id: string; onClose: () => 
     if (await a.executer(async () => ok(await supabase.rpc('clore_nc', v.data)))) apres();
   };
   return (
-    <Tiroir titre={x ? `${x.reference} — ${t(`gravites.${x.gravite}`)}` : t('nc.titre')} onClose={onClose}>
+    <div className="nc-fiche">
       <Bandeau type="err">{n.erreur ?? ci.erreur ?? a.erreur}</Bandeau>
       {x && <>
-        <div><Statut statut={STATUT[x.statut]} libelle={t(`statuts_nc.${x.statut}`)} />{enRetard(x) && <> <Statut statut="err" libelle={t('nc.retard')} /></>}
-          {x.inspection_id && <> · <Link to={`/inspections/${x.inspection_id}`}>{t('nc.voir_inspection')}</Link></>}</div>
-        <div className="section-titre">{t('champs.description')}</div>
-        <p>{x.description}</p>
+        <div className="surtitre">{x.reference}</div>
+        <div className="cons-action">{x.description}</div>
+        <div className="actions"><span className="mute">{x.fournisseur_id ? fournisseurs[x.fournisseur_id] ?? '' : ''}</span>
+          <Statut statut={STATUT[x.statut]} libelle={t(`statuts_nc.${x.statut}`)} />{enRetard(x) && <Statut statut="err" libelle={t('nc.retard')} />}</div>
+        <div className="pf-champs" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+          <div><span>{t('champs.dossier')}</span><b>{dossiers[x.dossier_id] ?? '—'}</b></div>
+          <div><span>{t('nc.origine')}</span><b>{x.inspection_id ? <Link to={`/inspections/${x.inspection_id}`}>{t('nc.voir_inspection')}</Link> : '—'}</b></div>
+          <div><span>{t('inspections.gravite')}</span><b>{t(`gravites.${x.gravite}`)}</b></div>
+          <div><span>{t('inspections.delai')}</span><b className={enRetard(x) ? 'txt-err' : ''}>{x.delai ? date(x.delai, langue) : '—'}</b></div>
+          <div><span>{t('nc.ouverte_le')}</span><b>{date(x.cree_le, langue)}</b></div>
+          <div><span>{t('nc.corrigee_le')}</span><b>{x.corrigee_le ? date(x.corrigee_le, langue) : '—'}</b></div>
+        </div>
         <Photos chemins={x.photos} />
         <div className="section-titre">{t('nc.correction_exigee')}</div>
         {x.correction ? <p>{x.correction}<br /><span className="mute">{t('inspections.delai')} : {x.delai ? date(x.delai, langue) : '—'}</span></p>
@@ -164,8 +185,19 @@ export function FicheNc({ id, onClose, onChange }: { id: string; onClose: () => 
           <p className="mute">{t('nc.aide_cloture')}</p>
           <Bouton variante="primaire" disabled={a.enCours} onClick={() => void clore()}>{t('inspections.clore_nc')}</Bouton>
         </>}
+        <div className="section-titre">{t('nc.libelle_client')}</div>
+        {x.libelle_client ? <p>{x.libelle_client}<br /><span className="mute">{t('nc.publie_le', { d: date(x.libelle_client_le, langue) })}</span></p>
+          : <p className="mute">{t('nc.non_publie')}</p>}
+        {agit && <>
+          <Champ label={x.libelle_client ? t('nc.remplacer_libelle') : t('nc.libelle_client')}><textarea rows={2} maxLength={1000} value={f.libelle} onChange={(e) => setF({ ...f, libelle: e.target.value })} /></Champ>
+          <p className="mute">{t('nc.aide_libelle_client')}</p>
+          <div className="actions">
+            <Bouton disabled={a.enCours || f.libelle.trim().length < 10} onClick={() => void publier(false)}>{t('nc.publier_client')}</Bouton>
+            {x.libelle_client && <Bouton disabled={a.enCours} onClick={() => void publier(true)}>{t('nc.retirer_client')}</Bouton>}
+          </div>
+        </>}
         {x.statut === 'close' && <p className="mute">{t('nc.close_le', { date: date(x.close_le, langue) })}{x.hors_delai ? ` · ${t('nc.hors_delai')}` : ''}{x.motif_cloture ? ` · ${x.motif_cloture}` : ''}</p>}
       </>}
-    </Tiroir>
+    </div>
   );
 }

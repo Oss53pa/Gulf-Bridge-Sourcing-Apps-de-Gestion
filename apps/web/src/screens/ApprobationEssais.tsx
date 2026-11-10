@@ -8,7 +8,8 @@ import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, montant } from '../lib/format';
 import { urlSignee } from '../lib/fichiers';
-import { Bandeau, Bouton, Champ, Statut, Tiroir } from '../components/ui';
+import { Bandeau, Bouton, Champ, Chargement, Entete, Statut, Tiroir, Vide } from '../components/ui';
+import { useNoms } from '../lib/referentiels';
 import { Depot } from '../components/Depot';
 
 interface Approbation { id: string; version: number; objet: string; documents: string[]; echantillon: boolean; echantillon_description: string | null;
@@ -191,5 +192,48 @@ function NouvelEssai({ commandeId, dossierId, onClose, onSaved }: { commandeId: 
       <Bandeau type="err">{a.erreur}</Bandeau>
       <Bouton variante="primaire" disabled={a.enCours} onClick={() => void enregistrer()}>{t('commun.enregistrer')}</Bouton>
     </Tiroir>
+  );
+}
+
+interface Circuit { id: string; commande_id: string; dossier_id: string; version: number; objet: string; statut: Approbation['statut'];
+  commandes: { reference: string | null; fournisseur_id: string; statut: string } | null }
+
+/** Approbation technique et essais en usine (maquette APT) : tous les circuits, un par commande, et le détail du circuit choisi. */
+export function ApprobationsTechniques() {
+  const { t } = useTranslation();
+  const fournisseurs = useNoms('fournisseurs');
+  const dossiers = useNoms('dossiers');
+  const [sel, setSel] = useState<string | null>(null);
+  const l = useAsync(async () => ok(await supabase.from('approbations_techniques')
+    .select('id, commande_id, dossier_id, version, objet, statut, commandes(reference, fournisseur_id, statut)')
+    .order('version', { ascending: false }).limit(2000)) as unknown as Circuit[], []);
+  // Dernière version de chaque commande (versions triées de la plus récente à la plus ancienne).
+  const circuits = (l.data ?? []).filter((x, i, tab) => tab.findIndex((y) => y.commande_id === x.commande_id) === i);
+  const x = circuits.find((c) => c.commande_id === sel) ?? circuits[0] ?? null;
+  const n = (s: string) => circuits.filter((c) => c.statut === s).length;
+  const titre = t('approbation.titre_circuits', { n: circuits.length, a: n('approuvee'), r: n('refusee'), s: n('soumise') });
+  return (
+    <div className="screen">
+      <Entete surtitre={`${t('modules.achats')} · ${t('approbation.surtitre')} · APT`} titre={l.data ? titre : t('ecrans.approbation')} />
+      <Bandeau type="err">{l.erreur}</Bandeau>
+      <div className="ref-grille apt-grille">
+        <div className="cadre">
+          {l.chargement && !l.data ? <Chargement /> : circuits.length === 0 ? <Vide>{t('approbation.aucun_circuit')}</Vide> : circuits.map((c) => (
+            <button key={c.id} type="button" className={'apt-ligne' + (x?.commande_id === c.commande_id ? ' actif' : '')} onClick={() => setSel(c.commande_id)}>
+              <span className="apt-tete"><b>{c.objet}</b><span className="mute">v{c.version}</span></span>
+              <span className="mute">{dossiers[c.dossier_id] ?? ''} · {fournisseurs[c.commandes?.fournisseur_id ?? ''] ?? ''}</span>
+              <Statut statut={STATUT[c.statut]} libelle={t(`approbation.statuts.${c.statut}`)} />
+            </button>))}
+        </div>
+        {x && (
+          <div className="ref-detail">
+            <div className="surtitre">{x.commandes?.reference} · {dossiers[x.dossier_id] ?? ''}</div>
+            <div className="cons-action">{x.objet} · v{x.version}</div>
+            <div className="mute">{fournisseurs[x.commandes?.fournisseur_id ?? ''] ?? ''}</div>
+            <ApprobationEssais key={x.commande_id} commandeId={x.commande_id} dossierId={x.dossier_id} statutCommande={x.commandes?.statut ?? ''} onChange={() => void l.recharger()} />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

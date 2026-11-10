@@ -8,7 +8,7 @@ import { date, montant, pourcent, type Langue } from '../lib/format';
 import type { Client, Constat, Dossier, DueDiligence, Facture, Fournisseur, Inspection, LigneFacture, NonConformite, Societe } from '../lib/types';
 import { Bouton, Chargement, Vide } from '../components/ui';
 
-function Qr({ texte }: { texte: string }) {
+export function Qr({ texte }: { texte: string }) {
   // QR généré localement (aucun service externe) ; rendu en SVG à partir des modules.
   const svg = useMemo(() => {
     const q = qrcode(0, 'M');
