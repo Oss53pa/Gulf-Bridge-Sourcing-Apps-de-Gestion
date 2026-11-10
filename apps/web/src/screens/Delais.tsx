@@ -38,6 +38,7 @@ interface PlanningOuverture {
 interface ElementMesTaches {
   nature: 'tache' | 'point_bloquant' | 'piece' | 'delai' | 'ouverture'; objet_id: string; dossier_id: string | null;
   dossier_reference: string | null; libelle: string; echeance: string | null; urgence: number;
+  responsable_id?: string; responsable?: string;
 }
 
 export function Voyant({ v }: { v: EtatDelai['voyant'] }) {
@@ -215,23 +216,33 @@ function PlanningOuvertureDossier({ dossier, peutAppliquer, onChange }: { dossie
 
 // ----------------------------------------------------------------------------- mes tâches
 type FiltreTaches = 'toutes' | 'retard' | 'aujourdhui' | 'semaine' | 'terminees';
+type PorteeTaches = 'moi' | 'equipe';
+const initialesDe = (nom: string | null | undefined) => (nom ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((m) => m[0]?.toUpperCase()).join('');
 
 export function MesTaches() {
   const { t } = useTranslation();
   const { profil, langue, fuseau } = useAuth();
   const equipe = useEquipe();
   const nav = useNavigate();
-  const l = useAsync(async () => ok(await supabase.rpc('mes_taches')) as ElementMesTaches[], []);
+  // Vue « Équipe » réservée aux responsables (la base le vérifie aussi : gbs.taches_equipe).
+  const responsable = ['admin', 'hub_afrique'].includes(profil?.role ?? '');
+  const [portee, setPortee] = useState<PorteeTaches>('moi');
+  const equipeVue = responsable && portee === 'equipe';
+  const l = useAsync(async () => ok(await supabase.rpc(equipeVue ? 'taches_equipe' : 'mes_taches')) as ElementMesTaches[], [equipeVue]);
   // Lundi de la semaine en cours, dans le fuseau de l'utilisateur.
   const aujourdhui = new Intl.DateTimeFormat('en-CA', { timeZone: fuseau }).format(new Date());
   const j = new Date(`${aujourdhui}T12:00:00Z`);
   const lundi = new Date(j); lundi.setUTCDate(j.getUTCDate() - ((j.getUTCDay() + 6) % 7));
   const dimanche = new Date(lundi); dimanche.setUTCDate(lundi.getUTCDate() + 6);
   const iso = (d: Date) => d.toISOString().slice(0, 10);
-  const faites = useAsync(async () => (profil
-    ? ok(await supabase.from('taches').select('id, libelle, dossier_id, echeance, faite_le').eq('assigne_a', profil.id).eq('statut', 'faite')
-      .gte('faite_le', `${iso(lundi)}T00:00:00Z`).order('faite_le', { ascending: false }).limit(200)) as { id: string; libelle: string; dossier_id: string | null; echeance: string | null; faite_le: string }[]
-    : []), [profil?.id, iso(lundi)]);
+  const faites = useAsync(async () => {
+    if (!profil) return [];
+    // En vue Équipe, la visibilité des tâches terminées reste celle des règles de la table (RLS).
+    let q = supabase.from('taches').select('id, libelle, dossier_id, echeance, faite_le, assigne_a').eq('statut', 'faite');
+    if (!equipeVue) q = q.eq('assigne_a', profil.id);
+    return ok(await q.gte('faite_le', `${iso(lundi)}T00:00:00Z`).order('faite_le', { ascending: false }).limit(200)) as
+      { id: string; libelle: string; dossier_id: string | null; echeance: string | null; faite_le: string; assigne_a: string }[];
+  }, [profil?.id, iso(lundi), equipeVue]);
   const ids = [...new Set([...(l.data ?? []).map((x) => x.dossier_id), ...(faites.data ?? []).map((x) => x.dossier_id)].filter((x): x is string => Boolean(x)))];
   const dossiers = useAsync(async () => (ids.length
     ? ok(await supabase.from('dossiers').select('id, reference, client_id').in('id', ids)) as { id: string; reference: string; client_id: string }[]
@@ -257,10 +268,11 @@ export function MesTaches() {
   };
   const libelle = (x: ElementMesTaches) => (x.nature === 'delai' ? t('delais.phase_en_retard', { phase: t(`phases.${x.libelle}`) })
     : x.nature === 'ouverture' ? t('ouverture.intenable_tache', { n: Math.abs(Number(x.libelle)) }) : x.libelle);
-  const initiales = (profil?.nom ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((m) => m[0]?.toUpperCase()).join('');
+  const nomDe = (id: string | null | undefined) => (equipe.data ?? []).find((p) => p.id === id)?.nom ?? (id === profil?.id ? profil?.nom : null);
+  const qui = (nom: string | null | undefined) => <span className="tache-qui sec" title={nom ?? undefined}>{initialesDe(nom)}</span>;
   const ligne = (x: ElementMesTaches) => (
-    <div key={x.nature + x.objet_id} className="tache">
-      {x.nature === 'tache'
+    <div key={x.nature + x.objet_id + (x.responsable_id ?? '')} className="tache">
+      {x.nature === 'tache' && (!equipeVue || x.responsable_id === profil?.id)
         ? <button className="tache-case" aria-label={t('delais.marquer_faite')} title={t('delais.marquer_faite')} disabled={a.enCours} onClick={() => void terminer(x.objet_id)} />
         : <span className="tache-case vide" aria-hidden="true" />}
       <div className="tache-txt">
@@ -269,7 +281,7 @@ export function MesTaches() {
       </div>
       <span className="tache-nat sec">{t(`delais.nature.${x.nature}`)}</span>
       <span className={'tache-date' + (x.echeance && x.echeance < aujourdhui ? ' retard' : '')}>{ddmm(x.echeance)}</span>
-      <span className="tache-qui sec">{initiales}</span>
+      {qui(equipeVue ? x.responsable : profil?.nom)}
       <span className="tache-act">{x.dossier_id && <Bouton petit onClick={() => nav(`/dossiers/${x.dossier_id}`)}>{t('delais.ouvrir')}</Bouton>}</span>
     </div>
   );
@@ -286,11 +298,16 @@ export function MesTaches() {
           <Bouton variante="primaire" onClick={() => setNouvelle(true)}>{t('delais.nouvelle_tache')}</Bouton>
         </>} />
       <Kpis items={[
-        { lib: t('delais.k_ouvertes'), val: items.length, sous: profil?.nom ?? '' },
+        { lib: t('delais.k_ouvertes'), val: items.length, sous: equipeVue ? t('delais.portee_equipe') : profil?.nom ?? '' },
         { lib: t('delais.k_retard'), val: enRetard.length, sous: t('delais.k_retard_sous') },
         { lib: t('delais.k_aujourdhui'), val: duJour.length, sous: date(aujourdhui, langue) },
         { lib: t('delais.k_terminees'), val: (faites.data ?? []).length, sous: t('delais.k_terminees_sous') },
       ]} />
+      {responsable && (
+        <div className="segment portee-taches" role="group" aria-label={t('delais.portee')}>
+          {(['moi', 'equipe'] as const).map((p) => (
+            <button key={p} type="button" aria-pressed={portee === p} onClick={() => setPortee(p)}>{t(`delais.portee_${p}`)}</button>))}
+        </div>)}
       <Onglets actif={filtre} onChange={setFiltre} items={[
         { id: 'toutes', lib: t('delais.f_toutes') }, { id: 'retard', lib: t('delais.f_retard') }, { id: 'aujourdhui', lib: t('delais.f_aujourdhui') },
         { id: 'semaine', lib: t('delais.f_semaine') }, { id: 'terminees', lib: t('delais.f_terminees') }]} />
@@ -305,7 +322,7 @@ export function MesTaches() {
                   <div className="tache-txt"><div className="tache-lib">{x.libelle}</div><div className="sec">{sousTitre(x.dossier_id, null) || '—'}</div></div>
                   <span className="tache-nat sec">{t('delais.nature.tache')}</span>
                   <span className="tache-date">{dateHeure(x.faite_le, langue, fuseau).slice(0, 5)}</span>
-                  <span className="tache-qui sec">{initiales}</span>
+                  {qui(equipeVue ? nomDe(x.assigne_a) : profil?.nom)}
                   <span className="tache-act" />
                 </div>))}
             </section>)

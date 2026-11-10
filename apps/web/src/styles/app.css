@@ -748,9 +748,10 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .aud-integrite.ok { background: var(--ok-bg); color: var(--ok); }
 .aud-integrite .pt { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .aud-filtres { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.aud-filtres .segment { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: var(--r); background: var(--sable); }
-.aud-filtres .segment button { border: 1px solid transparent; background: none; padding: 7px 10px; border-radius: var(--r); font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
-.aud-filtres .segment button[aria-pressed="true"] { background: var(--white); border-color: var(--bronze); }
+.portee-taches { margin: 0 0 12px; width: fit-content; }
+.aud-filtres .segment, .portee-taches.segment { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: var(--r); background: var(--sable); }
+.aud-filtres .segment button, .portee-taches.segment button { border: 1px solid transparent; background: none; padding: 7px 10px; border-radius: var(--r); font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+.aud-filtres .segment button[aria-pressed="true"], .portee-taches.segment button[aria-pressed="true"] { background: var(--white); border-color: var(--bronze); }
 .aud-filtres .segment button:disabled { opacity: .45; cursor: default; }
 .aud-recherche { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .aud-recherche .search { width: 340px; max-width: 100%; }

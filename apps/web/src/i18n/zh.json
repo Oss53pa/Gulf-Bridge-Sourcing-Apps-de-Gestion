@@ -957,6 +957,9 @@
    "GA": "加蓬"
   },
   "phase_en_retard": "阶段“{{phase}}”：期限将至或已过",
+  "portee": "任务范围",
+  "portee_equipe": "团队",
+  "portee_moi": "我的任务",
   "remplacant": "代理人",
   "reprendre": "恢复阶段",
   "responsable": "负责人",

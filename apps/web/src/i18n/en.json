@@ -957,6 +957,9 @@
    "GA": "Gabon"
   },
   "phase_en_retard": "Phase \"{{phase}}\": deadline near or past",
+  "portee": "Task scope",
+  "portee_equipe": "Team",
+  "portee_moi": "My tasks",
   "remplacant": "Stand-in",
   "reprendre": "Resume the phase",
   "responsable": "Owner",
