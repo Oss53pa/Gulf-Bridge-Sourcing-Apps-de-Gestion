@@ -2,16 +2,19 @@
 // Le questionnaire, la complétude, les champs critiques et les incohérences viennent de la base
 // (gbs.etat_besoin) ; chaque réponse y est validée champ par champ avant écriture.
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import i18n from '../i18n';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
-import { date, dateHeure } from '../lib/format';
+import { date, dateHeure, type Langue } from '../lib/format';
 import { useNoms } from '../lib/referentiels';
 import { Bandeau, Bouton, Champ, Chargement, Jauge, Statut, Vide } from '../components/ui';
 import { Depot } from '../components/Depot';
 import type { Dossier } from '../lib/types';
+import { BarreImpression } from './Imprimes';
 
 type TypeChamp = 'texte' | 'texte_long' | 'nombre' | 'choix' | 'choix_multiple' | 'oui_non' | 'date';
 type Valeur = string | number | boolean | string[];
@@ -187,6 +190,7 @@ function Guide({ besoin, dossier, libelleCategorie, onChange }: { besoin: Besoin
           <Bouton variante="primaire" disabled={a.enCours || !doc || !signeLe || ouvertes > 0} onClick={() => void valider()}>{t('besoin.valider')}</Bouton>
           {ouvertes > 0 && <span className="mute">{t('besoin.questions_a_clore')}</span>}
         </div>)}
+        <a className="btn" href={`/imprimer/cahier-des-charges/${besoin.id}${besoin.version ? `?version=${besoin.version}` : ''}`} target="_blank" rel="noopener noreferrer">{t('besoin.imprimer_cdc')}</a>
         <p className="mute">{t('besoin.note_reference')}</p>
       </aside>
     </div>
@@ -269,6 +273,80 @@ function PoserQuestion({ besoinId, champ, onDone }: { besoinId: string; champ: s
         <Bouton petit onClick={() => setOuvert(false)}>{t('banque.annuler')}</Bouton>
         <Bouton petit variante="primaire" disabled={a.enCours || q.trim().length < 3} onClick={() => void poser()}>{t('besoin.envoyer_question')}</Bouton>
       </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------- cahier des charges imprimable
+/** Cahier des charges du client, généré depuis le besoin (version soumise ?version=N, sinon réponses en cours).
+ *  En mandarin, les libellés viennent du référentiel ; les réponses libres restent dans leur langue d'origine. */
+export function ImprimerBesoin() {
+  const { id = '' } = useParams();
+  const qs = new URLSearchParams(window.location.search);
+  const lg: Langue = qs.get('langue') === 'zh' ? 'zh' : 'fr';
+  const version = Number(qs.get('version')) || null;
+  const t = i18n.getFixedT(lg);
+  const b = useAsync(async () => ok(await supabase.from('besoins').select('id, dossier_id, categorie, statut, version, reponses, pays, soumis_le, signe_le')
+    .eq('id', id).maybeSingle()) as (Besoin & { dossier_id: string; pays: string | null }) | null, [id]);
+  const v = useAsync(async () => (version ? ok(await supabase.from('besoins_versions').select('version, reponses, etat, cree_le').eq('besoin_id', id).eq('version', version).maybeSingle()) as
+    { version: number; reponses: Record<string, Valeur>; etat: Omit<Etat, 'etapes_definition'>; cree_le: string } | null : null), [id, version]);
+  const e = useAsync(async () => ok(await supabase.rpc('etat_besoin', { p_besoin: id })) as Etat, [id]);
+  const d = useAsync(async () => (b.data ? ok(await supabase.from('dossiers').select('reference, intitule, client_id').eq('id', b.data.dossier_id).maybeSingle()) as
+    { reference: string; intitule: string; client_id: string } | null : null), [b.data?.dossier_id]);
+  const clients = useNoms('clients');
+  const cats = useAsync(async () => ok(await supabase.from('questionnaires_besoin').select('categorie, libelle').eq('statut', 'actif')) as { categorie: string; libelle: string }[], []);
+  if (b.chargement || e.chargement || v.chargement) return <Chargement />;
+  if (!b.data || !e.data || (version && !v.data)) return <Vide>{b.erreur ?? e.erreur ?? v.erreur ?? t('besoin.version_introuvable')}</Vide>;
+  const rep = v.data?.reponses ?? b.data.reponses ?? {};
+  const etat = v.data?.etat ?? e.data;
+  const lib = (x: { libelle: string; libelle_zh?: string }) => (lg === 'zh' && x.libelle_zh ? x.libelle_zh : x.libelle);
+  const aff = (c: ChampDef, x: Valeur | undefined) => {
+    if (x === undefined || x === null) return '—';
+    if (c.type === 'oui_non') return t(x ? 'besoin.oui' : 'besoin.non');
+    if (c.type === 'date' && typeof x === 'string') return date(x, lg);
+    if (Array.isArray(x)) return x.join(', ');
+    return `${String(x)}${c.unite ? ` ${c.unite}` : ''}`;
+  };
+  const etiquette = v.data ? t('besoin.doc_version', { n: v.data.version, d: date(v.data.cree_le.slice(0, 10), lg) }) : t('besoin.doc_brouillon');
+  const libCat = b.data.categorie === 'tronc_commun' ? t('besoin.tronc_seul') : cats.data?.find((c) => c.categorie === b.data?.categorie)?.libelle ?? b.data.categorie;
+  return (
+    <div style={{ overflow: 'auto', height: '100%' }}>
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 8, paddingTop: 12 }}>
+        {(['fr', 'zh'] as Langue[]).map((l) => <a key={l} className="btn petit" href={`?langue=${l}${version ? `&version=${version}` : ''}`}>{l === 'zh' ? '中文' : 'FR'}</a>)}
+      </div>
+      <BarreImpression />
+      <article className="doc" lang={lg === 'zh' ? 'zh-CN' : 'fr'}>
+        <header style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div><img src="/gbs-logo.png" alt="" width={44} height={44} /><div className="mute">Gulf Bridge Sourcing · {t('doc.bureau_achat')}</div></div>
+          <div style={{ textAlign: 'right' }}><h1>{t('besoin.doc_titre')}</h1><div>{d.data?.reference ?? ''}</div>
+            <div className="mute">{libCat} · {etiquette}</div></div>
+        </header>
+        <section style={{ margin: '20px 0' }}>
+          <div style={{ fontSize: 16 }}>{d.data ? clients[d.data.client_id] ?? '' : ''}</div>
+          <div className="mute">{d.data?.intitule ?? ''}{b.data.pays ? ` · ${b.data.pays}` : ''}</div>
+        </section>
+        {!v.data && <p className="txt-err">{t('besoin.doc_non_soumis')}</p>}
+        {lg === 'zh' && <p className="mute">{t('besoin.doc_zh')}</p>}
+        {e.data.etapes_definition.map((et, i) => (
+          <section key={et.code} style={{ margin: '18px 0' }}>
+            <h2 style={{ fontSize: 15, margin: '0 0 6px' }}>{String(i + 1).padStart(2, '0')} · {lib(et)}</h2>
+            <table><tbody>{et.champs.map((c) => (
+              <tr key={c.cle}><td style={{ width: '42%' }}>{lib(c)}{c.critique ? ' *' : ''}</td><td>{aff(c, rep[c.cle])}</td></tr>))}</tbody></table>
+          </section>))}
+        {etat.alertes.length > 0 && (
+          <section style={{ marginTop: 16, padding: 12, border: '1px solid var(--ink)' }}>
+            <div className="surtitre">{t('besoin.doc_alertes')}</div>
+            {etat.alertes.map((x) => <p key={x.champ + x.code} style={{ margin: '4px 0' }}>{t(`besoin.alertes.${x.code}`, { pays: x.pays, attendu: Array.isArray(x.attendu) ? x.attendu.join(', ') : String(x.attendu ?? '') })}</p>)}
+          </section>)}
+        <p className="mute">{t('besoin.doc_reference')}</p>
+        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginTop: 28 }}>
+          {[t('besoin.doc_client'), t('besoin.doc_gbs')].map((qui) => (
+            <div key={qui} style={{ borderTop: '1px solid var(--ink)', paddingTop: 8, minHeight: 110 }}>
+              <div className="surtitre">{qui}</div>
+              <div className="mute">{t('besoin.doc_signature')}</div>
+            </div>))}
+        </section>
+      </article>
     </div>
   );
 }

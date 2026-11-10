@@ -78,6 +78,7 @@ const Paiements = paresseux(() => import('./screens/Finance'), 'Paiements');
 const Journal = paresseux(() => import('./screens/Administration'), 'Journal');
 const Parametrage = paresseux(() => import('./screens/Administration'), 'Parametrage');
 const ImprimerDueDiligence = paresseux(() => import('./screens/Imprimes'), 'ImprimerDueDiligence');
+const ImprimerBesoin = paresseux(() => import('./screens/Besoin'), 'ImprimerBesoin');
 const ImprimerFacture = paresseux(() => import('./screens/Imprimes'), 'ImprimerFacture');
 const ImprimerInspection = paresseux(() => import('./screens/Imprimes'), 'ImprimerInspection');
 const EspaceClient = paresseux(() => import('./screens/EspaceClient'), 'EspaceClient');
@@ -115,6 +116,7 @@ export function App() {
       <Route path="/imprimer/due-diligence/:id" element={g('fournisseurs', <ImprimerDueDiligence />)} />
       <Route path="/imprimer/certificat-lc/:id" element={g('portefeuille', <ImprimerCertificatLc />)} />
       <Route path="/imprimer/rapport-offres/:id" element={g('portefeuille', <ImprimerRapportOffres />)} />
+      <Route path="/imprimer/cahier-des-charges/:id" element={g('portefeuille', <ImprimerBesoin />)} />
       <Route path="*" element={
         <Coque>
           <Suspense fallback={attente}>
