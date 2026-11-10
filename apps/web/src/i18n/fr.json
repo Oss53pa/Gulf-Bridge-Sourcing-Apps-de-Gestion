@@ -441,6 +441,26 @@
   "titre_verif": "{{n}} vérifications à compléter avant toute ouverture de dossier",
   "verifies": "Vérifiés"
  },
+ "colisage": {
+  "aide_fournisseur": "Totaux de la commande prête à expédier. Une nouvelle déclaration remplace la précédente tant qu'elle n'est pas validée. La liste détaillée reste à joindre aux documents d'expédition.",
+  "aucun": "Aucune liste de colisage déclarée.",
+  "caisses": "Caisses",
+  "declarer": "Envoyer la liste de colisage",
+  "invalide": "Valeurs invraisemblables : vérifiez le poids, le volume et le nombre de caisses.",
+  "poids": "Poids brut (kg)",
+  "remarque": "Remarque",
+  "resume": "{{c}} caisse(s) · {{kg}} kg bruts · {{m3}} m³",
+  "statuts": {
+   "declaree": "En vérification",
+   "refusee": "Refusée",
+   "remplacee": "Remplacée",
+   "validee": "Validée"
+  },
+  "titre": "Liste de colisage déclarée par le fournisseur",
+  "titre_court": "Liste de colisage",
+  "valider": "Valider",
+  "volume": "Volume (m³)"
+ },
  "commandes": {
   "aide_annulation": "Annulation réservée à l'administratrice. Les montants dus dépendent de la phase atteinte.",
   "aide_approbation": "Plans, fiches techniques et échantillon de référence validés par le client (lot 0 : accord écrit déposé).",
@@ -1238,6 +1258,7 @@
   "GBS_CHOIX_DEJA_ENREGISTRE": "Le choix du client est déjà enregistré.",
   "GBS_CLIENT_NON_VERIFIE": "Vérification du client exigée (négoce ou lettre de crédit).",
   "GBS_CLOTURE_CONDITIONS": "Clôture impossible : des conditions bloquantes manquent (pièces, factures, réserves, non-conformités ou points bloquants).",
+  "GBS_COLISAGE_VALIDE": "La liste de colisage de cette commande est déjà validée.",
   "GBS_COMMANDE_ANNULEE": "Commande annulée.",
   "GBS_COMMANDE_AUTRE_DOSSIER": "Cette commande appartient à un autre dossier.",
   "GBS_COMMANDE_FIGEE": "Dossier, fournisseur et devise d'une commande ne se modifient pas.",

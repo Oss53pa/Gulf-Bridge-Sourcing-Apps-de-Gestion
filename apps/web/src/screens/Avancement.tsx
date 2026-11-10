@@ -104,3 +104,68 @@ export function DeclarerAvancement({ commandeId, reference, actuel, onClose, onF
     </Tiroir>
   );
 }
+
+interface Colisage { id: string; caisses: number; poids_brut_kg: number; volume_m3: number; remarque: string | null; statut: string; cree_le: string; motif_refus: string | null }
+
+/** Fiche commande (équipe) : listes de colisage déclarées par le fournisseur ; validation ou refus motivé. */
+export function ColisageCommande({ commandeId, traiter }: { commandeId: string; traiter: boolean }) {
+  const { t } = useTranslation();
+  const { langue, fuseau } = useAuth();
+  const l = useAsync(async () => ok(await supabase.from('colisages').select('id, caisses, poids_brut_kg, volume_m3, remarque, statut, cree_le, motif_refus')
+    .eq('commande_id', commandeId).neq('statut', 'remplacee').order('cree_le', { ascending: false }).limit(50)) as Colisage[], [commandeId]);
+  const a = useAction();
+  const [motif, setMotif] = useState('');
+  const statuer = async (c: Colisage, valider: boolean) => {
+    const v = z.object({ p_colisage: z.string().uuid(), p_valider: z.boolean(), p_motif: z.string().trim().min(5).max(1000).nullable() }).strict()
+      .safeParse({ p_colisage: c.id, p_valider: valider, p_motif: valider ? null : motif });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('traiter_colisage', v.data)))) { setMotif(''); void l.recharger(); }
+  };
+  return (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span className="section-titre">{t('colisage.titre')}</span>
+      <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
+      {(l.data ?? []).length === 0 ? <Vide>{t('colisage.aucun')}</Vide> : (l.data ?? []).map((c) => (
+        <div key={c.id} className="ligne-montant">
+          <span>{t('colisage.resume', { c: c.caisses, kg: Number(c.poids_brut_kg).toLocaleString(langue), m3: Number(c.volume_m3).toLocaleString(langue) })}
+            <br /><span className="mute">{dateHeure(c.cree_le, langue, fuseau)}{c.remarque ? ` · ${c.remarque}` : ''}{c.motif_refus ? ` · ${c.motif_refus}` : ''}</span></span>
+          <span className="actions">
+            <Statut statut={c.statut === 'validee' ? 'ok' : c.statut === 'refusee' ? 'err' : 'att'} libelle={t(`colisage.statuts.${c.statut}`)} />
+            {traiter && c.statut === 'declaree' && <>
+              <Bouton petit variante="primaire" disabled={a.enCours} onClick={() => void statuer(c, true)}>{t('colisage.valider')}</Bouton>
+              <input aria-label={t('banque.motif')} placeholder={t('banque.motif')} maxLength={1000} value={motif} onChange={(e) => setMotif(e.target.value)} />
+              <Bouton petit disabled={a.enCours || motif.trim().length < 5} onClick={() => void statuer(c, false)}>{t('clients.refuser')}</Bouton></>}
+          </span>
+        </div>))}
+    </section>
+  );
+}
+
+/** Portail fournisseur : déclaration de la liste de colisage d'une commande. */
+export function DeclarerColisage({ commandeId, reference, onClose, onFait }: { commandeId: string; reference: string; onClose: () => void; onFait: () => void }) {
+  const { t } = useTranslation();
+  const a = useAction();
+  const [f, setF] = useState({ caisses: '', poids: '', volume: '', remarque: '' });
+  const n = (x: string) => Number(x.replace(/\s/g, '').replace(',', '.'));
+  const envoyer = async () => {
+    const v = z.object({ caisses: z.number().int().min(1).max(100000), poids_brut_kg: z.number().positive().max(10000000), volume_m3: z.number().positive().max(100000),
+      remarque: z.string().trim().max(500).nullable() }).strict()
+      .refine((x) => x.poids_brut_kg / x.volume_m3 >= 1 && x.poids_brut_kg / x.volume_m3 <= 3000 && x.volume_m3 / x.caisses <= 100)
+      .safeParse({ caisses: n(f.caisses), poids_brut_kg: n(f.poids), volume_m3: n(f.volume), remarque: f.remarque.trim() || null });
+    if (!v.success) { a.setErreur(t('colisage.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('declarer_colisage', { p_commande: commandeId, p: v.data })))) onFait();
+  };
+  return (
+    <Tiroir titre={`${t('colisage.declarer')} · ${reference}`} onClose={onClose}>
+      <Bandeau>{t('colisage.aide_fournisseur')}</Bandeau>
+      <div className="grille3">
+        <Champ label={t('colisage.caisses')}><input inputMode="numeric" value={f.caisses} onChange={(e) => setF({ ...f, caisses: e.target.value })} /></Champ>
+        <Champ label={t('colisage.poids')}><input inputMode="decimal" value={f.poids} onChange={(e) => setF({ ...f, poids: e.target.value })} /></Champ>
+        <Champ label={t('colisage.volume')}><input inputMode="decimal" value={f.volume} onChange={(e) => setF({ ...f, volume: e.target.value })} /></Champ>
+      </div>
+      <Champ label={t('colisage.remarque')}><textarea rows={2} maxLength={500} value={f.remarque} onChange={(e) => setF({ ...f, remarque: e.target.value })} /></Champ>
+      <Bandeau type="err">{a.erreur}</Bandeau>
+      <Bouton variante="primaire" disabled={a.enCours} onClick={() => void envoyer()}>{t('avancement.envoyer')}</Bouton>
+    </Tiroir>
+  );
+}

@@ -441,6 +441,26 @@
   "titre_verif": "{{n}} verifications to complete before any file is opened",
   "verifies": "Verified"
  },
+ "colisage": {
+  "aide_fournisseur": "Totals for the order ready to ship. A new report replaces the previous one until it is validated. The detailed list must still be attached to the shipping documents.",
+  "aucun": "No packing list reported.",
+  "caisses": "Cases",
+  "declarer": "Send the packing list",
+  "invalide": "Implausible values: check weight, volume and number of cases.",
+  "poids": "Gross weight (kg)",
+  "remarque": "Remark",
+  "resume": "{{c}} case(s) · {{kg}} kg gross · {{m3}} m³",
+  "statuts": {
+   "declaree": "Under review",
+   "refusee": "Declined",
+   "remplacee": "Replaced",
+   "validee": "Validated"
+  },
+  "titre": "Packing list reported by the supplier",
+  "titre_court": "Packing list",
+  "valider": "Validate",
+  "volume": "Volume (m³)"
+ },
  "commandes": {
   "aide_annulation": "Cancellation is reserved to the administrator. Amounts due depend on the phase reached.",
   "aide_approbation": "Drawings, data sheets and reference sample approved by the client (phase 0: written approval uploaded).",
@@ -1238,6 +1258,7 @@
   "GBS_CHOIX_DEJA_ENREGISTRE": "The client's choice is already recorded.",
   "GBS_CLIENT_NON_VERIFIE": "Client verification required (trading or letter of credit).",
   "GBS_CLOTURE_CONDITIONS": "Cannot close: blocking conditions are missing (documents, invoices, reservations, non-conformities or blocking issues).",
+  "GBS_COLISAGE_VALIDE": "The packing list for this order is already validated.",
   "GBS_COMMANDE_ANNULEE": "Order cancelled.",
   "GBS_COMMANDE_AUTRE_DOSSIER": "This order belongs to another file.",
   "GBS_COMMANDE_FIGEE": "An order's file, supplier and currency cannot change.",

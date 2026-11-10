@@ -15,7 +15,7 @@ import { CataloguePieces } from './PiecesRechange';
 import { Depot } from '../components/Depot';
 import { useNoms } from '../lib/referentiels';
 import { DonneesCoutGlobal, ListeRapports } from './RapportOffres';
-import { AvancementCommande } from './Avancement';
+import { AvancementCommande, ColisageCommande } from './Avancement';
 
 const INCOTERMS = ['FOB', 'FCA', 'FAS', 'EXW', 'CFR', 'CPT', 'CIF', 'CIP'] as const;
 
@@ -381,7 +381,8 @@ export function FicheCommande() {
         { id: 'production', lib: t('avancement.onglet') }]} />
       <Bandeau type="err">{a.erreur}</Bandeau>
       <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {onglet === 'production' && <AvancementCommande commandeId={cmd.id} publier={['admin', 'achats_chine'].includes(role)} />}
+        {onglet === 'production' && <><AvancementCommande commandeId={cmd.id} publier={['admin', 'achats_chine'].includes(role)} />
+          <ColisageCommande commandeId={cmd.id} traiter={['admin', 'achats_chine'].includes(role)} /></>}
         {onglet === 'dossier' && <>
           <div className="cmd-plan">
             {GROUPES.map(([g, codes]) => {

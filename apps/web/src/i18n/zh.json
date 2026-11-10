@@ -441,6 +441,26 @@
   "titre_verif": "{{n}} 项核查须在开立案卷前完成",
   "verifies": "已核查"
  },
+ "colisage": {
+  "aide_fournisseur": "待发货订单的合计。确认前，新申报将替换上一次申报。详细装箱单仍须随发货单证提交。",
+  "aucun": "尚未申报装箱单。",
+  "caisses": "箱数",
+  "declarer": "提交装箱单",
+  "invalide": "数值不合理：请检查重量、体积和箱数。",
+  "poids": "毛重（公斤）",
+  "remarque": "备注",
+  "resume": "{{c}} 箱 · 毛重 {{kg}} 公斤 · {{m3}} 立方米",
+  "statuts": {
+   "declaree": "审核中",
+   "refusee": "已拒绝",
+   "remplacee": "已替换",
+   "validee": "已确认"
+  },
+  "titre": "供应商申报的装箱单",
+  "titre_court": "装箱单",
+  "valider": "确认",
+  "volume": "体积（立方米）"
+ },
  "commandes": {
   "aide_annulation": "仅管理员可取消。应付金额取决于所处阶段。",
   "aide_approbation": "客户确认的图纸、技术资料和参考样品（第 0 期：上传书面确认）。",
@@ -1238,6 +1258,7 @@
   "GBS_CHOIX_DEJA_ENREGISTRE": "客户选择已登记。",
   "GBS_CLIENT_NON_VERIFIE": "需完成客户核查（贸易或信用证）。",
   "GBS_CLOTURE_CONDITIONS": "无法结案：尚缺结案条件（文件、发票、保留意见、不合格项或阻碍事项）。",
+  "GBS_COLISAGE_VALIDE": "该订单的装箱单已确认。",
   "GBS_COMMANDE_ANNULEE": "订单已取消。",
   "GBS_COMMANDE_AUTRE_DOSSIER": "该订单属于其他项目。",
   "GBS_COMMANDE_FIGEE": "订单的项目、供应商和币种不可更改。",
