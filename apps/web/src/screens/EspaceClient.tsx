@@ -11,6 +11,7 @@ import { deposerPieceClient, FichierRefuse, urlSignee } from '../lib/fichiers';
 import { Bandeau, Bouton, Champ, Chargement, Statut, Tiroir, Vide } from '../components/ui';
 import { MessagerieVue } from './Messagerie';
 import { Jauge, Vignettes } from './Avancement';
+import { ReceptionsClient } from './ReceptionSite';
 import { z } from 'zod';
 import { useAction } from '../lib/data';
 
@@ -143,6 +144,7 @@ export function EspaceClient() {
           </>}
           {vue === 'expedition' && <>
             <h1 className="ecl-titre">{t('portail.vues.expedition')}</h1>
+            <ReceptionsClient dossierId={d.id} />
             {x.expeditions.length === 0 ? <Vide>{t('portail.aucune_expedition')}</Vide> : x.expeditions.map((y) => (
               <section key={y.reference} className="ecl-bloc">
                 <div className="liv-pv"><b>{y.reference}{y.port_arrivee ? ` · ${y.port_arrivee}` : ''}</b><Statut statut="info" libelle={t(`statuts_exp.${y.statut}`)} /></div>

@@ -897,3 +897,5 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .annonce-vir { display: flex; flex-direction: column; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--border); }
 .annonce-vir .actions { flex-wrap: wrap; }
 .annonce-vir .ref { overflow-wrap: anywhere; }
+
+.nowrap { white-space: nowrap; flex-shrink: 0; }
