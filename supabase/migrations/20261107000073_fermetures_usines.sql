@@ -3,9 +3,16 @@
 -- * Une fermeture vaut pour toutes les usines (fournisseur vide) ou pour un fournisseur ; 120 jours au plus.
 -- * Saisie et annulation (motivée, journalisée) par l'administratrice et les achats Chine, seuls à lire
 --   les commandes ; une fermeture ne se modifie pas et ne se supprime pas : on l'annule et on la ressaisit.
+-- * Alerte (écran Alertes et compteur de l'en-tête) : fermeture non passée qui commence dans l'horizon
+--   paramétré « fermetures.horizon_alerte_jours » (60 jours par défaut).
 -- * Commandes touchées : commandes non terminées (brouillon, contrat signé, en production) dont la période
 --   de production, de la signature du contrat (à défaut la création) à la livraison promise, chevauche
 --   une fermeture non annulée de leur usine. Le chevauchement est compté en jours calendaires.
+
+insert into gbs.parametres_definitions (cle, type, minimum, maximum, validateur, module, libelle) values
+  ('fermetures.horizon_alerte_jours', 'entier', 1, 365, null, 'achats', 'Alerte d''une fermeture d''usine : jours avant son début');
+insert into gbs.parametres (cle, valeur, date_effet, commentaire) values
+  ('fermetures.horizon_alerte_jours', '60', date '2026-01-01', 'Alerte deux mois avant une fermeture qui touche une production');
 
 create table gbs.fermetures_usines (
   id               uuid primary key default gen_random_uuid(),
@@ -91,14 +98,16 @@ end $$;
 -- Commandes dont la production chevauche une fermeture non annulée (passée ou à venir).
 create or replace function gbs.commandes_fermetures()
 returns table (fermeture_id uuid, motif text, du date, au date, commande_id uuid, commande_reference text, dossier_id uuid, dossier_reference text,
-               fournisseur text, statut text, debut_production date, livraison_promise date, jours_chevauches int)
+               fournisseur text, statut text, debut_production date, livraison_promise date, jours_chevauches int, en_alerte boolean)
 language plpgsql stable security definer set search_path = '' as $$
 begin
   perform gbs_private.exiger(gbs_private.has_role('admin','achats_chine'));
   return query
     select f.id, f.motif, f.du, f.au, k.id, k.reference, d.id, d.reference, s.raison_sociale_en, k.statut,
            coalesce(k.contrat_signe_le, k.cree_le::date), k.date_livraison_promise,
-           (least(f.au, k.date_livraison_promise) - greatest(f.du, coalesce(k.contrat_signe_le, k.cree_le::date)) + 1)::int
+           (least(f.au, k.date_livraison_promise) - greatest(f.du, coalesce(k.contrat_signe_le, k.cree_le::date)) + 1)::int,
+           -- En alerte : fermeture non passée qui commence dans l'horizon paramétré (ou déjà commencée).
+           f.au >= current_date and f.du <= current_date + gbs_private.param_num('fermetures.horizon_alerte_jours')::int
       from gbs.fermetures_usines f
       join gbs.commandes k on (f.fournisseur_id is null or f.fournisseur_id = k.fournisseur_id)
       join gbs.dossiers d on d.id = k.dossier_id

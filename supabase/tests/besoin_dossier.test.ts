@@ -28,6 +28,7 @@ describe('Besoin relié au dossier', () => {
     expect(await taches(db)).toEqual([]);
     await db.query(`select gbs.soumettre_besoin($1)`, [b]);
     expect(await taches(db)).toEqual([{ nature: 'besoin', libelle: 'tronc_commun', urgence: 2 }]);
+    expect((await one(db, `select echeance - current_date n from gbs.mes_taches() where nature = 'besoin'`)).n).toBe(2);
     await as(db, m.achats);
     expect(await taches(db)).toEqual([]);
     await as(db, m.admin);

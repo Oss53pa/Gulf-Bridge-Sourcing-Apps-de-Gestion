@@ -48,7 +48,7 @@ export function Alertes() {
         supabase.from('paiements_fournisseurs').select('id, reference, nature, montant, devise, cree_le, dossiers(reference)').eq('statut', 'prepare').limit(200)),
       lire<{ id: string; reference: string | null; fournisseur_id: string; valide_jusqu_au: string; fournisseurs: { raison_sociale_en: string } | null }>(
         supabase.from('due_diligences').select('id, reference, fournisseur_id, valide_jusqu_au, fournisseurs(raison_sociale_en)').eq('statut', 'validee').gte('valide_jusqu_au', auj).lte('valide_jusqu_au', dans60).limit(200)),
-      lireCommandesFermetures().then((r) => { if (r.erreur) echecs += 1; return fermeturesEnAlerte(r.rows, auj); }),
+      lireCommandesFermetures().then((r) => { if (r.erreur) echecs += 1; return fermeturesEnAlerte(r.rows); }),
     ]);
     const a: Alerte[] = [
       ...pb.filter((x) => !societeActive || x.dossiers?.societe_id === societeActive).map((x) => ({

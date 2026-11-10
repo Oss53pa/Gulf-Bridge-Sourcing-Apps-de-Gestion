@@ -3,7 +3,12 @@
 --   client validé et signé » (phase Consultation) avec le même document, validée par la même personne :
 --   plus de double dépôt. Une pièce déjà validée avec un autre document n'est pas écrasée.
 -- * Un besoin soumis devient un élément de « Mes tâches » du responsable de la phase Consultation (à défaut
---   le chef de dossier), à relire sous deux jours ; en retard au-delà.
+--   le chef de dossier), à relire dans le délai paramétré « besoin.delai_relecture_jours » ; en retard au-delà.
+
+insert into gbs.parametres_definitions (cle, type, minimum, maximum, validateur, module, libelle) values
+  ('besoin.delai_relecture_jours', 'entier', 0, 60, null, 'commercial', 'Relecture d''un besoin soumis : délai (jours calendaires)');
+insert into gbs.parametres (cle, valeur, date_effet, commentaire) values
+  ('besoin.delai_relecture_jours', '2', date '2026-01-01', 'Relire un besoin soumis sous deux jours');
 
 create or replace function gbs_private.taches_de(p_user uuid, p_visibles boolean)
 returns table (nature text, objet_id uuid, dossier_id uuid, dossier_reference text, libelle text,
@@ -33,8 +38,8 @@ begin
        and (not p_visibles or gbs_private.dossier_visible(d.id));
   -- Besoin soumis par le client ou l'équipe : à relire par le responsable de la phase (à défaut le chef).
   return query
-    select 'besoin'::text, b.id, b.dossier_id, d.reference, b.categorie, (b.soumis_le at time zone 'UTC')::date + 2,
-           case when (b.soumis_le at time zone 'UTC')::date + 2 < current_date then 1 else 2 end
+    select 'besoin'::text, b.id, b.dossier_id, d.reference, b.categorie, (b.soumis_le at time zone 'UTC')::date + gbs_private.param_num('besoin.delai_relecture_jours')::int,
+           case when (b.soumis_le at time zone 'UTC')::date + gbs_private.param_num('besoin.delai_relecture_jours')::int < current_date then 1 else 2 end
       from gbs.besoins b join gbs.dossiers d on d.id = b.dossier_id
       left join gbs.dossier_phases f on f.dossier_id = d.id and f.phase = 'consultation'
      where b.statut = 'soumis' and d.statut = 'ouvert' and coalesce(f.responsable_id, d.chef_id) = p_user

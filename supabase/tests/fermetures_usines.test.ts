@@ -30,6 +30,16 @@ describe('Fermetures d’usines', () => {
     expect(k2).toBeTruthy();
   }));
 
+  it('alerte selon l’horizon paramétré : une fermeture lointaine touche la commande sans alerter', () => withTx(async (db) => {
+    const { m, k1 } = await preparer(db);
+    await as(db, m.achats);
+    await ajouter(db, { motif: 'Golden Week', du: jj(30), au: jj(36) });
+    expect(await rows(db, `select commande_id, en_alerte from gbs.commandes_fermetures()`)).toEqual([{ commande_id: k1, en_alerte: true }]);
+    await as(db, m.admin);
+    await db.query(`insert into gbs.parametres (cle, valeur, date_effet, commentaire) values ('fermetures.horizon_alerte_jours', '20', current_date, 'Essai')`);
+    expect((await one(db, `select en_alerte from gbs.commandes_fermetures()`)).en_alerte).toBe(false);
+  }));
+
   it('une fermeture d’usine ne touche que ce fournisseur ; l’annulation la retire', () => withTx(async (db) => {
     const { m, autre, k2 } = await preparer(db);
     await as(db, m.admin);
