@@ -11,6 +11,7 @@ import { date, nombre } from '../lib/format';
 import { normaliser } from '../lib/droits';
 import { invaliderReferentiels } from '../lib/referentiels';
 import type { Article, Client, Compte, DueDiligence, Fournisseur } from '../lib/types';
+import { SanctionsFournisseur } from './SanctionsFournisseur';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 
 // ============================================================================ Clients
@@ -316,7 +317,7 @@ export function FicheFournisseur() {
   const nav = useNavigate();
   const { profil, langue } = useAuth();
   const role = profil?.role ?? '';
-  const [onglet, setOnglet] = useState<'synthese' | 'dd' | 'comptes' | 'commandes'>('synthese');
+  const [onglet, setOnglet] = useState<'synthese' | 'dd' | 'sanctions' | 'comptes' | 'commandes'>('synthese');
   const [dd, setDd] = useState<DueDiligence | 'nouvelle' | null>(null);
   const [compte, setCompte] = useState(false);
   const fo = useAsync(async () => ok(await supabase.from('fournisseurs').select('*').eq('id', id).maybeSingle()) as Fournisseur | null, [id]);
@@ -351,7 +352,7 @@ export function FicheFournisseur() {
       <div className="fou-grille">
         <nav className="fou-nav" aria-label={t('fournisseurs.fiche_surtitre')}>
           {([['societe', [['synthese', t('fournisseurs.o_synthese'), null]]],
-            ['suivi', [['dd', t('fournisseurs.due_diligence'), ddValide?.note ?? null],
+            ['suivi', [['dd', t('fournisseurs.due_diligence'), ddValide?.note ?? null], ['sanctions', t('sanctions.onglet'), null],
               ...(ecrit ? [['comptes', t('fournisseurs.comptes'), (comptes.data ?? []).length]] : []),
               ['commandes', t('fournisseurs.o_commandes'), (cmds.data ?? []).length]]]] as [string, [typeof onglet, string, number | null][]][]).map(([g, items]) => (
             <div key={g} className="fou-groupe">
@@ -400,6 +401,7 @@ export function FicheFournisseur() {
               {ecrit && <PiecesDd ddId={x.id} enCours={x.statut === 'en_cours'} />}
             </section>))}
         </>}
+        {onglet === 'sanctions' && <SanctionsFournisseur fournisseurId={f.id} onChange={() => void fo.recharger()} />}
         {onglet === 'comptes' && ecrit && <>
           <DemandesComptes fournisseurId={f.id} onTraite={() => void comptes.recharger()} />
           <div><Bouton petit onClick={() => setCompte(true)}>{t('fournisseurs.nouveau_compte')}</Bouton></div>
