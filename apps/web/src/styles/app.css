@@ -886,3 +886,9 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 @media (max-width: 1500px) { .topbar .sync { display: none; } }
 .msg-fils b .badge { margin-left: 6px; }
 .dcl { margin-bottom: 12px; flex: none; }
+
+/* Avancement de production : jauge commune et vignettes photo */
+.avt { flex: 1 1 220px; min-width: 160px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.avt > b { font-family: var(--serif); font-size: 20px; font-weight: 400; line-height: 1.2; }
+.vignettes { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; flex-shrink: 0; }
+.vignettes img, .vignette-vide { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--sable); }

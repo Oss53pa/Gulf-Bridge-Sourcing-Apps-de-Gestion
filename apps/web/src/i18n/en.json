@@ -191,6 +191,25 @@
   "titre": "{{n}} items",
   "volume": "Unit volume (m³)"
  },
+ "avancement": {
+  "aide_fournisseur": "Photos are dated on receipt and checked by Gulf Bridge Sourcing before being shown to the client. Progress cannot go backwards.",
+  "aide_publication": "Nothing is shown to the client before publication. In trading, check that no photo reveals the manufacturer (logo, nameplate, sign).",
+  "ajouter_photos": "Add photos",
+  "au": "as of {{d}}",
+  "aucun": "The supplier has not reported anything yet.",
+  "commentaire": "Comment",
+  "declarer": "Update production",
+  "envoyer": "Send",
+  "n_photos": "{{n}} photo(s)",
+  "non_publie": "Not published",
+  "onglet": "Production",
+  "pct": "Progress (%)",
+  "photos_jointes": "{{n}} photo(s) attached",
+  "publie": "Published to client",
+  "publier": "Publish to client",
+  "retirer": "Withdraw",
+  "titre": "Progress reported by the supplier"
+ },
  "avenants": {
   "aide": "An amendment changes a signed order (quantity, specification, price) or a lead time. It is approved by someone other than its author, then the administrator records the signed version: the order price and schedule are then recalculated.",
   "aucun": "No amendment on this file.",
@@ -1200,6 +1219,7 @@
   "GBS_ASSIGNE_INVALIDE": "The task must be assigned to an active team member.",
   "GBS_AUCUNE_OFFRE": "No offer recorded for this request.",
   "GBS_AUTO_VALIDATION": "You cannot decide on your own declaration.",
+  "GBS_AVANCEMENT_RECUL": "Progress cannot be lower than the last report.",
   "GBS_AVENANT_FIGE": "Only an amendment awaiting approval can be edited.",
   "GBS_AVENANT_INUTILE": "Order not signed (edit it directly) or completed: no amendment.",
   "GBS_AVENANT_LIGNE_INVALIDE": "Invalid amendment line: check the item, quantity and price.",

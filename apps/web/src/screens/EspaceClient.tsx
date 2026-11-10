@@ -10,6 +10,7 @@ import { date, montant } from '../lib/format';
 import { deposerPieceClient, FichierRefuse, urlSignee } from '../lib/fichiers';
 import { Bandeau, Bouton, Chargement, Statut, Vide } from '../components/ui';
 import { MessagerieVue } from './Messagerie';
+import { Jauge, Vignettes } from './Avancement';
 import { z } from 'zod';
 import { useAction } from '../lib/data';
 
@@ -26,7 +27,8 @@ interface Contenu {
   expeditions: { reference: string; mode: string; statut: string; port_arrivee: string | null; etd: string | null; eta: string | null;
     etapes: { etape: string; lieu: string | null; survenue_le: string; commentaire: string | null }[] }[];
   production: {
-    commandes: { reference: string; statut: string; fabricant: string | null; produits: { designation: string; quantite: number }[] }[];
+    commandes: { reference: string; statut: string; fabricant: string | null; produits: { designation: string; quantite: number }[];
+      avancement: { pct: number; le: string } | null; photos: { chemin: string; le: string }[] }[];
     inspections: { reference: string | null; type: string; produit: string | null; date_prevue: string | null; date_realisee: string | null; statut: string;
       decision: string | null; defauts: { critiques: number; majeurs: number; mineurs: number } | null }[];
     non_conformites: { reference: string | null; gravite: string; libelle: string; statut: string; delai: string | null }[];
@@ -84,7 +86,7 @@ export function EspaceClient() {
                   <div key={p.libelle + i} className="grl-regle"><span><b>{String(i + 1).padStart(2, '0')} · {p.libelle}</b>
                     <span className="mute">{p.demandee_le ? t('portail.demandee_le', { d: date(p.demandee_le, langue) }) : t(`phases.${p.phase}`, { defaultValue: p.phase })}</span></span>
                     <span className="actions"><Statut statut={p.statut === 'refusee' || p.statut === 'expiree' ? 'err' : 'att'} libelle={t(`portail.pieces.${p.statut}`, { defaultValue: p.statut })} />
-                      {(() => { const dp = x.depots.find((y) => y.phase === p.phase && y.libelle === p.libelle); return dp ? <Transmettre pieceId={dp.id} onFait={() => void c.recharger()} /> : null; })()}</span></div>))}
+                      {(() => { const dp = (x.depots ?? []).find((y) => y.phase === p.phase && y.libelle === p.libelle); return dp ? <Transmettre pieceId={dp.id} onFait={() => void c.recharger()} /> : null; })()}</span></div>))}
                 {actions.length > 0 && <span className="mute">{t('portail.transmettre')}</span>}
                 {x.points_bloquants.filter((b) => !b.resolu).map((b) => <Bandeau key={b.description} type="err">{b.description}</Bandeau>)}
               </section>
@@ -117,6 +119,8 @@ export function EspaceClient() {
                 <div className="liv-pv"><b className="ref">{k.reference}{k.fabricant ? <span className="mute"> · {k.fabricant}</span> : null}</b>
                   <Statut statut={['livree', 'expediee', 'production_terminee'].includes(k.statut) ? 'ok' : 'info'} libelle={t(`statuts_commande.${k.statut}`, { defaultValue: k.statut })} /></div>
                 <table className="t"><tbody>{k.produits.map((l, i) => <tr key={i}><td>{l.designation}</td><td className="num">{Number(l.quantite)}</td></tr>)}</tbody></table>
+                {k.avancement && <div className="liv-pv"><Jauge pct={k.avancement.pct} /><span className="mute">{t('avancement.au', { d: date(k.avancement.le, langue) })}</span></div>}
+                <Vignettes chemins={(k.photos ?? []).slice(0, 12).map((ph) => ph.chemin)} />
               </section>))}
             <div className="surtitre">{t('portail.inspections')}</div>
             {x.production.inspections.length === 0 ? <Vide>{t('portail.aucune_inspection')}</Vide> : (

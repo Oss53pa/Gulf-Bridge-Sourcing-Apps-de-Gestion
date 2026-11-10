@@ -191,6 +191,25 @@
   "titre": "{{n}} articles",
   "volume": "Volume unitaire (m³)"
  },
+ "avancement": {
+  "aide_fournisseur": "Les photos sont datées à la réception et vérifiées par Gulf Bridge Sourcing avant d'être montrées au client. L'avancement ne peut pas reculer.",
+  "aide_publication": "Rien n'est montré au client avant publication. En négoce, vérifiez qu'aucune photo ne révèle le fabricant (logo, plaque, enseigne).",
+  "ajouter_photos": "Ajouter des photos",
+  "au": "au {{d}}",
+  "aucun": "Le fournisseur n'a encore rien déclaré.",
+  "commentaire": "Commentaire",
+  "declarer": "Mettre à jour la production",
+  "envoyer": "Envoyer",
+  "n_photos": "{{n}} photo(s)",
+  "non_publie": "Non publié",
+  "onglet": "Production",
+  "pct": "Avancement (%)",
+  "photos_jointes": "{{n}} photo(s) jointe(s)",
+  "publie": "Publié au client",
+  "publier": "Publier au client",
+  "retirer": "Retirer",
+  "titre": "Avancement déclaré par le fournisseur"
+ },
  "avenants": {
   "aide": "Un avenant modifie une commande signée (quantité, spécification, prix) ou un délai. Il est validé par une autre personne que son auteur, puis l'administratrice enregistre la version signée : le prix de la commande et le planning sont alors recalculés.",
   "aucun": "Aucun avenant sur ce dossier.",
@@ -1200,6 +1219,7 @@
   "GBS_ASSIGNE_INVALIDE": "La tâche doit être confiée à un membre actif de l'équipe.",
   "GBS_AUCUNE_OFFRE": "Aucune offre enregistrée pour cette consultation.",
   "GBS_AUTO_VALIDATION": "Vous ne pouvez pas trancher votre propre déclaration.",
+  "GBS_AVANCEMENT_RECUL": "L’avancement ne peut pas être inférieur à la dernière déclaration.",
   "GBS_AVENANT_FIGE": "Seul un avenant à valider se modifie.",
   "GBS_AVENANT_INUTILE": "Commande non signée (modifiez-la directement) ou terminée : pas d'avenant.",
   "GBS_AVENANT_LIGNE_INVALIDE": "Ligne d'avenant invalide : vérifiez l'article, la quantité et le prix.",

@@ -191,6 +191,25 @@
   "titre": "{{n}} 个物料",
   "volume": "单件体积（m³）"
  },
+ "avancement": {
+  "aide_fournisseur": "照片在接收时标注日期，经 Gulf Bridge Sourcing 审核后才向客户展示。进度不可回退。",
+  "aide_publication": "发布前客户看不到任何内容。贸易模式下，请确认照片未暴露制造商（标志、铭牌、招牌）。",
+  "ajouter_photos": "添加照片",
+  "au": "截至 {{d}}",
+  "aucun": "供应商尚未申报。",
+  "commentaire": "备注",
+  "declarer": "更新生产进度",
+  "envoyer": "提交",
+  "n_photos": "{{n}} 张照片",
+  "non_publie": "未发布",
+  "onglet": "生产",
+  "pct": "完成百分比",
+  "photos_jointes": "已上传 {{n}} 张",
+  "publie": "已向客户发布",
+  "publier": "发布给客户",
+  "retirer": "撤回",
+  "titre": "供应商申报的生产进度"
+ },
  "avenants": {
   "aide": "补充协议用于修改已签订单（数量、规格、价格）或期限。须由起草人以外的人审批，再由管理员登记签署版本，订单价格和计划随即重新计算。",
   "aucun": "该项目暂无补充协议。",
@@ -1200,6 +1219,7 @@
   "GBS_ASSIGNE_INVALIDE": "任务须分配给在职团队成员。",
   "GBS_AUCUNE_OFFRE": "该询价尚无报价。",
   "GBS_AUTO_VALIDATION": "不能对自己的申报作出决定。",
+  "GBS_AVANCEMENT_RECUL": "进度不能低于上一次申报。",
   "GBS_AVENANT_FIGE": "仅待审批的补充协议可修改。",
   "GBS_AVENANT_INUTILE": "订单未签署（可直接修改）或已完成：无需补充协议。",
   "GBS_AVENANT_LIGNE_INVALIDE": "补充协议明细无效：请检查物料、数量和价格。",
