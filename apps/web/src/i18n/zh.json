@@ -2671,6 +2671,8 @@
   "delegue": "第二审批人",
   "delegue_aide": "指定审批管理员所制付款的第二人",
   "dernier_numero": "最新编号 {{n}}",
+  "designer_encaissement": "设为客户收款账户",
+  "encaissement_clients": "客户收款",
   "fiche": "资料",
   "filtrer": "筛选参数",
   "fne_oui": "标准电子发票（税务总局）",
@@ -2705,6 +2707,7 @@
   },
   "rattachements": "按客户国家确定签约公司",
   "rattacher": "关联账户",
+  "retirer_encaissement": "取消",
   "role": "角色",
   "sans_role": "无角色",
   "societes": "可见公司",
@@ -4364,5 +4367,29 @@
   "non_verifie": "未核查",
   "refuse": "已拒绝",
   "verifie": "已核查"
+ },
+ "virements": {
+  "a_regler": "待付发票 {{n}}",
+  "aide_interne": "告知不等于收款：到账后先登记收款，再标记为已对账。",
+  "alerte_fraude": "我方银行账户绝不会通过邮件或电话变更。请仅向此处显示的账户付款；如有疑问，请致电项目经理。",
+  "annonce_le": "{{d}} 已告知转账（{{ref}}）",
+  "annonces": "客户告知的转账",
+  "banque": "银行",
+  "compte": "账号（IBAN）",
+  "date": "转账日期",
+  "j_ai_vire": "我已完成转账",
+  "rapprochee": "已对账",
+  "reference_a_porter": "付款备注",
+  "regler": "付款",
+  "sans_coordonnees": "此处暂无转账信息：请向项目经理索取。",
+  "sans_suite": "不予处理",
+  "statuts": {
+   "annoncee": "已告知",
+   "rapprochee": "已到账",
+   "sans_suite": "已关闭"
+  },
+  "titre": "支付发票 {{n}}",
+  "titulaire": "户名",
+  "votre_reference": "您的转账参考号"
  }
 }

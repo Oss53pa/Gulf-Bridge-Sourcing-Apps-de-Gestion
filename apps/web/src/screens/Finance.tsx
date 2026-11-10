@@ -134,6 +134,8 @@ export function FicheFacture() {
   const f = useAsync(async () => ok(await supabase.from('factures').select('*').eq('id', id).maybeSingle()) as Facture | null, [id]);
   const lignes = useAsync(async () => ok(await supabase.from('lignes_facture').select('*').eq('facture_id', id).order('ordre').order('cree_le')) as LigneFacture[], [id]);
   const encs = useAsync(async () => ok(await supabase.from('encaissements').select('*').eq('facture_id', id).order('recu_le')) as { id: string; montant: number; devise: string; recu_le: string; mode: string; reference: string | null }[], [id]);
+  const annonces = useAsync(async () => ok(await supabase.from('annonces_virements').select('id, reference, date_virement, statut, cree_le').eq('facture_id', id).order('cree_le', { ascending: false })) as
+    { id: string; reference: string; date_virement: string | null; statut: string; cree_le: string }[], [id]);
   const a = useAction();
   const [ligne, setLigne] = useState({ libelle: '', service: '', quantite: '1', prix_unitaire: '' });
   const [fne, setFne] = useState<{ num: string; qr: string } | null>(null);
@@ -229,6 +231,16 @@ export function FicheFacture() {
           {peut && ['emise', 'partiellement_payee'].includes(x.statut) && <Bouton variante="primaire" data-sans-glose style={{ width: '100%', justifyContent: 'center' }}
             onClick={() => setEnc({ montant: String(reste), recu_le: new Date().toISOString().slice(0, 10), mode: 'virement', reference: '' })}>{t('factures.rapprocher')}</Bouton>}
           {x.statut !== 'brouillon' && <Link className="btn" style={{ justifyContent: 'center' }} to={`/imprimer/facture/${x.id}`}>{t('commun.imprimer')}</Link>}
+          {(annonces.data ?? []).length > 0 && <section className="fiche-bloc">
+            <div className="surtitre">{t('virements.annonces')}</div>
+            {(annonces.data ?? []).map((v) => (
+              <div key={v.id} className="ligne-montant"><span>{v.reference}<span className="mute"> · {date(v.date_virement ?? v.cree_le, langue)}</span></span>
+                <span className="actions"><Statut statut={v.statut === 'rapprochee' ? 'ok' : v.statut === 'sans_suite' ? 'neutre' : 'att'} libelle={t(`virements.statuts.${v.statut}`)} />
+                  {peut && v.statut === 'annoncee' && <>
+                    <Bouton petit disabled={a.enCours} onClick={() => void a.executer(async () => ok(await supabase.rpc('traiter_annonce_virement', { p_annonce: v.id, p_statut: 'rapprochee' }))).then((o) => { if (o) void annonces.recharger(); })}>{t('virements.rapprochee')}</Bouton>
+                    <Bouton petit disabled={a.enCours} onClick={() => void a.executer(async () => ok(await supabase.rpc('traiter_annonce_virement', { p_annonce: v.id, p_statut: 'sans_suite' }))).then((o) => { if (o) void annonces.recharger(); })}>{t('virements.sans_suite')}</Bouton></>}</span></div>))}
+            <span className="mute">{t('virements.aide_interne')}</span>
+          </section>}
           <section className="fiche-bloc">
             <div className="surtitre">{t('factures.encaissements')}</div>
             {(encs.data ?? []).length === 0 ? <span className="mute">{t('factures.aucun_encaissement')}</span> : (encs.data ?? []).map((e) => (

@@ -2671,6 +2671,8 @@
   "delegue": "Second validateur",
   "delegue_aide": "Seconde personne désignée pour valider les paiements préparés par l'administratrice",
   "dernier_numero": "dernier n° {{n}}",
+  "designer_encaissement": "Désigner pour les clients",
+  "encaissement_clients": "Encaissement clients",
   "fiche": "Fiche",
   "filtrer": "Filtrer les paramètres",
   "fne_oui": "Factures normalisées électroniques (DGI)",
@@ -2705,6 +2707,7 @@
   },
   "rattachements": "Société qui contracte selon le pays du client",
   "rattacher": "Rattacher le compte",
+  "retirer_encaissement": "Retirer",
   "role": "Rôle",
   "sans_role": "Sans rôle",
   "societes": "Sociétés visibles",
@@ -4364,5 +4367,29 @@
   "non_verifie": "Non vérifié",
   "refuse": "Refusé",
   "verifie": "Vérifié"
+ },
+ "virements": {
+  "a_regler": "Facture {{n}} à régler",
+  "aide_interne": "Une annonce n'est pas un encaissement : enregistrez l'encaissement à réception des fonds, puis marquez l'annonce rapprochée.",
+  "alerte_fraude": "Nos coordonnées bancaires ne changent jamais par courriel ni par téléphone. Ne payez que sur le compte affiché ici ; en cas de doute, appelez votre chef de dossier.",
+  "annonce_le": "virement annoncé le {{d}} ({{ref}})",
+  "annonces": "Virements annoncés par le client",
+  "banque": "Banque",
+  "compte": "Compte (IBAN)",
+  "date": "Date du virement",
+  "j_ai_vire": "J'ai effectué le virement",
+  "rapprochee": "Rapproché",
+  "reference_a_porter": "Référence à indiquer",
+  "regler": "Régler",
+  "sans_coordonnees": "Les coordonnées de virement ne sont pas encore disponibles ici : demandez-les à votre chef de dossier.",
+  "sans_suite": "Sans suite",
+  "statuts": {
+   "annoncee": "Annoncé",
+   "rapprochee": "Reçu",
+   "sans_suite": "Sans suite"
+  },
+  "titre": "Régler la facture {{n}}",
+  "titulaire": "Titulaire",
+  "votre_reference": "Référence de votre virement"
  }
 }

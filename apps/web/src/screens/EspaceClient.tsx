@@ -8,7 +8,7 @@ import { ok, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, montant } from '../lib/format';
 import { deposerPieceClient, FichierRefuse, urlSignee } from '../lib/fichiers';
-import { Bandeau, Bouton, Chargement, Statut, Vide } from '../components/ui';
+import { Bandeau, Bouton, Champ, Chargement, Statut, Tiroir, Vide } from '../components/ui';
 import { MessagerieVue } from './Messagerie';
 import { Jauge, Vignettes } from './Avancement';
 import { z } from 'zod';
@@ -34,6 +34,8 @@ interface Contenu {
     non_conformites: { reference: string | null; gravite: string; libelle: string; statut: string; delai: string | null }[];
   };
   depots: { id: string; libelle: string; phase: string; statut: string }[];
+  reglements: { facture_id: string; numero: string | null; devise: string; reste: number; echeance: string | null;
+    coordonnees: { titulaire: string; banque: string; numero: string } | null; annonce: { reference: string; statut: string; le: string } | null }[];
   factures: { numero: string | null; objet: string; type: string; date_emission: string | null; echeance: string | null; devise: string; ttc: number; net_a_payer: number; encaisse: number; statut: string }[];
 }
 type Vue = 'accueil' | 'dossier' | 'production' | 'expedition' | 'documents' | 'factures' | 'messagerie' | 'demande';
@@ -45,6 +47,7 @@ export function EspaceClient() {
   const e = useAsync(async () => ok(await supabase.rpc('espace_client')) as Espace, []);
   const [sel, setSel] = useState<string | null>(null);
   const [vue, setVue] = useState<Vue>('accueil');
+  const [regler, setRegler] = useState<Contenu['reglements'][number] | null>(null);
   const nonLus = useAsync(async () => ok(await supabase.rpc('messages_non_lus')) as number, [vue]);
   const d = (e.data?.dossiers ?? []).find((x) => x.id === sel) ?? e.data?.dossiers[0] ?? null;
   const c = useAsync(async () => (d ? ok(await supabase.rpc('espace_client_dossier', { p_dossier: d.id })) as Contenu : null), [d?.id]);
@@ -160,6 +163,11 @@ export function EspaceClient() {
             <div className="surtitre">{t('portail.transparence')}</div>
             <h1 className="ecl-titre">{t('portail.vues.factures')}</h1>
             <p className="sec">{t('portail.aide_factures')}</p>
+            {(x.reglements ?? []).map((r) => (
+              <div key={r.facture_id} className="grl-regle"><span><b>{t('virements.a_regler', { n: r.numero ?? '' })}</b>
+                <span className="mute">{montant(Number(r.reste), r.devise, langue)}{r.annonce ? ` · ${t('virements.annonce_le', { d: date(r.annonce.le, langue), ref: r.annonce.reference })}` : ''}</span></span>
+                <span className="actions">{r.annonce && <Statut statut={r.annonce.statut === 'rapprochee' ? 'ok' : r.annonce.statut === 'sans_suite' ? 'neutre' : 'att'} libelle={t(`virements.statuts.${r.annonce.statut}`)} />}
+                  {r.annonce?.statut !== 'annoncee' && <Bouton petit onClick={() => setRegler(r)}>{t('virements.regler')}</Bouton>}</span></div>))}
             {x.factures.length === 0 ? <Vide>{t('portail.aucune_facture')}</Vide> : (
               <table className="t"><thead><tr><th>{t('portail.facture')}</th><th>{t('portail.echeance')}</th><th className="num">{t('portail.montant')}</th><th className="num">{t('portail.reste')}</th><th>{t('champs.statut')}</th></tr></thead>
                 <tbody>{x.factures.map((f, i) => { const reste = Number(f.net_a_payer) - Number(f.encaisse); return (
@@ -168,6 +176,7 @@ export function EspaceClient() {
                     <td><Statut statut={f.statut === 'payee' ? 'ok' : f.echeance && f.echeance < new Date().toISOString().slice(0, 10) ? 'err' : 'att'} libelle={t(`portail.statuts_facture.${f.statut}`, { defaultValue: f.statut })} /></td></tr>); })}</tbody></table>)}
           </>}
         </>}
+        {regler && <Regler r={regler} onClose={() => setRegler(null)} onFait={() => { setRegler(null); void c.recharger(); }} />}
       </main>
     </div>
   );
@@ -195,6 +204,38 @@ function Transmettre({ pieceId, onFait }: { pieceId: string; onFait: () => void 
     <Bouton petit disabled={envoi} onClick={() => ref.current?.click()}>{envoi ? t('depot.envoi') : t('portail.transmettre_piece')}</Bouton>
     {etat && <span className="txt-err">{etat}</span>}
   </>);
+}
+
+/** Régler une facture : coordonnées issues de la base (jamais d'un courriel), puis annonce du virement. */
+function Regler({ r, onClose, onFait }: { r: Contenu['reglements'][number]; onClose: () => void; onFait: () => void }) {
+  const { t } = useTranslation();
+  const { langue } = useAuth();
+  const a = useAction();
+  const [f, setF] = useState({ reference: '', date_virement: '' });
+  const envoyer = async () => {
+    const v = z.object({ reference: z.string().trim().regex(/^[A-Za-z0-9 ./_-]{3,80}$/), date_virement: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable() }).strict()
+      .safeParse({ reference: f.reference.trim(), date_virement: f.date_virement || null });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('annoncer_virement', { p_facture: r.facture_id, p: v.data })))) onFait();
+  };
+  return (
+    <Tiroir titre={t('virements.titre', { n: r.numero ?? '' })} onClose={onClose}>
+      <Bandeau type="err">{t('virements.alerte_fraude')}</Bandeau>
+      {r.coordonnees ? <dl className="dl">
+        <dt>{t('virements.titulaire')}</dt><dd>{r.coordonnees.titulaire}</dd>
+        <dt>{t('virements.banque')}</dt><dd>{r.coordonnees.banque}</dd>
+        <dt>{t('virements.compte')}</dt><dd className="ref">{r.coordonnees.numero}</dd>
+        <dt>{t('virements.reference_a_porter')}</dt><dd className="ref">{r.numero}</dd>
+        <dt>{t('portail.reste')}</dt><dd>{montant(Number(r.reste), r.devise, langue)}</dd>
+      </dl> : <Bandeau>{t('virements.sans_coordonnees')}</Bandeau>}
+      <div className="grille2">
+        <Champ label={t('virements.votre_reference')}><input value={f.reference} maxLength={80} placeholder="VIR 091026 8812" onChange={(e) => setF({ ...f, reference: e.target.value })} /></Champ>
+        <Champ label={t('virements.date')}><input type="date" max={new Date().toISOString().slice(0, 10)} value={f.date_virement} onChange={(e) => setF({ ...f, date_virement: e.target.value })} /></Champ>
+      </div>
+      <Bandeau type="err">{a.erreur}</Bandeau>
+      <Bouton variante="primaire" disabled={a.enCours || !r.coordonnees} onClick={() => void envoyer()}>{t('virements.j_ai_vire')}</Bouton>
+    </Tiroir>
+  );
 }
 
 function Frise({ phases }: { phases: Contenu['phases'] }) {

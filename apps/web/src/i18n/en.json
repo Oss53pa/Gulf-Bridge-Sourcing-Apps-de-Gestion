@@ -2671,6 +2671,8 @@
   "delegue": "Second approver",
   "delegue_aide": "Second person designated to approve payments prepared by the administrator",
   "dernier_numero": "last no. {{n}}",
+  "designer_encaissement": "Use for clients",
+  "encaissement_clients": "Client collections",
   "fiche": "Profile",
   "filtrer": "Filter settings",
   "fne_oui": "Standardised e-invoices (DGI)",
@@ -2705,6 +2707,7 @@
   },
   "rattachements": "Contracting company by client country",
   "rattacher": "Link the account",
+  "retirer_encaissement": "Remove",
   "role": "Role",
   "sans_role": "No role",
   "societes": "Visible companies",
@@ -4364,5 +4367,29 @@
   "non_verifie": "Not verified",
   "refuse": "Rejected",
   "verifie": "Verified"
+ },
+ "virements": {
+  "a_regler": "Invoice {{n}} to pay",
+  "aide_interne": "An announcement is not a receipt: record the receipt when funds arrive, then mark the announcement matched.",
+  "alerte_fraude": "Our bank details never change by email or phone. Only pay to the account shown here; if in doubt, call your project manager.",
+  "annonce_le": "transfer announced on {{d}} ({{ref}})",
+  "annonces": "Transfers announced by the client",
+  "banque": "Bank",
+  "compte": "Account (IBAN)",
+  "date": "Transfer date",
+  "j_ai_vire": "I have made the transfer",
+  "rapprochee": "Matched",
+  "reference_a_porter": "Reference to quote",
+  "regler": "Pay",
+  "sans_coordonnees": "Transfer details are not yet available here: ask your project manager.",
+  "sans_suite": "No follow-up",
+  "statuts": {
+   "annoncee": "Announced",
+   "rapprochee": "Received",
+   "sans_suite": "Closed"
+  },
+  "titre": "Pay invoice {{n}}",
+  "titulaire": "Account holder",
+  "votre_reference": "Your transfer reference"
  }
 }
