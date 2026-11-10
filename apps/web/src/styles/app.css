@@ -900,3 +900,24 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .annonce-vir .ref { overflow-wrap: anywhere; }
 
 .nowrap { white-space: nowrap; flex-shrink: 0; }
+
+/* Guide d'expression du besoin (BES) */
+.besoin-creer { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
+.besoin-grille { display: grid; grid-template-columns: minmax(200px, 0.6fr) minmax(0, 1.6fr) minmax(220px, 0.8fr); gap: 20px; align-items: start; }
+.besoin-etapes { display: flex; flex-direction: column; gap: 2px; }
+.besoin-etape { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 2px 8px; text-align: left; background: none; border: 0; border-radius: var(--r); padding: 8px 10px; font: inherit; color: var(--ink); cursor: pointer; }
+.besoin-etape .statut { grid-column: 2; justify-self: start; }
+.besoin-etape.choisi { background: var(--sable); font-weight: 600; }
+.besoin-etape:disabled { cursor: default; }
+.besoin-champs { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.besoin-champ { display: flex; flex-direction: column; gap: 6px; padding: 0 0 14px; border-bottom: 1px solid var(--rule); }
+.besoin-question { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--sable); border-radius: var(--r); }
+.besoin-reponse { padding-left: 10px; border-left: 2px solid var(--bronze); }
+.besoin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.besoin-aside { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--rule); border-radius: var(--r); }
+.besoin-pct { font-size: 32px; font-weight: 500; }
+.besoin-valider { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--rule); }
+@media (max-width: 1100px) { .besoin-grille { grid-template-columns: 1fr; } .besoin-etapes { flex-direction: row; overflow-x: auto; } }
+.besoin-champ > button.lien, .besoin-question > .btn, .besoin-question > button { align-self: flex-start; }
+.besoin-champ > button.lien { color: var(--action, var(--ink)); text-decoration: underline; font-size: 13px; }
+.besoin-param-actions { margin: 12px 0 0; }
