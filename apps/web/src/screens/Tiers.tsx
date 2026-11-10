@@ -401,6 +401,7 @@ export function FicheFournisseur() {
             </section>))}
         </>}
         {onglet === 'comptes' && ecrit && <>
+          <DemandesComptes fournisseurId={f.id} onTraite={() => void comptes.recharger()} />
           <div><Bouton petit onClick={() => setCompte(true)}>{t('fournisseurs.nouveau_compte')}</Bouton></div>
           <p className="mute" style={{ margin: 0 }}>{t('fournisseurs.aide_comptes')}</p>
           {(comptes.data ?? []).length === 0 ? <span className="mute">{t('fournisseurs.aucun_compte')}</span> : (comptes.data ?? []).map((c) => (
@@ -499,6 +500,43 @@ function GrilleDd({ fournisseur, dd, onClose, onOk }: { fournisseur: Fournisseur
       <Bandeau type="err">{a.erreur}</Bandeau>
       <Bouton variante="primaire" disabled={a.enCours} onClick={() => void envoyer()}>{t('commun.enregistrer')}</Bouton>
     </Tiroir>
+  );
+}
+
+interface DemandeCompte { id: string; type: string; titulaire: string; devise: string; banque: string | null; numero: string; swift: string | null; motif: string; cree_le: string }
+
+/** Demandes de changement de compte déposées depuis le portail : acceptation (compte créé non vérifié,
+ *  quatre yeux ensuite) ou refus motivé. Les coordonnées s'affichent en clair pour le rappel de contrôle. */
+function DemandesComptes({ fournisseurId, onTraite }: { fournisseurId: string; onTraite: () => void }) {
+  const { t } = useTranslation();
+  const { langue } = useAuth();
+  const l = useAsync(async () => ok(await supabase.from('demandes_comptes_fournisseurs').select('id, type, titulaire, devise, banque, numero, swift, motif, cree_le')
+    .eq('fournisseur_id', fournisseurId).eq('statut', 'nouvelle').order('cree_le')) as DemandeCompte[], [fournisseurId]);
+  const a = useAction();
+  const [motif, setMotif] = useState('');
+  const traiter = async (d: DemandeCompte, accepter: boolean) => {
+    const v = z.object({ p_demande: z.string().uuid(), p_accepter: z.boolean(), p_motif: z.string().trim().min(5).max(1000).nullable() }).strict()
+      .safeParse({ p_demande: d.id, p_accepter: accepter, p_motif: accepter ? null : motif });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('traiter_demande_compte', v.data)))) { setMotif(''); void l.recharger(); onTraite(); }
+  };
+  if (!(l.data ?? []).length) return null;
+  return (
+    <section className="carte" style={{ padding: 12 }}>
+      <div className="surtitre">{t('fournisseurs.demandes_portail')}</div>
+      <Bandeau type="err">{l.erreur ?? a.erreur}</Bandeau>
+      <Bandeau>{t('fournisseurs.aide_demandes_portail')}</Bandeau>
+      {(l.data ?? []).map((d) => (
+        <div key={d.id} className="ligne-montant">
+          <span>{t(`types_compte.${d.type}`)} · {d.devise} · {d.titulaire}<br /><span className="mute">{d.banque ?? ''} {d.numero}{d.swift ? ` · ${d.swift}` : ''} · {date(d.cree_le, langue)}</span>
+            <br /><span className="sec">{d.motif}</span></span>
+          <span className="actions">
+            <Bouton petit variante="primaire" disabled={a.enCours} onClick={() => void traiter(d, true)}>{t('fournisseurs.accepter_demande')}</Bouton>
+            <input aria-label={t('banque.motif')} placeholder={t('banque.motif')} maxLength={1000} value={motif} onChange={(e) => setMotif(e.target.value)} />
+            <Bouton petit disabled={a.enCours || motif.trim().length < 5} onClick={() => void traiter(d, false)}>{t('clients.refuser')}</Bouton>
+          </span>
+        </div>))}
+    </section>
   );
 }
 

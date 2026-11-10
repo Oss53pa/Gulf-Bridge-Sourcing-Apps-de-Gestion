@@ -7,7 +7,9 @@ import { supabase } from '../lib/supabase';
 import { ok, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant } from '../lib/format';
-import { Bandeau, Bouton, Chargement, Statut, Vide } from '../components/ui';
+import { Bandeau, Bouton, Champ, Chargement, Statut, Tiroir, Vide } from '../components/ui';
+import { z } from 'zod';
+import { useAction } from '../lib/data';
 import { MessagerieVue } from './Messagerie';
 import { PageFournisseur } from './PlisFournisseurs';
 
@@ -110,6 +112,7 @@ export function EspaceFournisseur() {
               {x.comptes.map((c, i) => <div key={i} className="grl-regle"><span><b>{c.banque ?? t(`portail_f.types_compte.${c.type}`, { defaultValue: c.type })}</b><span className="mute">•••• {c.fin_numero}</span></span>
                 <Statut statut={c.verifie ? 'ok' : 'att'} libelle={c.verifie ? t('portail_f.verifie', { d: c.verifie_le ? date(c.verifie_le, langue) : '' }) : t('portail_f.non_verifie')} /></div>)}
               <span className="mute">{t('portail_f.aide_compte')}</span>
+              <DemandesCompte finance={x.utilisateur.sous_role === 'finance'} />
             </section>
           </>}
           {vue === 'messagerie' && <MessagerieVue avecEntete={false} nouveau={{ audiences: ['fournisseur'], commandes: x.commandes.map((c) => ({ id: c.id, libelle: c.reference })) }} />}
@@ -124,4 +127,50 @@ export function EspaceFournisseur() {
       </main>
     </div>
   );
+}
+
+interface MaDemande { type: string; banque: string | null; devise: string; fin_numero: string; statut: 'nouvelle' | 'acceptee' | 'refusee'; cree_le: string; traitee_le: string | null }
+
+/** Demande de changement de compte (sous-rôle finance) : jamais de compte créé ici ; l'équipe vérifie
+ *  les nouvelles coordonnées, dont un rappel, avant tout paiement. */
+function DemandesCompte({ finance }: { finance: boolean }) {
+  const { t } = useTranslation();
+  const { langue } = useAuth();
+  const l = useAsync(async () => ok(await supabase.rpc('mes_demandes_compte')) as MaDemande[], []);
+  const [ouvert, setOuvert] = useState(false);
+  const a = useAction();
+  const [f, setF] = useState({ type: 'banque', titulaire: '', devise: 'USD', banque: '', numero: '', swift: '', motif: '' });
+  const envoyer = async () => {
+    const v = z.object({ type: z.enum(['banque', 'wechat_pay', 'alipay']), titulaire: z.string().trim().min(2).max(200), devise: z.enum(['USD', 'CNY']),
+      banque: z.string().trim().max(200).nullable(), numero: z.string().trim().regex(/^[A-Za-z0-9 -]{4,64}$/),
+      swift: z.string().regex(/^[A-Z0-9]{8}([A-Z0-9]{3})?$/).nullable(), titulaire_est_entreprise: z.literal(true), motif: z.string().trim().min(5).max(1000) }).strict()
+      .refine((x) => x.type !== 'banque' || !!x.banque)
+      .safeParse({ ...f, banque: f.type === 'banque' ? f.banque.trim() || null : null, swift: f.type === 'banque' ? f.swift.trim().toUpperCase() || null : null,
+        titulaire_est_entreprise: true });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('demander_compte_fournisseur', { p: v.data })))) { setOuvert(false); void l.recharger(); }
+  };
+  const enAttente = (l.data ?? []).some((d) => d.statut === 'nouvelle');
+  return (<>
+    {(l.data ?? []).map((d, i) => <div key={i} className="grl-regle"><span><b>{d.banque ?? t(`portail_f.types_compte.${d.type}`, { defaultValue: d.type })}</b><span className="mute">•••• {d.fin_numero} · {date(d.cree_le, langue)}</span></span>
+      <Statut statut={d.statut === 'acceptee' ? 'ok' : d.statut === 'refusee' ? 'err' : 'att'} libelle={t(`portail_f.demandes_compte.${d.statut}`)} /></div>)}
+    {finance && !enAttente && <div><Bouton petit onClick={() => setOuvert(true)}>{t('portail_f.changer_compte')}</Bouton></div>}
+    {ouvert && <Tiroir titre={t('portail_f.changer_compte')} onClose={() => setOuvert(false)}>
+      <Bandeau>{t('portail_f.aide_changer_compte')}</Bandeau>
+      <div className="grille2">
+        <Champ label={t('champs.type')}><select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value, devise: e.target.value === 'banque' ? f.devise : 'CNY' })}>
+          {['banque', 'wechat_pay', 'alipay'].map((x) => <option key={x} value={x}>{t(`portail_f.types_compte.${x}`, { defaultValue: x })}</option>)}</select></Champ>
+        <Champ label={t('champs.devise')}><select value={f.devise} onChange={(e) => setF({ ...f, devise: e.target.value })}><option>USD</option><option>CNY</option></select></Champ>
+      </div>
+      <Champ label={t('fournisseurs.titulaire')}><input value={f.titulaire} maxLength={200} onChange={(e) => setF({ ...f, titulaire: e.target.value })} /></Champ>
+      {f.type === 'banque' && <Champ label={t('fournisseurs.banque')}><input value={f.banque} maxLength={200} onChange={(e) => setF({ ...f, banque: e.target.value })} /></Champ>}
+      <div className="grille2">
+        <Champ label={t('fournisseurs.numero')}><input value={f.numero} maxLength={64} autoComplete="off" onChange={(e) => setF({ ...f, numero: e.target.value })} /></Champ>
+        {f.type === 'banque' && <Champ label="SWIFT"><input value={f.swift} maxLength={11} onChange={(e) => setF({ ...f, swift: e.target.value })} /></Champ>}
+      </div>
+      <Champ label={t('portail_f.motif_changement')}><textarea rows={3} maxLength={1000} value={f.motif} onChange={(e) => setF({ ...f, motif: e.target.value })} /></Champ>
+      <Bandeau type="err">{a.erreur}</Bandeau>
+      <Bouton variante="primaire" disabled={a.enCours} onClick={() => void envoyer()}>{t('portail_f.envoyer_demande')}</Bouton>
+    </Tiroir>}
+  </>);
 }
