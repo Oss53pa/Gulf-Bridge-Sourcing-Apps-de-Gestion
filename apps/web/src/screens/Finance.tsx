@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth';
 import { date, montant, nombre, pourcent } from '../lib/format';
 import type { Client, Dossier, Facture, LigneFacture, Paiement } from '../lib/types';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
+import { ExportComptable } from './Commissions';
 import { useNoms } from '../lib/referentiels';
 import { Qr } from './Imprimes';
 
@@ -22,6 +23,7 @@ export function Factures() {
   const clients = useNoms('clients');
   const [filtre, setFiltre] = useState<Filtre>('toutes');
   const [creer, setCreer] = useState(false);
+  const [exporter, setExporter] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const mens = useAction();
   const l = useAsync(async () => {
@@ -53,8 +55,12 @@ export function Factures() {
             const n = ok(await supabase.rpc('facturer_mensualites_cadre', { p_mois: new Date().toISOString().slice(0, 10) })) as number;
             setInfo(t('factures.mensualites_faites', { n })); void l.recharger();
           })}>{t('factures.facturer_mensualites')}</Bouton>}
+          {['admin', 'comptable'].includes(profil?.role ?? '') && <Bouton onClick={() => setExporter(true)}>{t('factures.export_comptable')}</Bouton>}
           {peut && <Bouton variante="primaire" onClick={() => setCreer(true)}>{t('factures.nouvelle')}</Bouton>}
         </>} />
+      {exporter && <Tiroir titre={t('factures.export_comptable')} onClose={() => setExporter(false)}>
+        <ExportComptable rpc="export_ecritures" prefixe="ecritures-ventes" titre={t('factures.export_titre')} aide={t('factures.export_aide')} libelleSociete={t('factures.export_societe')} />
+      </Tiroir>}
       <Bandeau type="err">{mens.erreur}</Bandeau>
       <Bandeau>{info}</Bandeau>
       {fne > 0 && <Bandeau>{t('factures.bandeau_fne', { n: fne })}</Bandeau>}
