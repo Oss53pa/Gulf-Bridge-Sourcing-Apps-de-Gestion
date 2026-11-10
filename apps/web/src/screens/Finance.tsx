@@ -234,11 +234,14 @@ export function FicheFacture() {
           {(annonces.data ?? []).length > 0 && <section className="fiche-bloc">
             <div className="surtitre">{t('virements.annonces')}</div>
             {(annonces.data ?? []).map((v) => (
-              <div key={v.id} className="ligne-montant"><span>{v.reference}<span className="mute"> · {date(v.date_virement ?? v.cree_le, langue)}</span></span>
-                <span className="actions"><Statut statut={v.statut === 'rapprochee' ? 'ok' : v.statut === 'sans_suite' ? 'neutre' : 'att'} libelle={t(`virements.statuts.${v.statut}`)} />
+              <div key={v.id} className="annonce-vir">
+                <div className="ligne-montant"><span className="ref">{v.reference}<span className="mute"> · {date(v.date_virement ?? v.cree_le, langue)}</span></span>
+                  <Statut statut={v.statut === 'rapprochee' ? 'ok' : v.statut === 'sans_suite' ? 'neutre' : 'att'} libelle={t(`virements.statuts.${v.statut}`)} /></div>
+                <span className="actions">
                   {peut && v.statut === 'annoncee' && <>
                     <Bouton petit disabled={a.enCours} onClick={() => void a.executer(async () => ok(await supabase.rpc('traiter_annonce_virement', { p_annonce: v.id, p_statut: 'rapprochee' }))).then((o) => { if (o) void annonces.recharger(); })}>{t('virements.rapprochee')}</Bouton>
-                    <Bouton petit disabled={a.enCours} onClick={() => void a.executer(async () => ok(await supabase.rpc('traiter_annonce_virement', { p_annonce: v.id, p_statut: 'sans_suite' }))).then((o) => { if (o) void annonces.recharger(); })}>{t('virements.sans_suite')}</Bouton></>}</span></div>))}
+                    <Bouton petit disabled={a.enCours} onClick={() => void a.executer(async () => ok(await supabase.rpc('traiter_annonce_virement', { p_annonce: v.id, p_statut: 'sans_suite' }))).then((o) => { if (o) void annonces.recharger(); })}>{t('virements.sans_suite')}</Bouton></>}</span>
+              </div>))}
             <span className="mute">{t('virements.aide_interne')}</span>
           </section>}
           <section className="fiche-bloc">
