@@ -1106,6 +1106,8 @@ T = {
  'journal.vide': ('Aucune ligne.', 'No line.', '暂无记录。'), 'journal.choisir': ('Choisissez une ligne pour voir l\'avant et l\'après.', 'Select a line to see before and after.', '选择一条记录查看修改前后。'),
  'journal.empreinte': ('Empreinte SHA-256', 'SHA-256 hash', 'SHA-256 哈希'), 'journal.avant': ('Avant', 'Before', '修改前'), 'journal.apres': ('Après', 'After', '修改后'),
  'journal.systeme': ('Système', 'System', '系统'),
+ 'delais.nature.besoin': ('Besoins à relire', 'Needs to review', '待审需求'),
+ 'delais.besoin_a_relire': ('Relire le besoin soumis ({{categorie}}) et poser les questions', 'Review the submitted needs ({{categorie}}) and ask questions', '审阅已提交的需求（{{categorie}}）并提问'),
  'portail.vues.besoin': ('Mon besoin', 'My needs', '我的需求'),
  'besoin.client_titre': ('Exprimer votre besoin', 'State your needs', '表达您的需求'),
  'besoin.client_aide': ("Répondez étape par étape : chaque question est accompagnée d'une explication et d'un exemple. L'envoi n'est possible qu'une fois les informations indispensables renseignées. Vos réponses sont enregistrées à chaque étape.", 'Answer step by step: each question comes with an explanation and an example. You can send once the essential information is filled in. Your answers are saved at each step.', '请逐步回答：每个问题都附有说明和示例。必填信息完整后方可提交。每一步都会保存您的回答。'),

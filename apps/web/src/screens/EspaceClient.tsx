@@ -54,6 +54,10 @@ export function EspaceClient() {
   const d = (e.data?.dossiers ?? []).find((x) => x.id === sel) ?? e.data?.dossiers[0] ?? null;
   const c = useAsync(async () => (d ? ok(await supabase.rpc('espace_client_dossier', { p_dossier: d.id })) as Contenu : null), [d?.id]);
   const x = c.data;
+  // Questions de l'équipe en attente de réponse sur le besoin (sous-rôle finance exclu par la base).
+  const besoins = useAsync(async () => (d && e.data?.utilisateur.sous_role !== 'finance'
+    ? ok(await supabase.rpc('besoins_client', { p_dossier: d.id })) as { questions_ouvertes: number }[] : []), [d?.id, vue]);
+  const questionsBesoin = (besoins.data ?? []).reduce((n, b) => n + Number(b.questions_ouvertes ?? 0), 0);
   const ouvrir = async (chemin: string) => { const u = await urlSignee(chemin); if (u) window.open(u, '_blank', 'noopener,noreferrer'); };
   const joursAvant = x?.ouverture ? Math.round((Date.parse(x.ouverture.date) - Date.parse(new Date().toISOString().slice(0, 10))) / 86400000) : null;
   const actions = (x?.pieces_attendues ?? []).filter((p) => p.statut !== 'recue' && p.statut !== 'validee');
@@ -69,7 +73,7 @@ export function EspaceClient() {
       </header>
       <nav className="ecl-nav" aria-label={t('portail.navigation')}>
         {VUES.filter((v) => v !== 'besoin' || e.data?.utilisateur.sous_role !== 'finance').map((v) => <button key={v} type="button" aria-current={vue === v ? 'page' : undefined} onClick={() => setVue(v)}>
-          {t(`portail.vues.${v}`)}{v === 'accueil' && actions.length > 0 && <span className="badge">{actions.length}</span>}{v === 'messagerie' && (nonLus.data ?? 0) > 0 && <span className="badge">{nonLus.data}</span>}</button>)}
+          {t(`portail.vues.${v}`)}{v === 'accueil' && actions.length > 0 && <span className="badge">{actions.length}</span>}{v === 'messagerie' && (nonLus.data ?? 0) > 0 && <span className="badge">{nonLus.data}</span>}{v === 'besoin' && questionsBesoin > 0 && <span className="badge">{questionsBesoin}</span>}</button>)}
       </nav>
       <main className="screen ecl-main">
         <Bandeau type="err">{e.erreur ?? c.erreur}</Bandeau>

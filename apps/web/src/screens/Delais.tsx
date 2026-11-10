@@ -36,7 +36,7 @@ interface PlanningOuverture {
     fin_au_plus_tard: string | null; fin_projetee: string | null; en_retard: boolean }[];
 }
 interface ElementMesTaches {
-  nature: 'tache' | 'point_bloquant' | 'piece' | 'delai' | 'ouverture'; objet_id: string; dossier_id: string | null;
+  nature: 'tache' | 'point_bloquant' | 'piece' | 'delai' | 'ouverture' | 'besoin'; objet_id: string; dossier_id: string | null;
   dossier_reference: string | null; libelle: string; echeance: string | null; urgence: number;
   responsable_id?: string; responsable?: string;
 }
@@ -267,7 +267,8 @@ export function MesTaches() {
     return [d?.reference ?? ref, d ? clients[d.client_id] : null].filter(Boolean).join(' · ');
   };
   const libelle = (x: ElementMesTaches) => (x.nature === 'delai' ? t('delais.phase_en_retard', { phase: t(`phases.${x.libelle}`) })
-    : x.nature === 'ouverture' ? t('ouverture.intenable_tache', { n: Math.abs(Number(x.libelle)) }) : x.libelle);
+    : x.nature === 'ouverture' ? t('ouverture.intenable_tache', { n: Math.abs(Number(x.libelle)) })
+    : x.nature === 'besoin' ? t('delais.besoin_a_relire', { categorie: x.libelle === 'tronc_commun' ? t('besoin.tronc_seul') : x.libelle }) : x.libelle);
   const nomDe = (id: string | null | undefined) => (equipe.data ?? []).find((p) => p.id === id)?.nom ?? (id === profil?.id ? profil?.nom : null);
   const qui = (nom: string | null | undefined) => <span className="tache-qui sec" title={nom ?? undefined}>{initialesDe(nom)}</span>;
   const ligne = (x: ElementMesTaches) => (

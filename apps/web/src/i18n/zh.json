@@ -1006,6 +1006,7 @@
   "assigne_a": "分配给",
   "aucune_tache": "该项目暂无任务。",
   "aucune_terminee": "本周暂无已完成任务。",
+  "besoin_a_relire": "审阅已提交的需求（{{categorie}}）并提问",
   "calendrier": "日历",
   "chef_dossier": "项目负责人",
   "chine_vide": "本年度中国日历为空：请录入国务院公布的放假及调休安排，否则在华期限将不计春节。",
@@ -1038,6 +1039,7 @@
   "marquer_faite": "标记为完成",
   "mettre_en_attente": "设为等待第三方",
   "nature": {
+   "besoin": "待审需求",
    "delai": "期限预警",
    "ouverture": "开业日期受威胁",
    "piece": "缺失文件",

@@ -1006,6 +1006,7 @@
   "assigne_a": "Confiée à",
   "aucune_tache": "Aucune tâche sur ce dossier.",
   "aucune_terminee": "Aucune tâche terminée cette semaine.",
+  "besoin_a_relire": "Relire le besoin soumis ({{categorie}}) et poser les questions",
   "calendrier": "Calendrier",
   "chef_dossier": "Chef de dossier",
   "chine_vide": "Calendrier chinois vide pour cette année : saisissez les congés officiels et les jours de compensation publiés par le Conseil des affaires de l'État, sinon les délais en Chine ignorent la fête du printemps.",
@@ -1038,6 +1039,7 @@
   "marquer_faite": "Marquer comme faite",
   "mettre_en_attente": "Mettre en attente du tiers",
   "nature": {
+   "besoin": "Besoins à relire",
    "delai": "Délais en alerte",
    "ouverture": "Ouverture menacée",
    "piece": "Pièces manquantes",

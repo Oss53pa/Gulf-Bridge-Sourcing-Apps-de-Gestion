@@ -1006,6 +1006,7 @@
   "assigne_a": "Assigned to",
   "aucune_tache": "No task on this file.",
   "aucune_terminee": "No task completed this week.",
+  "besoin_a_relire": "Review the submitted needs ({{categorie}}) and ask questions",
   "calendrier": "Calendar",
   "chef_dossier": "File manager",
   "chine_vide": "Chinese calendar empty for this year: enter the official holidays and make-up working days published by the State Council, otherwise deadlines in China ignore Spring Festival.",
@@ -1038,6 +1039,7 @@
   "marquer_faite": "Mark as done",
   "mettre_en_attente": "Set waiting for third party",
   "nature": {
+   "besoin": "Needs to review",
    "delai": "Deadline alerts",
    "ouverture": "Opening at risk",
    "piece": "Missing documents",
