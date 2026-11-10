@@ -23,7 +23,8 @@ interface EtapeDef { code: string; libelle: string; libelle_zh?: string; aide?: 
 interface Alerte { champ: string; code: 'tension_pays' | 'frequence_pays' | 'prises_pays' | 'pays_inconnu'; pays: string; attendu?: number[] | number | string[]; confirme?: boolean }
 interface Etat { completude: number; etapes: { code: string; total: number; remplis: number }[]; critiques_manquants: string[]; alertes: Alerte[]; etapes_definition: EtapeDef[] }
 interface Besoin { id: string; categorie: string; statut: 'brouillon' | 'soumis' | 'valide'; version: number; reponses: Record<string, Valeur>; soumis_le: string | null; valide_le: string | null; document_signe: string | null; signe_le: string | null }
-interface Question { id: string; champ: string; question: string; auteur_id: string; cree_le: string; reponse: string | null; repondu_le: string | null }
+interface Question { id: string; champ: string; question: string; auteur: string | null; cree_le: string; reponse: string | null; repondu_le: string | null }
+interface Detail { besoin: Besoin & { categorie_libelle: string | null }; etat: Etat; questions: Question[]; versions: { version: number; cree_le: string }[] }
 
 const REDACTEURS = ['admin', 'hub_afrique', 'agent_pays'];
 const VALIDEURS = ['admin', 'hub_afrique'];
@@ -71,22 +72,33 @@ export function BesoinDossier({ dossier }: { dossier: Dossier }) {
             </Champ>
             <Bouton variante="primaire" disabled={a.enCours || !categorie} onClick={() => void creer()}>{t('besoin.commencer')}</Bouton>
           </div>)}
-        {b && <Guide key={b.id} besoin={b} dossier={dossier} libelleCategorie={libelleCat(b.categorie)} onChange={() => void l.recharger()} />}
+        {b && <Guide key={b.id} besoinId={b.id} dossierId={dossier.id} onChange={() => void l.recharger()} />}
       </>)}
     </section>
   );
 }
 
-function Guide({ besoin, dossier, libelleCategorie, onChange }: { besoin: Besoin; dossier: Dossier; libelleCategorie: string; onChange: () => void }) {
+/** Guide d'un besoin : sert à l'équipe (fiche dossier) et au client (espace client, client = true).
+ *  Lecture unique par gbs.besoin_detail ; la base décide des droits à chaque écriture. */
+export function Guide({ besoinId, dossierId, client = false, onChange }: { besoinId: string; dossierId: string; client?: boolean; onChange?: () => void }) {
+  const det = useAsync(async () => ok(await supabase.rpc('besoin_detail', { p_besoin: besoinId })) as Detail, [besoinId]);
+  if (det.chargement && !det.data) return <Chargement />;
+  if (!det.data) return <Bandeau type="err">{det.erreur}</Bandeau>;
+  return <GuideContenu key={`${det.data.besoin.statut}-${det.data.besoin.version}`} detail={det.data} dossierId={dossierId} client={client}
+    recharger={() => { void det.recharger(); onChange?.(); }} rechargerQuestions={() => void det.recharger()} />;
+}
+
+function GuideContenu({ detail, dossierId, client, recharger, rechargerQuestions }: { detail: Detail; dossierId: string; client: boolean; recharger: () => void; rechargerQuestions: () => void }) {
   const { t } = useTranslation();
   const { profil, langue, fuseau } = useAuth();
   const role = profil?.role ?? '';
-  const profils = useNoms('profils');
-  const etat = useAsync(async () => ok(await supabase.rpc('etat_besoin', { p_besoin: besoin.id })) as Etat, [besoin.id, besoin.version, besoin.statut]);
-  const questions = useAsync(async () => ok(await supabase.from('besoins_questions').select('id, champ, question, auteur_id, cree_le, reponse, repondu_le')
-    .eq('besoin_id', besoin.id).order('cree_le')) as Question[], [besoin.id]);
-  const versions = useAsync(async () => ok(await supabase.from('besoins_versions').select('version, cree_le').eq('besoin_id', besoin.id).order('version', { ascending: false })) as
-    { version: number; cree_le: string }[], [besoin.id, besoin.version]);
+  const besoin = detail.besoin;
+  const libelleCategorie = besoin.categorie === 'tronc_commun' ? t('besoin.tronc_seul') : besoin.categorie_libelle ?? besoin.categorie;
+  const [etatLocal, setEtatLocal] = useState<Etat>(detail.etat);
+  const etat = { data: etatLocal, chargement: false, erreur: null as string | null, recharger: () => {} };
+  const questions = { data: detail.questions, erreur: null as string | null, recharger: rechargerQuestions };
+  const versions = { data: detail.versions };
+  const onChange = recharger;
   const [etape, setEtape] = useState(0);
   const [brouillon, setBrouillon] = useState<Record<string, Valeur | null>>({});
   const [reponses, setReponses] = useState<Record<string, Valeur>>(besoin.reponses ?? {});
@@ -96,7 +108,7 @@ function Guide({ besoin, dossier, libelleCategorie, onChange }: { besoin: Besoin
   const e = etat.data;
   const defs = e?.etapes_definition ?? [];
   const et = defs[Math.min(etape, defs.length - 1)];
-  const redacteur = REDACTEURS.includes(role) && besoin.statut !== 'valide';
+  const redacteur = (client || REDACTEURS.includes(role)) && besoin.statut !== 'valide';
   const valeur = (c: ChampDef) => (c.cle in brouillon ? brouillon[c.cle] : reponses[c.cle]) ?? null;
   const modifie = Object.keys(brouillon).length > 0;
   const lib = (x: { libelle: string; libelle_zh?: string }) => (langue === 'zh' && x.libelle_zh ? x.libelle_zh : x.libelle);
@@ -108,7 +120,7 @@ function Guide({ besoin, dossier, libelleCategorie, onChange }: { besoin: Besoin
       const n = { ...reponses };
       for (const [k, v] of Object.entries(brouillon)) { if (v === null) delete n[k]; else n[k] = typeof v === 'string' ? v.trim() : v; }
       setReponses(n); setBrouillon({});
-      if (r) void etat.recharger();
+      if (r) setEtatLocal({ ...(r as Etat), etapes_definition: etatLocal.etapes_definition });
       if (besoin.statut === 'soumis') onChange();
     }
     return okEnr;
@@ -155,8 +167,8 @@ function Guide({ besoin, dossier, libelleCategorie, onChange }: { besoin: Besoin
                 {x.confirme === false && ` ${t('besoin.reseau_a_confirmer')}`}</Bandeau>)}
               {c.aide && <span className="mute">{c.aide}</span>}
               {c.exemple && <span className="mute">{t('besoin.exemple', { exemple: c.exemple })}</span>}
-              {qs.map((q) => <QuestionChamp key={q.id} q={q} auteur={profils[q.auteur_id] ?? '—'} peutRepondre={redacteur} onDone={() => void questions.recharger()} />)}
-              {besoin.statut !== 'valide' && ['admin', 'hub_afrique', 'agent_pays', 'achats_chine'].includes(role) &&
+              {qs.map((q) => <QuestionChamp key={q.id} q={q} auteur={q.auteur ?? '—'} peutRepondre={redacteur} onDone={() => void questions.recharger()} />)}
+              {besoin.statut !== 'valide' && !client && ['admin', 'hub_afrique', 'agent_pays', 'achats_chine'].includes(role) &&
                 <PoserQuestion besoinId={besoin.id} champ={c.cle} onDone={() => void questions.recharger()} />}
             </div>);
         })}
@@ -183,14 +195,14 @@ function Guide({ besoin, dossier, libelleCategorie, onChange }: { besoin: Besoin
         </dl>
         {redacteur && besoin.statut === 'brouillon' && (
           <Bouton variante="primaire" disabled={a.enCours || e.critiques_manquants.length > 0} onClick={() => void soumettre()}>{t('besoin.soumettre')}</Bouton>)}
-        {besoin.statut === 'soumis' && VALIDEURS.includes(role) && (<div className="besoin-valider">
+        {besoin.statut === 'soumis' && !client && VALIDEURS.includes(role) && (<div className="besoin-valider">
           <span className="sec">{t('besoin.aide_validation')}</span>
-          <Champ label={t('besoin.cdc_signe')}><Depot dossierId={dossier.id} valeur={doc} onChange={setDoc} /></Champ>
+          <Champ label={t('besoin.cdc_signe')}><Depot dossierId={dossierId} valeur={doc} onChange={setDoc} /></Champ>
           <Champ label={t('besoin.signe_le')}><input type="date" value={signeLe} max={new Date().toISOString().slice(0, 10)} onChange={(x) => setSigneLe(x.target.value)} /></Champ>
           <Bouton variante="primaire" disabled={a.enCours || !doc || !signeLe || ouvertes > 0} onClick={() => void valider()}>{t('besoin.valider')}</Bouton>
           {ouvertes > 0 && <span className="mute">{t('besoin.questions_a_clore')}</span>}
         </div>)}
-        <a className="btn" href={`/imprimer/cahier-des-charges/${besoin.id}${besoin.version ? `?version=${besoin.version}` : ''}`} target="_blank" rel="noopener noreferrer">{t('besoin.imprimer_cdc')}</a>
+        {!client && <a className="btn" href={`/imprimer/cahier-des-charges/${besoin.id}${besoin.version ? `?version=${besoin.version}` : ''}`} target="_blank" rel="noopener noreferrer">{t('besoin.imprimer_cdc')}</a>}
         <p className="mute">{t('besoin.note_reference')}</p>
       </aside>
     </div>
@@ -348,5 +360,33 @@ export function ImprimerBesoin() {
         </section>
       </article>
     </div>
+  );
+}
+
+// ----------------------------------------------------------------------------- espace client
+interface BesoinListeClient { id: string; categorie: string; statut: Besoin['statut']; version: number; completude: number; questions_ouvertes: number }
+
+/** Espace client : besoins de son dossier, remplis et soumis par le client ; la validation reste à l'équipe. */
+export function BesoinsClient({ dossierId }: { dossierId: string }) {
+  const { t } = useTranslation();
+  const l = useAsync(async () => ok(await supabase.rpc('besoins_client', { p_dossier: dossierId })) as BesoinListeClient[], [dossierId]);
+  const [sel, setSel] = useState<string | null>(null);
+  const liste = l.data ?? [];
+  const b = liste.find((x) => x.id === sel) ?? liste[0] ?? null;
+  return (
+    <section>
+      <h1 className="ecl-titre">{t('besoin.client_titre')}</h1>
+      <p className="sec">{t('besoin.client_aide')}</p>
+      <Bandeau type="err">{l.erreur}</Bandeau>
+      {l.chargement && !l.data ? <Chargement /> : liste.length === 0 ? <Vide>{t('besoin.client_aucun')}</Vide> : (<>
+        {liste.length > 1 && (
+          <div className="segment portee-taches" role="group" aria-label={t('besoin.categorie')}>
+            {liste.map((x) => <button key={x.id} type="button" aria-pressed={b?.id === x.id} onClick={() => setSel(x.id)}>{x.categorie}</button>)}
+          </div>)}
+        {b?.statut === 'soumis' && <Bandeau type="ok">{t('besoin.client_soumis', { n: b.version })}</Bandeau>}
+        {b?.statut === 'valide' && <Bandeau type="ok">{t('besoin.client_valide')}</Bandeau>}
+        {b && <Guide key={b.id} besoinId={b.id} dossierId={dossierId} client onChange={() => void l.recharger()} />}
+      </>)}
+    </section>
   );
 }

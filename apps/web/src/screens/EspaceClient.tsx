@@ -12,6 +12,7 @@ import { Bandeau, Bouton, Champ, Chargement, Statut, Tiroir, Vide } from '../com
 import { MessagerieVue } from './Messagerie';
 import { Jauge, Vignettes } from './Avancement';
 import { ReceptionsClient } from './ReceptionSite';
+import { BesoinsClient } from './Besoin';
 import { z } from 'zod';
 import { useAction } from '../lib/data';
 
@@ -39,8 +40,8 @@ interface Contenu {
     coordonnees: { titulaire: string; banque: string; numero: string } | null; annonce: { reference: string; statut: string; le: string } | null }[];
   factures: { numero: string | null; objet: string; type: string; date_emission: string | null; echeance: string | null; devise: string; ttc: number; net_a_payer: number; encaisse: number; statut: string }[];
 }
-type Vue = 'accueil' | 'dossier' | 'production' | 'expedition' | 'documents' | 'factures' | 'messagerie' | 'demande';
-const VUES: Vue[] = ['accueil', 'dossier', 'production', 'expedition', 'documents', 'factures', 'messagerie', 'demande'];
+type Vue = 'accueil' | 'dossier' | 'besoin' | 'production' | 'expedition' | 'documents' | 'factures' | 'messagerie' | 'demande';
+const VUES: Vue[] = ['accueil', 'dossier', 'besoin', 'production', 'expedition', 'documents', 'factures', 'messagerie', 'demande'];
 
 export function EspaceClient() {
   const { t } = useTranslation();
@@ -67,7 +68,7 @@ export function EspaceClient() {
         </span>
       </header>
       <nav className="ecl-nav" aria-label={t('portail.navigation')}>
-        {VUES.map((v) => <button key={v} type="button" aria-current={vue === v ? 'page' : undefined} onClick={() => setVue(v)}>
+        {VUES.filter((v) => v !== 'besoin' || e.data?.utilisateur.sous_role !== 'finance').map((v) => <button key={v} type="button" aria-current={vue === v ? 'page' : undefined} onClick={() => setVue(v)}>
           {t(`portail.vues.${v}`)}{v === 'accueil' && actions.length > 0 && <span className="badge">{actions.length}</span>}{v === 'messagerie' && (nonLus.data ?? 0) > 0 && <span className="badge">{nonLus.data}</span>}</button>)}
       </nav>
       <main className="screen ecl-main">
@@ -114,6 +115,7 @@ export function EspaceClient() {
                 <td className="ref">{p.debut ? date(p.debut, langue) : '—'}</td><td className="ref">{p.fin ? date(p.fin, langue) : p.fin_prevue ? t('portail.prevue', { d: date(p.fin_prevue, langue) }) : '—'}</td>
                 <td><Statut statut={p.statut === 'terminee' ? 'ok' : p.statut === 'en_cours' ? 'info' : 'neutre'} libelle={t(`portail.statuts_phase.${p.statut}`)} /></td></tr>)}</tbody></table>
           </>}
+          {vue === 'besoin' && <BesoinsClient dossierId={d.id} />}
           {vue === 'production' && <>
             <h1 className="ecl-titre">{t('portail.vues.production')}</h1>
             <p className="sec">{t('portail.aide_production')}</p>
