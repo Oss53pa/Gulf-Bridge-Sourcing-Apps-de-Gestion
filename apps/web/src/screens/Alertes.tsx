@@ -9,10 +9,11 @@ import { useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, montant } from '../lib/format';
 import { Bandeau, Chargement, Entete, Onglets, Statut, Vide } from '../components/ui';
+import { fermeturesEnAlerte, lireCommandesFermetures } from '../lib/fermetures';
 
-type Categorie = 'point_bloquant' | 'retard_paiement' | 'fne' | 'paiement_a_valider' | 'due_diligence';
+type Categorie = 'point_bloquant' | 'retard_paiement' | 'fne' | 'paiement_a_valider' | 'due_diligence' | 'fermeture_usine';
 interface Alerte { id: string; categorie: Categorie; critique: boolean; titre: string; detail: string; echeance: string | null; module: string; reference: string; lien: string }
-const CATEGORIES: Categorie[] = ['point_bloquant', 'retard_paiement', 'fne', 'paiement_a_valider', 'due_diligence'];
+const CATEGORIES: Categorie[] = ['point_bloquant', 'retard_paiement', 'fne', 'paiement_a_valider', 'due_diligence', 'fermeture_usine'];
 
 const jour = () => new Date().toISOString().slice(0, 10);
 const ecart = (d: string | null) => (d ? Math.round((Date.parse(d.slice(0, 10)) - Date.parse(jour())) / 86400000) : null);
@@ -36,7 +37,7 @@ export function Alertes() {
       .in('cle', ['alertes.retard_critique_jours', 'alertes.dd_critique_jours']).lte('date_effet', auj).order('date_effet', { ascending: false }));
     const prmNum = (cle: string, defaut: number) => { const v = prm.find((x) => x.cle === cle)?.valeur; return typeof v === 'number' ? v : defaut; };
     const seuilRetard = prmNum('alertes.retard_critique_jours', 30), seuilDd = prmNum('alertes.dd_critique_jours', 15);
-    const [pb, fr, fne, pay, dd] = await Promise.all([
+    const [pb, fr, fne, pay, dd, fe] = await Promise.all([
       lire<{ id: string; description: string; categorie: string; echeance: string; escalade_le: string; dossier_id: string; dossiers: { reference: string; societe_id: string } | null }>(
         supabase.from('points_bloquants').select('id, description, categorie, echeance, escalade_le, dossier_id, dossiers(reference, societe_id)').is('resolu_le', null).not('escalade_le', 'is', null).limit(200)),
       lire<{ id: string; numero: string | null; echeance: string; net_a_payer: number; encaisse: number; devise: string; societe_id: string; clients: { raison_sociale: string } | null }>(
@@ -47,6 +48,7 @@ export function Alertes() {
         supabase.from('paiements_fournisseurs').select('id, reference, nature, montant, devise, cree_le, dossiers(reference)').eq('statut', 'prepare').limit(200)),
       lire<{ id: string; reference: string | null; fournisseur_id: string; valide_jusqu_au: string; fournisseurs: { raison_sociale_en: string } | null }>(
         supabase.from('due_diligences').select('id, reference, fournisseur_id, valide_jusqu_au, fournisseurs(raison_sociale_en)').eq('statut', 'validee').gte('valide_jusqu_au', auj).lte('valide_jusqu_au', dans60).limit(200)),
+      lireCommandesFermetures().then((r) => { if (r.erreur) echecs += 1; return fermeturesEnAlerte(r.rows, auj); }),
     ]);
     const a: Alerte[] = [
       ...pb.filter((x) => !societeActive || x.dossiers?.societe_id === societeActive).map((x) => ({
@@ -64,6 +66,12 @@ export function Alertes() {
       ...dd.map((x) => ({
         id: `dd-${x.id}`, categorie: 'due_diligence' as const, critique: (ecart(x.valide_jusqu_au) ?? 9999) <= seuilDd, titre: t('alertes.dd_titre', { f: x.fournisseurs?.raison_sociale_en ?? '—', d: date(x.valide_jusqu_au, langue) }),
         detail: t('alertes.dd_detail', { ref: x.reference ?? '' }), echeance: x.valide_jusqu_au, module: 'achats', reference: x.reference ?? '', lien: `/fournisseurs/${x.fournisseur_id}` })),
+      // Fermeture d'usine : critique quand elle a commencé (la production est déjà arrêtée).
+      ...fe.map((x) => ({
+        id: `fe-${x.fermeture_id}-${x.commande_id}`, categorie: 'fermeture_usine' as const, critique: x.du <= auj,
+        titre: t('alertes.fe_titre', { ref: x.commande_reference, motif: x.motif }),
+        detail: t('alertes.fe_detail', { f: x.fournisseur, n: x.jours_chevauches, d: date(x.livraison_promise, langue), dos: x.dossier_reference }),
+        echeance: x.du, module: 'achats', reference: x.commande_reference, lien: `/commandes/${x.commande_id}` })),
     ];
     // Critiques d'abord, puis par échéance la plus ancienne.
     return { alertes: a.sort((x, y) => Number(y.critique) - Number(x.critique) || (x.echeance ?? '9').localeCompare(y.echeance ?? '9')), echecs };

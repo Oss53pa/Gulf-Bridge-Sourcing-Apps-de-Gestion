@@ -65,6 +65,7 @@ export const ECRANS: Ecran[] = [
   { id: 'historique_prix', chemin: '/historique-prix', module: 'achats', section: 'consultation', roles: ['admin', 'achats_chine'], lot: 0 },
   { id: 'commandes', chemin: '/commandes', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine', 'comptable'], lot: 0 },
   { id: 'approbation', chemin: '/approbation-technique', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine'], lot: 1 },
+  { id: 'fermetures', chemin: '/fermetures-usines', module: 'achats', section: 'commandes', roles: ['admin', 'achats_chine'], lot: 0 },
   { id: 'inspections', chemin: '/inspections', module: 'qualite', section: 'controles', roles: ['admin', 'achats_chine', 'inspecteur'], lot: 0 },
   { id: 'ethique', chemin: '/ethique', module: 'qualite', section: 'non_conformites', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable', 'inspecteur'], lot: 2 },
   { id: 'non_conformites', chemin: '/non-conformites', module: 'qualite', section: 'non_conformites', roles: ['admin', 'achats_chine'], lot: 1 },
@@ -118,7 +119,7 @@ export const normaliser = (s: string) => s.normalize('NFD').replace(/\p{Diacriti
 export const TCODES: Record<string, string> = {
   tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', ethique: 'ETH', negoce: 'NEG', garanties: 'GAR', documents: 'DOC', sav: 'SAV', stock: 'STK', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
   appels_offres: 'AOF', fiches_reference: 'REF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
-  articles: 'ART', consultations: 'MEC', historique_prix: 'PRX', commandes: 'CMD', approbation: 'APT', inspections: 'INS', non_conformites: 'NCF',
+  articles: 'ART', consultations: 'MEC', historique_prix: 'PRX', commandes: 'CMD', approbation: 'APT', fermetures: 'FRM', inspections: 'INS', non_conformites: 'NCF',
   expeditions: 'EXP', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
   rapprochement: 'BNK', flux: 'FLX', tresorerie: 'TRC', commissions: 'COM', notes_frais: 'NDF', messagerie: 'MSG', parametrage: 'PAR',
 };

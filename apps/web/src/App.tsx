@@ -65,6 +65,7 @@ const Fournisseurs = paresseux(() => import('./screens/Tiers'), 'Fournisseurs');
 const Commandes = paresseux(() => import('./screens/Achats'), 'Commandes');
 const FicheCommande = paresseux(() => import('./screens/Achats'), 'FicheCommande');
 const HistoriquePrix = paresseux(() => import('./screens/Achats'), 'HistoriquePrix');
+const Fermetures = paresseux(() => import('./screens/Fermetures'), 'Fermetures');
 const MiseEnConcurrence = paresseux(() => import('./screens/Achats'), 'MiseEnConcurrence');
 const Expeditions = paresseux(() => import('./screens/Operations'), 'Expeditions');
 const FicheExpedition = paresseux(() => import('./screens/Operations'), 'FicheExpedition');
@@ -151,6 +152,7 @@ export function App() {
             <Route path="/articles" element={g('articles', <Articles />)} />
             <Route path="/mise-en-concurrence" element={g('consultations', <MiseEnConcurrence />)} />
             <Route path="/historique-prix" element={g('historique_prix', <HistoriquePrix />)} />
+            <Route path="/fermetures-usines" element={g('fermetures', <Fermetures />)} />
             <Route path="/approbation-technique" element={g('approbation', <ApprobationsTechniques />)} />
             <Route path="/commandes" element={g('commandes', <Commandes />)} />
             <Route path="/commandes/:id" element={g('commandes', <FicheCommande />)} />
