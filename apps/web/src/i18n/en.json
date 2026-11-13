@@ -15,6 +15,7 @@
  "alertes": {
   "a_traiter": "To handle",
   "actions": {
+   "date_promise": "Enter the contract’s promised delivery date in the order sheet.",
    "due_diligence": "Start the due diligence review before expiry.",
    "fermeture_usine": "Confirm the restart schedule with the factory and renegotiate the promised delivery date if needed.",
    "fne": "Obtain FNE certification before sending to the client.",
@@ -26,6 +27,7 @@
   "aucune": "No alert.",
   "aujourdhui": "Today",
   "categories": {
+   "date_promise": "Missing promised date",
    "due_diligence": "Due diligence",
    "fermeture_usine": "Factory closure",
    "fne": "Invoice to certify",
@@ -54,6 +56,8 @@
   "pay_titre": "{{ref}} · {{nature}} prepared, to approve",
   "pb_titre": "Escalated blocking issue · file {{ref}}",
   "reference": "Reference",
+  "sd_detail": "neither late penalties nor factory-closure alerts can be computed",
+  "sd_titre": "{{ref}} · no promised delivery date",
   "sources_echec": "{{n}} source(s) could not be read: the list may be incomplete. Try again.",
   "titre": "{{n}} alert(s), {{c}} critical",
   "toutes": "All"

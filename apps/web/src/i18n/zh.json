@@ -15,6 +15,7 @@
  "alertes": {
   "a_traiter": "待处理",
   "actions": {
+   "date_promise": "请在订单页填写合同承诺交期。",
    "due_diligence": "到期前启动尽职调查复审。",
    "fermeture_usine": "与工厂确认复工计划，必要时重新商定承诺交期。",
    "fne": "发送客户前先取得 FNE 认证。",
@@ -26,6 +27,7 @@
   "aucune": "暂无提醒。",
   "aujourdhui": "今天",
   "categories": {
+   "date_promise": "缺少承诺交期",
    "due_diligence": "尽职调查",
    "fermeture_usine": "工厂停工",
    "fne": "待认证发票",
@@ -54,6 +56,8 @@
   "pay_titre": "{{ref}} · {{nature}} 已准备，待审批",
   "pb_titre": "已升级阻塞问题 · 项目 {{ref}}",
   "reference": "编号",
+  "sd_detail": "无法计算延误罚金及工厂停工提醒",
+  "sd_titre": "{{ref}} · 无承诺交期",
   "sources_echec": "{{n}} 个数据源读取失败，列表可能不完整，请重试。",
   "titre": "{{n}} 条提醒，其中 {{c}} 条紧急",
   "toutes": "全部"

@@ -9,18 +9,19 @@ import { useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, montant } from '../lib/format';
 import { Bandeau, Chargement, Entete, Onglets, Statut, Vide } from '../components/ui';
-import { fermeturesEnAlerte, lireCommandesFermetures } from '../lib/fermetures';
+import { fermeturesEnAlerte, lireCommandesFermetures, lireCommandesSansDate, ROLES_FERMETURES } from '../lib/fermetures';
 
-type Categorie = 'point_bloquant' | 'retard_paiement' | 'fne' | 'paiement_a_valider' | 'due_diligence' | 'fermeture_usine';
+type Categorie = 'point_bloquant' | 'retard_paiement' | 'fne' | 'paiement_a_valider' | 'due_diligence' | 'fermeture_usine' | 'date_promise';
 interface Alerte { id: string; categorie: Categorie; critique: boolean; titre: string; detail: string; echeance: string | null; module: string; reference: string; lien: string }
-const CATEGORIES: Categorie[] = ['point_bloquant', 'retard_paiement', 'fne', 'paiement_a_valider', 'due_diligence', 'fermeture_usine'];
+const CATEGORIES: Categorie[] = ['point_bloquant', 'retard_paiement', 'fne', 'paiement_a_valider', 'due_diligence', 'fermeture_usine', 'date_promise'];
 
 const jour = () => new Date().toISOString().slice(0, 10);
 const ecart = (d: string | null) => (d ? Math.round((Date.parse(d.slice(0, 10)) - Date.parse(jour())) / 86400000) : null);
 
 export function Alertes() {
   const { t } = useTranslation();
-  const { langue, societeActive } = useAuth();
+  const { langue, societeActive, profil } = useAuth();
+  const role = profil?.role ?? '';
   const l = useAsync(async () => {
     const auj = jour();
     const dans60 = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
@@ -37,7 +38,7 @@ export function Alertes() {
       .in('cle', ['alertes.retard_critique_jours', 'alertes.dd_critique_jours']).lte('date_effet', auj).order('date_effet', { ascending: false }));
     const prmNum = (cle: string, defaut: number) => { const v = prm.find((x) => x.cle === cle)?.valeur; return typeof v === 'number' ? v : defaut; };
     const seuilRetard = prmNum('alertes.retard_critique_jours', 30), seuilDd = prmNum('alertes.dd_critique_jours', 15);
-    const [pb, fr, fne, pay, dd, fe] = await Promise.all([
+    const [pb, fr, fne, pay, dd, fe, sd] = await Promise.all([
       lire<{ id: string; description: string; categorie: string; echeance: string; escalade_le: string; dossier_id: string; dossiers: { reference: string; societe_id: string } | null }>(
         supabase.from('points_bloquants').select('id, description, categorie, echeance, escalade_le, dossier_id, dossiers(reference, societe_id)').is('resolu_le', null).not('escalade_le', 'is', null).limit(200)),
       lire<{ id: string; numero: string | null; echeance: string; net_a_payer: number; encaisse: number; devise: string; societe_id: string; clients: { raison_sociale: string } | null }>(
@@ -49,6 +50,7 @@ export function Alertes() {
       lire<{ id: string; reference: string | null; fournisseur_id: string; valide_jusqu_au: string; fournisseurs: { raison_sociale_en: string } | null }>(
         supabase.from('due_diligences').select('id, reference, fournisseur_id, valide_jusqu_au, fournisseurs(raison_sociale_en)').eq('statut', 'validee').gte('valide_jusqu_au', auj).lte('valide_jusqu_au', dans60).limit(200)),
       lireCommandesFermetures().then((r) => { if (r.erreur) echecs += 1; return fermeturesEnAlerte(r.rows); }),
+      ROLES_FERMETURES.includes(role) ? lireCommandesSansDate().then((r) => { if (r.erreur) echecs += 1; return r.rows; }) : Promise.resolve([]),
     ]);
     const a: Alerte[] = [
       ...pb.filter((x) => !societeActive || x.dossiers?.societe_id === societeActive).map((x) => ({
@@ -72,10 +74,15 @@ export function Alertes() {
         titre: t('alertes.fe_titre', { ref: x.commande_reference, motif: x.motif }),
         detail: t('alertes.fe_detail', { f: x.fournisseur, n: x.jours_chevauches, d: date(x.livraison_promise, langue), dos: x.dossier_reference }),
         echeance: x.du, module: 'achats', reference: x.commande_reference, lien: `/commandes/${x.commande_id}` })),
+      // Commande sans date promise : critique une fois en production (le retard ne se mesure pas).
+      ...sd.map((x) => ({
+        id: `sd-${x.id}`, categorie: 'date_promise' as const, critique: x.statut === 'en_production',
+        titre: t('alertes.sd_titre', { ref: x.reference ?? '—' }), detail: [x.dossiers?.reference, t('alertes.sd_detail')].filter(Boolean).join(' · '),
+        echeance: x.contrat_signe_le, module: 'achats', reference: x.reference ?? '', lien: `/commandes/${x.id}` })),
     ];
     // Critiques d'abord, puis par échéance la plus ancienne.
     return { alertes: a.sort((x, y) => Number(y.critique) - Number(x.critique) || (x.echeance ?? '9').localeCompare(y.echeance ?? '9')), echecs };
-  }, [societeActive, langue]);
+  }, [societeActive, langue, role]);
   const [cat, setCat] = useState<Categorie | 'toutes'>('toutes');
   const [sel, setSel] = useState<string | null>(null);
   const tous = l.data?.alertes ?? [];

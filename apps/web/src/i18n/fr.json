@@ -15,6 +15,7 @@
  "alertes": {
   "a_traiter": "À traiter",
   "actions": {
+   "date_promise": "Reporter la date de livraison promise du contrat dans la fiche commande.",
    "due_diligence": "Lancer la revue de due diligence avant expiration.",
    "fermeture_usine": "Confirmer avec l'usine le planning de reprise et, si besoin, renégocier la date de livraison promise.",
    "fne": "Obtenir la certification FNE avant envoi au client.",
@@ -26,6 +27,7 @@
   "aucune": "Aucune alerte.",
   "aujourdhui": "Aujourd'hui",
   "categories": {
+   "date_promise": "Date promise manquante",
    "due_diligence": "Due diligence",
    "fermeture_usine": "Fermeture d'usine",
    "fne": "Facture à certifier",
@@ -54,6 +56,8 @@
   "pay_titre": "{{ref}} · {{nature}} préparé, à valider",
   "pb_titre": "Point bloquant escaladé · dossier {{ref}}",
   "reference": "Référence",
+  "sd_detail": "ni pénalité de retard ni alerte de fermeture d’usine ne peuvent être calculées",
+  "sd_titre": "{{ref}} · sans date de livraison promise",
   "sources_echec": "{{n}} source(s) n'ont pas pu être lues : la liste peut être incomplète. Réessayez.",
   "titre": "{{n}} alerte(s), dont {{c}} critique(s)",
   "toutes": "Toutes"

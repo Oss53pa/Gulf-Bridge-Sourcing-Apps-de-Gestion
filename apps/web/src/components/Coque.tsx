@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
-import { ROLES_FERMETURES, fermeturesEnAlerte, lireCommandesFermetures } from '../lib/fermetures';
+import { ROLES_FERMETURES, fermeturesEnAlerte, lireCommandesFermetures, lireCommandesSansDate } from '../lib/fermetures';
 import { ECRANS, MODULES, ecranCourant, type Ecran } from '../lib/droits';
 import { dateHeure, jourCourt, type Langue } from '../lib/format';
 import { Sommaire } from './Sommaire';
@@ -81,7 +81,8 @@ export function Coque({ children }: { children: ReactNode }) {
       if (!actif) return;
       if (!r.error && r.data) {
         const d = r.data as Record<string, number | null>;
-        const fe = ROLES_FERMETURES.includes(profil?.role ?? '') ? fermeturesEnAlerte((await lireCommandesFermetures()).rows).length : 0;
+        const achats = ROLES_FERMETURES.includes(profil?.role ?? '');
+        const fe = achats ? fermeturesEnAlerte((await lireCommandesFermetures()).rows).length + (await lireCommandesSansDate()).rows.length : 0;
         if (!actif) return;
         setAlertes((d.points_bloquants_escalades ?? 0) + (d.fne_en_attente ?? 0) + (d.factures_en_retard ?? 0)
           + (d.paiements_a_valider ?? 0) + (d.dd_expirant_60j ?? 0) + fe);

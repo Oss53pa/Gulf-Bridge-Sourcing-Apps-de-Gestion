@@ -22,3 +22,13 @@ export async function lireCommandesFermetures(): Promise<{ rows: CommandeTouchee
   if (r.error) return { rows: [], erreur: r.error.code !== '42501' };
   return { rows: (r.data ?? []) as CommandeTouchee[], erreur: false };
 }
+
+/** Commandes signées ou en production sans date de livraison promise : ni pénalité de retard ni alerte de
+ *  fermeture ne peuvent les suivre. Même définition pour le compteur de l'en-tête et l'écran Alertes. */
+export interface CommandeSansDate { id: string; reference: string | null; statut: string; contrat_signe_le: string | null; dossiers: { reference: string } | null }
+export async function lireCommandesSansDate(): Promise<{ rows: CommandeSansDate[]; erreur: boolean }> {
+  const r = await supabase.from('commandes').select('id, reference, statut, contrat_signe_le, dossiers(reference)')
+    .in('statut', ['contrat_signe', 'en_production']).is('date_livraison_promise', null).limit(200);
+  if (r.error) return { rows: [], erreur: r.error.code !== '42501' };
+  return { rows: (r.data ?? []) as unknown as CommandeSansDate[], erreur: false };
+}
