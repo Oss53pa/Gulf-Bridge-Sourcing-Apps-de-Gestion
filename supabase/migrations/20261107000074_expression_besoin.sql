@@ -204,6 +204,15 @@ begin
   perform gbs_private.exiger(gbs_private.is_admin(), 'GBS_VALIDATION_ADMIN');
   select * into q from gbs.questionnaires_besoin where id = p_questionnaire for update;
   if q.id is null or q.statut <> 'brouillon' then raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023'; end if;
+  -- Aucune clé partagée entre le tronc commun et une catégorie actives (sinon une réponse aurait deux définitions).
+  if exists (
+    select 1 from jsonb_array_elements(q.etapes) e, jsonb_array_elements(e -> 'champs') c
+     where c ->> 'cle' in (
+       select c2 ->> 'cle' from gbs.questionnaires_besoin o, jsonb_array_elements(o.etapes) e2, jsonb_array_elements(e2 -> 'champs') c2
+        where o.statut = 'actif' and o.categorie <> q.categorie
+          and (q.categorie = 'tronc_commun' or o.categorie = 'tronc_commun'))) then
+    raise exception 'GBS_CLES_EN_DOUBLE' using errcode = 'P0001';
+  end if;
   perform gbs_private.rpc('besoin');
   update gbs.questionnaires_besoin set statut = 'retire' where categorie = q.categorie and statut = 'actif';
   update gbs.questionnaires_besoin set statut = 'actif', active_le = now(), active_par = auth.uid() where id = q.id;

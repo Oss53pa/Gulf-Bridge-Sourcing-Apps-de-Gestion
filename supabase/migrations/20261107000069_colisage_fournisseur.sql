@@ -111,7 +111,7 @@ begin
   perform gbs_private.rpc('');
   return r;
 exception
-  when check_violation or not_null_violation or invalid_text_representation or numeric_value_out_of_range then
+  when check_violation or not_null_violation or invalid_text_representation or numeric_value_out_of_range or division_by_zero then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
 end $$;
 
@@ -120,6 +120,9 @@ create or replace function gbs.traiter_colisage(p_colisage uuid, p_valider boole
 language plpgsql security definer set search_path = '' as $$
 declare c gbs.colisages;
 begin
+  select * into c from gbs.colisages where id = p_colisage;
+  -- Même verrou que la déclaration (la commande), puis relecture : pas de course entre déclaration et validation.
+  perform 1 from gbs.commandes where id = c.commande_id for update;
   select * into c from gbs.colisages where id = p_colisage for update;
   perform gbs_private.exiger(c.id is not null and gbs_private.has_role('admin','achats_chine') and gbs_private.dossier_visible(c.dossier_id));
   if p_valider is null then raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023'; end if;

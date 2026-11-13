@@ -18,16 +18,30 @@ begin
   perform gbs_private.exiger(gbs_private.is_admin(), 'GBS_VALIDATION_ADMIN');
   select * into c from gbs.comptes_bancaires where id = p_compte for update;
   if c.id is null or p_oui is null or (p_oui and not c.actif) then raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023'; end if;
+  perform gbs_private.rpc('compte_encaissement');
   if p_oui then
     update gbs.comptes_bancaires set encaissement_clients = false where societe_id = c.societe_id and devise = c.devise and id <> c.id and encaissement_clients;
   end if;
   update gbs.comptes_bancaires set encaissement_clients = p_oui where id = c.id;
+  perform gbs_private.rpc('');
   perform gbs_private.journaliser('compte_encaissement_designe', 'comptes_bancaires', c.id::text, null,
     jsonb_build_object('encaissement_clients', c.encaissement_clients), jsonb_build_object('encaissement_clients', p_oui), null);
 end $$;
 
--- La désignation ne passe que par la fonction (aucun droit de mise à jour directe sur la colonne).
-revoke update (encaissement_clients) on gbs.comptes_bancaires from authenticated;
+-- La désignation ne passe que par la fonction : à la création comme en mise à jour, la colonne n'est posée
+-- que sous le drapeau de designer_compte_encaissement (journalisé).
+create or replace function gbs_private.trg_compte_encaissement() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if coalesce(current_setting('gbs.rpc', true), '') <> 'compte_encaissement'
+     and ((tg_op = 'INSERT' and new.encaissement_clients) or (tg_op = 'UPDATE' and new.encaissement_clients is distinct from old.encaissement_clients)) then
+    raise exception 'GBS_VALIDATION_RPC: le compte d''encaissement se désigne par designer_compte_encaissement()' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+create trigger comptes_bancaires_encaissement before insert or update on gbs.comptes_bancaires
+  for each row execute function gbs_private.trg_compte_encaissement();
+revoke all on function gbs_private.trg_compte_encaissement() from public, anon, authenticated;
 
 create table gbs.annonces_virements (
   id             uuid primary key default gen_random_uuid(),

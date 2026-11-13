@@ -4,7 +4,8 @@
 --   référence sont calculées en base selon des paramètres datés (10 % et 0,35 % par défaut, à confirmer
 --   avec l'assureur) ; la prime réelle de l'assureur peut être saisie à la place de la prime de référence.
 -- * Sinistre : déclaré par l'équipe qui gère l'expédition (nature, constat, montant réclamé, preuves au
---   dossier) ; une déclaration au-delà du délai paramétré après le constat est signalée « tardive ».
+--   dossier) ; constat pendant la couverture ; une déclaration au-delà du délai paramétré après le constat est
+--   signalée « tardive ». Indemnités plafonnées en cumul à la valeur assurée ; police figée après indemnité.
 --   Suite (administratrice, achats Chine) : transmission à l'expert, puis indemnité (plafonnée à la valeur
 --   assurée, convertie au cours du jour) ou refus motivé. Un sinistre clos ne se modifie plus.
 -- * Lecture : équipe interne qui voit le dossier.
@@ -113,6 +114,10 @@ begin
   if exists (select 1 from gbs.sinistres s where s.expedition_id = e.id and s.statut in ('declare','expertise')) then
     raise exception 'GBS_SINISTRE_EN_COURS' using errcode = 'P0001';
   end if;
+  -- Une police qui a donné lieu à indemnité ne se réécrit plus (historique du règlement).
+  if exists (select 1 from gbs.sinistres s where s.expedition_id = e.id and s.statut = 'indemnise') then
+    raise exception 'GBS_POLICE_FIGEE' using errcode = 'P0001';
+  end if;
   cif := (p ->> 'valeur_cif')::numeric; d1 := (p ->> 'du')::date; d2 := (p ->> 'au')::date;
   maj := gbs_private.param_num('assurance.majoration_valeur', d1);
   prime := case when jsonb_typeof(p -> 'prime') = 'number' then (p ->> 'prime')::numeric
@@ -154,7 +159,8 @@ begin
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
   end if;
   c := (p ->> 'constate_le')::date;
-  if c > current_date or c < po.du or c > po.au + gbs_private.param_num('assurance.delai_declaration_jours')::int then
+  -- Le dommage doit être constaté pendant la couverture ; le délai paramétré ne vaut que pour la déclaration (« tardif »).
+  if c > current_date or c < po.du or c > po.au then
     raise exception 'GBS_HORS_COUVERTURE' using errcode = 'P0001';
   end if;
   if (p ->> 'montant_reclame')::numeric > po.valeur_assuree then raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023'; end if;
@@ -193,7 +199,9 @@ begin
     update gbs.sinistres set statut = 'expertise', reference_assureur = trim(p ->> 'reference_assureur'), traite_par = auth.uid() where id = s.id;
   elsif p_action = 'indemniser' and s.statut = 'expertise' then
     if coalesce(jsonb_typeof(p -> 'indemnite'), '') <> 'number' or coalesce(jsonb_typeof(p -> 'indemnise_le'), '') <> 'string'
-       or (p ->> 'indemnite')::numeric < 0 or (p ->> 'indemnite')::numeric > po.valeur_assuree
+       or (p ->> 'indemnite')::numeric < 0
+       -- Plafond en cumul : toutes les indemnités de la police réunies ne dépassent pas la valeur assurée.
+       or (p ->> 'indemnite')::numeric + coalesce((select sum(x.indemnite) from gbs.sinistres x where x.police_id = po.id and x.statut = 'indemnise'), 0) > po.valeur_assuree
        or (p ->> 'indemnise_le')::date > current_date or (p ->> 'indemnise_le')::date < s.declare_le then
       raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
     end if;

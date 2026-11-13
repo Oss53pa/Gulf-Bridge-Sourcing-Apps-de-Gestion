@@ -52,6 +52,8 @@ create index on gbs.controles_sanctions (fournisseur_id, cree_le);
 create or replace function gbs_private.trg_beneficiaire_fournisseur() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
+  -- Sérialise avec l'enregistrement d'un contrôle (instantané des bénéficiaires cohérent).
+  perform 1 from gbs.fournisseurs where id = new.fournisseur_id for update;
   if tg_op = 'UPDATE' and new.fournisseur_id <> old.fournisseur_id then
     raise exception 'GBS_ACCES_REFUSE' using errcode = '42501';
   end if;
@@ -105,6 +107,7 @@ language plpgsql security definer set search_path = '' as $$
 declare r uuid; be jsonb; res text;
 begin
   perform gbs_private.exiger(gbs_private.has_role('admin','achats_chine'));
+  perform 1 from gbs.fournisseurs where id = p_fournisseur for update;
   if not exists (select 1 from gbs.fournisseurs where id = p_fournisseur) or jsonb_typeof(p) <> 'object'
      or exists (select 1 from jsonb_object_keys(p) k where k not in ('realise_le','listes','source','resultat','justification','preuve'))
      or coalesce(jsonb_typeof(p -> 'realise_le'), '') <> 'string' or coalesce(jsonb_typeof(p -> 'listes'), '') <> 'array'
@@ -174,6 +177,77 @@ begin
   return x;
 end $$;
 
+-- ----------------------------------------------------------------------------- correspondance confirmée
+-- Tant que le dernier contrôle valide confirme une correspondance, le fournisseur n'est ni consultable, ni
+-- commandable, ni agréable, et ne sort pas de la suspension : seul un nouveau contrôle (qui périme le
+-- précédent) peut lever le blocage.
+create or replace function gbs_private.sanction_confirmee(f uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from gbs.controles_sanctions c where c.fournisseur_id = f and c.statut = 'valide' and c.resultat = 'correspondance_confirmee')
+$$;
+
+create or replace function gbs_private.fournisseur_commandable(f uuid, d date default current_date)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from gbs.fournisseurs x
+    where x.id = f and x.archive_le is null
+      and x.statut_agrement not in ('suspendu','radie')
+      and not gbs_private.sanction_confirmee(x.id)
+      and (x.apporte_par_client or (
+            x.engagement_non_commission_le is not null
+        and exists (select 1 from gbs.due_diligences dd
+                    where dd.fournisseur_id = x.id and dd.statut = 'validee'
+                      and dd.valide_jusqu_au >= d))))
+$$;
+
+create or replace function gbs_private.fournisseur_consultable(f uuid, d date default current_date)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from gbs.fournisseurs x
+    where x.id = f and x.archive_le is null and not x.apporte_par_client
+      and x.statut_agrement in ('agree','sous_surveillance')
+      and not gbs_private.sanction_confirmee(x.id)
+      and x.engagement_non_commission_le is not null
+      and exists (select 1 from gbs.due_diligences dd
+                  where dd.fournisseur_id = x.id and dd.statut = 'validee'
+                    and dd.valide_jusqu_au >= d))
+$$;
+
+create or replace function gbs.agreer_fournisseur(p_fournisseur uuid)
+returns gbs.fournisseurs language plpgsql security definer set search_path = '' as $$
+declare f gbs.fournisseurs;
+begin
+  perform gbs_private.exiger(gbs_private.is_admin(), 'GBS_VALIDATION_ADMIN');
+  select * into f from gbs.fournisseurs where id = p_fournisseur for update;
+  if f.engagement_non_commission_le is null then
+    raise exception 'GBS_ENGAGEMENT_NON_COMMISSION: un fournisseur sans engagement de non-commission signé ne peut pas être agréé'
+      using errcode = 'P0001';
+  end if;
+  if gbs_private.sanction_confirmee(f.id) then raise exception 'GBS_SANCTION_CONFIRMEE' using errcode = 'P0001'; end if;
+  if not exists (select 1 from gbs.due_diligences dd where dd.fournisseur_id = f.id and dd.statut = 'validee'
+                 and dd.valide_jusqu_au >= current_date) then
+    raise exception 'GBS_DD_REQUISE: due diligence validée et en cours de validité exigée' using errcode = 'P0001';
+  end if;
+  perform gbs_private.rpc('agreer_fournisseur');
+  update gbs.fournisseurs set statut_agrement = 'agree', agree_le = current_date, agree_par = auth.uid()
+   where id = p_fournisseur returning * into f;
+  perform gbs_private.rpc('');
+  return f;
+end $$;
+
+-- Aucune sortie de la suspension par écriture directe tant que la correspondance est confirmée.
+create or replace function gbs_private.trg_fournisseur_sanction() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.statut_agrement is distinct from old.statut_agrement and new.statut_agrement not in ('suspendu','radie')
+     and gbs_private.sanction_confirmee(new.id) then
+    raise exception 'GBS_SANCTION_CONFIRMEE' using errcode = 'P0001';
+  end if;
+  return new;
+end $$;
+create trigger fournisseurs_sanction before update on gbs.fournisseurs for each row execute function gbs_private.trg_fournisseur_sanction();
+
+revoke all on function gbs_private.sanction_confirmee(uuid), gbs_private.trg_fournisseur_sanction() from public, anon, authenticated;
 revoke all on function gbs_private.trg_beneficiaire_fournisseur(), gbs_private.trg_controle_sanctions() from public, anon, authenticated;
 revoke all on function gbs.enregistrer_controle_sanctions(uuid, jsonb) from public, anon;
 grant execute on function gbs.enregistrer_controle_sanctions(uuid, jsonb) to authenticated;

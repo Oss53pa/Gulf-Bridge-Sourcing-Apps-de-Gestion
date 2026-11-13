@@ -58,8 +58,12 @@ begin
       raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
     end if;
   end loop;
+  if exists (select 1 from jsonb_array_elements(p -> 'points') v where jsonb_typeof(v) <> 'string') then
+    raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
+  end if;
   select array_agg(trim(v)) into libs from jsonb_array_elements_text(p -> 'points') v;
-  if exists (select 1 from unnest(coalesce(libs, '{}')) l where length(l) not between 3 and 160) then
+  if exists (select 1 from unnest(coalesce(libs, '{}')) l where length(l) not between 3 and 160)
+     or (select count(distinct lower(l)) from unnest(coalesce(libs, '{}')) l) <> coalesce(cardinality(libs), 0) then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
   end if;
   select * into r from gbs.receptions_site where expedition_id = e.id for update;

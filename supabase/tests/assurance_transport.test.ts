@@ -74,8 +74,8 @@ describe('Assurance transport et sinistres', () => {
     await db.query(`select gbs.traiter_sinistre($1, 'indemniser', $2)`, [s, { indemnite: 2500, indemnise_le: jj(0) }]);
     await expectError(db, 'GBS_DEMANDE_TRAITEE', `select gbs.traiter_sinistre($1, 'refuser', '{"motif":"Exclusion de garantie"}')`, [s]);
     expect(await one(db, `select statut, indemnite from gbs.sinistres where id = $1`, [s])).toEqual({ statut: 'indemnise', indemnite: '2500.00' });
-    // Le sinistre clos libère la police.
-    await police(db, e, { ...POLICE, numero: 'POL-MAR-2026-0411' });
+    // Une police indemnisée est figée (historique du règlement).
+    await expectError(db, 'GBS_POLICE_FIGEE', `select gbs.enregistrer_police($1, $2)`, [e, { ...POLICE, numero: 'POL-MAR-2026-0411' }]);
   }));
 
   it('droits : écriture directe interdite ; lecture selon le dossier ; comptable et agent d’un autre pays exclus', () => withTx(async (db) => {
