@@ -5,6 +5,8 @@
 --   le chemin pointerait ailleurs n'ouvre plus rien).
 -- * Photos de production : plafond total par commande (paramètre daté) et limitation de débit par compte.
 -- * Demande de compte fournisseur : une valeur trop longue répond « paramètres invalides », pas une erreur brute.
+-- * Relecture des points d'entrée publics : le lien fournisseur ne sert plus pour un fournisseur bloqué (lecture
+--   comme dépôt) ; les mises à jour d'une expédition par le lien transitaire comptent dans le plafond horaire.
 
 insert into gbs.parametres_definitions (cle, type, minimum, maximum, validateur, module, libelle) values
   ('production.photos_max_commande', 'entier', 12, 2000, null, 'achats', 'Photos de production au plus par commande');
@@ -220,6 +222,85 @@ begin
 exception
   when check_violation or not_null_violation or invalid_text_representation or string_data_right_truncation then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
+end $function$;
+
+create or replace function gbs_private.lien_fournisseur(p_jeton text, p_compter boolean)
+ RETURNS gbs.liens_fournisseurs
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare l gbs.liens_fournisseurs; max_h int;
+begin
+  if p_jeton is null or p_jeton !~ '^[A-Za-z0-9_-]{43}$' then raise exception 'GBS_LIEN_INVALIDE' using errcode = 'P0001'; end if;
+  select * into l from gbs.liens_fournisseurs where empreinte = gbs_private.empreinte_jeton(p_jeton) for update;
+  -- Fournisseur suspendu, radié ou sous correspondance confirmée : le lien ne sert plus (lecture comme dépôt).
+  if l.id is null or l.revoque_le is not null or l.expire_le <= now() or gbs_private.fournisseur_bloque(l.fournisseur_id) then
+    raise exception 'GBS_LIEN_INVALIDE' using errcode = 'P0001';
+  end if;
+  if p_compter then
+    max_h := gbs_private.param_num('fournisseur.consultations_max_heure')::int;
+    perform set_config('gbs.rpc', 'plis', true);
+    if l.fenetre_debut is null or l.fenetre_debut < now() - interval '1 hour' then
+      update gbs.liens_fournisseurs set fenetre_debut = now(), fenetre_n = 1, consultations = consultations + 1, derniere_consultation = now()
+       where id = l.id returning * into l;
+    elsif l.fenetre_n >= max_h then
+      perform set_config('gbs.rpc', '', true);
+      raise exception 'GBS_TROP_DE_CONSULTATIONS' using errcode = 'P0001';
+    else
+      update gbs.liens_fournisseurs set fenetre_n = fenetre_n + 1, consultations = consultations + 1, derniere_consultation = now()
+       where id = l.id returning * into l;
+    end if;
+    perform set_config('gbs.rpc', '', true);
+  end if;
+  return l;
+end $function$;
+
+create or replace function gbs.maj_expedition_transitaire(p_jeton text, p_champs jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare l gbs.liens_transitaires; k text; c text;
+begin
+  -- Chaque mise à jour compte dans le plafond horaire du lien (comme une consultation).
+  l := gbs_private.lien_transitaire(p_jeton, true);
+  if jsonb_typeof(p_champs) <> 'object' or exists (select 1 from jsonb_object_keys(p_champs) x
+       where x not in ('navire','etd','eta','numero_connaissement','date_mainlevee','conteneurs','plombs')) then
+    raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
+  end if;
+  for k in select jsonb_object_keys(p_champs) loop
+    if k in ('conteneurs','plombs') then
+      if jsonb_typeof(p_champs -> k) <> 'array' or jsonb_array_length(p_champs -> k) > 50 then
+        raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
+      end if;
+      for c in select jsonb_array_elements_text(p_champs -> k) loop
+        if (k = 'conteneurs' and c !~ '^[A-Z]{4}[0-9]{7}$') or (k = 'plombs' and c !~ '^[A-Za-z0-9-]{3,30}$') then
+          raise exception 'GBS_PARAMETRES_INVALIDES: %', k using errcode = '22023';
+        end if;
+      end loop;
+    elsif k in ('etd','eta','date_mainlevee') then
+      if jsonb_typeof(p_champs -> k) <> 'string' or (p_champs ->> k) !~ '^\d{4}-\d{2}-\d{2}$'
+         or (p_champs ->> k)::date not between current_date - 365 and current_date + 365 then
+        raise exception 'GBS_PARAMETRES_INVALIDES: %', k using errcode = '22023';
+      end if;
+    elsif jsonb_typeof(p_champs -> k) <> 'string' or length(trim(p_champs ->> k)) not between 2 and (case k when 'navire' then 120 else 60 end) then
+      raise exception 'GBS_PARAMETRES_INVALIDES: %', k using errcode = '22023';
+    end if;
+  end loop;
+  update gbs.expeditions set
+    navire = case when p_champs ? 'navire' then trim(p_champs ->> 'navire') else navire end,
+    etd = case when p_champs ? 'etd' then (p_champs ->> 'etd')::date else etd end,
+    eta = case when p_champs ? 'eta' then (p_champs ->> 'eta')::date else eta end,
+    numero_connaissement = case when p_champs ? 'numero_connaissement' then trim(p_champs ->> 'numero_connaissement') else numero_connaissement end,
+    date_mainlevee = case when p_champs ? 'date_mainlevee' then (p_champs ->> 'date_mainlevee')::date else date_mainlevee end,
+    conteneurs = case when p_champs ? 'conteneurs' then array(select jsonb_array_elements_text(p_champs -> 'conteneurs')) else conteneurs end,
+    plombs = case when p_champs ? 'plombs' then array(select jsonb_array_elements_text(p_champs -> 'plombs')) else plombs end
+   where id = l.expedition_id;
+  perform gbs_private.journaliser('maj_transitaire', 'expeditions', l.expedition_id::text,
+    (select dossier_id from gbs.expeditions where id = l.expedition_id), null, p_champs, null);
+  return jsonb_build_object('ok', true);
 end $function$;
 
 revoke all on function gbs_private.fournisseur_bloque(uuid), gbs_private.limiter_compte(uuid, text) from public, anon, authenticated;

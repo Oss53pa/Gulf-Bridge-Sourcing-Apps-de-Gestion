@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detecter, retirerMetadonnees, UUID } from '../functions/_shared/fichiers';
+import { detecter, longueurCorps, retirerMetadonnees, UUID } from '../functions/_shared/fichiers';
 
 const o = (...b: number[]) => new Uint8Array(b);
 
@@ -74,5 +74,17 @@ describe('fonction serveur de dépôt : métadonnées des images retirées', () 
     expect(retirerMetadonnees(o(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 99, 0x49, 0x48), 'png')).toBeNull();
     const pdf = o(0x25, 0x50, 0x44, 0x46, 0x2d, 0x31);
     expect(retirerMetadonnees(pdf, 'pdf')).toBe(pdf);
+  });
+});
+
+describe('fonctions serveur publiques : taille annoncée du corps', () => {
+  it('absente refusée (envoi par morceaux), illisible ou trop grande refusée, sinon acceptée', () => {
+    expect(longueurCorps(null, 1024)).toBe('absente');
+    expect(longueurCorps('', 1024)).toBe('absente');
+    expect(longueurCorps('abc', 1024)).toBe('trop');
+    expect(longueurCorps('-1', 1024)).toBe('trop');
+    expect(longueurCorps('1025', 1024)).toBe('trop');
+    expect(longueurCorps('1024', 1024)).toBe('ok');
+    expect(longueurCorps('0', 1024)).toBe('ok');
   });
 });

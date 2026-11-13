@@ -88,4 +88,28 @@ describe('Revue des portails (58 à 68)', () => {
     await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.demander_compte_fournisseur($1)`, [{ type: 'banque', titulaire: 'Foshan Ceramics Co. Ltd', devise: 'USDX',
       banque: 'Bank of China', numero: '6217000000009999', motif: 'Changement de banque principal' }]);
   }));
+
+  it('liens publics : fournisseur bloqué sans lecture ni dépôt par lien ; mises à jour du transitaire plafonnées', () => withTx(async (db) => {
+    const m = await monde(db);
+    const d = await dossier(db, m);
+    await as(db, m.achats);
+    const rfq = (await one(db, `insert into gbs.consultations_fournisseurs (dossier_id, objet, quantite, date_limite)
+      values ($1, 'Chambre froide', 1, now() + interval '1 hour') returning id`, [d])).id;
+    await db.query(`insert into gbs.consultation_invites (consultation_id, fournisseur_id) values ($1, $2)`, [rfq, m.fournisseur]);
+    const lf = (await one(db, `select gbs.creer_lien_fournisseur($1, $2) l`, [rfq, m.fournisseur])).l as { jeton: string };
+    const e = (await one(db, `insert into gbs.expeditions (dossier_id, mode, pays_destination, port_arrivee) values ($1, 'conteneur_complet', 'CI', 'Abidjan') returning id`, [d])).id;
+    const lt = (await one(db, `select gbs.creer_lien_transitaire($1, 'Transitaire') l`, [e])).l as { jeton: string };
+    await as(db, m.admin);
+    await db.query(`insert into gbs.parametres (cle, valeur, date_effet, commentaire) values ('fournisseur.consultations_max_heure', '3', current_date, 'Essai')`);
+    await service(db);
+    await db.query(`select gbs.formulaire_fournisseur($1)`, [lf.jeton]);
+    for (let i = 0; i < 3; i++) await db.query(`select gbs.maj_expedition_transitaire($1, $2)`, [lt.jeton, JSON.stringify({ eta: '2027-01-0' + (i + 1) })]);
+    await expectError(db, 'GBS_TROP_DE_CONSULTATIONS', `select gbs.maj_expedition_transitaire($1, $2)`, [lt.jeton, JSON.stringify({ eta: '2027-06-01' })]);
+    await as(db, m.achats);
+    await db.query(`select gbs.enregistrer_controle_sanctions($1, $2)`, [m.fournisseur, { listes: ['ofac'], source: 'OFAC', realise_le: new Date().toISOString().slice(0, 10),
+      resultat: 'correspondance_confirmee', justification: 'Actionnaire inscrit sur la liste OFAC' }]);
+    await service(db);
+    await expectError(db, 'GBS_LIEN_INVALIDE', `select gbs.formulaire_fournisseur($1)`, [lf.jeton]);
+    await expectError(db, 'GBS_LIEN_INVALIDE', `select gbs.deposer_pli($1, $2, $3, $4, true)`, [lf.jeton, CHIFFRE, IV, sha('b')]);
+  }));
 });

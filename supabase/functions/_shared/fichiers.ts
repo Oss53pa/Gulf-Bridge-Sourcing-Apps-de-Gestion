@@ -106,3 +106,11 @@ function webpSansMeta(b: Uint8Array): Uint8Array | null {
   r.set(corps, 12);
   return r;
 }
+
+// Taille annoncée d'un corps de requête : sans en-tête Content-Length (envoi par morceaux), le corps serait lu en
+// entier avant tout contrôle ; on le refuse. « absente » → 411, « trop » (ou valeur illisible) → 413.
+export function longueurCorps(entete: string | null, max: number): 'ok' | 'absente' | 'trop' {
+  if (entete === null || entete === '') return 'absente';
+  if (!/^\d{1,12}$/.test(entete)) return 'trop';
+  return Number(entete) > max ? 'trop' : 'ok';
+}
