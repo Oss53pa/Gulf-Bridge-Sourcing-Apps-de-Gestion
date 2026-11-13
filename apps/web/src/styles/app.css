@@ -921,3 +921,8 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .besoin-champ > button.lien, .besoin-question > .btn, .besoin-question > button { align-self: flex-start; }
 .besoin-champ > button.lien { color: var(--action, var(--ink)); text-decoration: underline; font-size: 13px; }
 .besoin-param-actions { margin: 12px 0 0; }
+
+/* Assurance et sinistres (ASS) */
+.sin-etapes { list-style: none; display: flex; gap: 6px; padding: 0; margin: 0 0 6px; flex-wrap: wrap; }
+.sin-etapes li { flex: 1; min-width: 90px; padding-top: 6px; border-top: 3px solid var(--border); color: var(--mute); font-size: 13px; }
+.sin-etapes li.fait { border-top-color: var(--nuit); color: var(--ink); }
