@@ -9,6 +9,36 @@
 --   100 m3 par caisse ; sinon la déclaration est refusée à la saisie (erreur de frappe probable).
 -- * Le document « Liste de colisage » du dossier reste la pièce qui fait foi pour la douane.
 
+-- Limitation de débit des écritures des comptes externes (client, fournisseur) : compteur horaire par compte
+-- et par action, seuil en paramètre daté. Sert aux fonctions des portails des migrations suivantes.
+insert into gbs.parametres_definitions (cle, type, minimum, maximum, validateur, module, libelle) values
+  ('portail.max_ecritures_heure', 'entier', 1, 10000, null, 'administration', 'Écritures au plus par compte externe, par action et par heure');
+insert into gbs.parametres (cle, valeur, date_effet, commentaire) values
+  ('portail.max_ecritures_heure', '60', date '2026-01-01', 'Limite anti-abus des portails client et fournisseur');
+
+create table gbs.limites_debit (
+  profil_id uuid not null references gbs.profils(id),
+  action    text not null check (action ~ '^[a-z_]{2,40}$'),
+  heure     timestamptz not null,
+  nombre    int not null default 1,
+  primary key (profil_id, action, heure)
+);
+alter table gbs.limites_debit enable row level security;   -- aucune règle : lecture et écriture par la fonction seule
+
+create or replace function gbs_private.limiter(p_action text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare n int; h timestamptz := date_trunc('hour', now());
+begin
+  if gbs_private.role() not in ('client','fournisseur') or auth.uid() is null then return; end if;
+  delete from gbs.limites_debit where heure < now() - interval '2 days' and profil_id = auth.uid();
+  insert into gbs.limites_debit (profil_id, action, heure) values (auth.uid(), p_action, h)
+  on conflict (profil_id, action, heure) do update set nombre = gbs.limites_debit.nombre + 1 returning nombre into n;
+  if n > gbs_private.param_num('portail.max_ecritures_heure')::int then
+    raise exception 'GBS_TROP_DE_DEMANDES' using errcode = 'P0001';
+  end if;
+end $$;
+revoke all on function gbs_private.limiter(text) from public, anon, authenticated;
+
 create table gbs.colisages (
   id            uuid primary key default gen_random_uuid(),
   commande_id   uuid not null references gbs.commandes(id),
@@ -61,6 +91,7 @@ begin
   select * into k from gbs.commandes where id = p_commande for update;
   perform gbs_private.exiger(f is not null and k.id is not null and k.fournisseur_id = f
     and k.statut in ('en_production','production_terminee'));
+  perform gbs_private.limiter('colisage');
   if jsonb_typeof(p) <> 'object'
      or exists (select 1 from jsonb_object_keys(p) x where x not in ('caisses','poids_brut_kg','volume_m3','remarque'))
      or coalesce(jsonb_typeof(p -> 'caisses'), '') <> 'number' or coalesce(jsonb_typeof(p -> 'poids_brut_kg'), '') <> 'number'

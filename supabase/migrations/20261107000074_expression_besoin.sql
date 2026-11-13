@@ -345,6 +345,7 @@ declare b gbs.besoins; champs jsonb; k text; c jsonb; nouvelles jsonb;
 begin
   select * into b from gbs.besoins where id = p_besoin for update;
   perform gbs_private.exiger(gbs_private.besoin_redigeable(b));
+  perform gbs_private.limiter('besoin');
   if b.statut = 'valide' then raise exception 'GBS_BESOIN_VALIDE' using errcode = 'P0001'; end if;
   if jsonb_typeof(p_reponses) <> 'object' or (select count(*) from jsonb_object_keys(p_reponses)) not between 1 and 200 then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
@@ -383,6 +384,7 @@ declare b gbs.besoins; e jsonb;
 begin
   select * into b from gbs.besoins where id = p_besoin for update;
   perform gbs_private.exiger(gbs_private.besoin_redigeable(b));
+  perform gbs_private.limiter('besoin');
   if b.statut <> 'brouillon' then raise exception 'GBS_DEMANDE_TRAITEE' using errcode = 'P0001'; end if;
   e := gbs_private.etat_besoin(b);
   if jsonb_array_length(e -> 'critiques_manquants') > 0 then raise exception 'GBS_BESOIN_INCOMPLET' using errcode = 'P0001'; end if;
@@ -421,6 +423,7 @@ begin
   select * into q from gbs.besoins_questions where id = p_question for update;
   select * into b from gbs.besoins where id = q.besoin_id;
   perform gbs_private.exiger(q.id is not null and gbs_private.besoin_redigeable(b));
+  perform gbs_private.limiter('besoin');
   if q.reponse is not null then raise exception 'GBS_DEMANDE_TRAITEE' using errcode = 'P0001'; end if;
   if p_reponse is null or length(trim(p_reponse)) not between 1 and 2000 then raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023'; end if;
   perform gbs_private.rpc('besoin');

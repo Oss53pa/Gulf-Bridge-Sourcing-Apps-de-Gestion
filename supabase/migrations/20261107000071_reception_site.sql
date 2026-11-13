@@ -101,6 +101,7 @@ create or replace function gbs.choisir_creneau(p_expedition uuid, p_indice int) 
 language plpgsql security definer set search_path = '' as $$
 declare r gbs.receptions_site := gbs_private.reception_du_client(p_expedition);
 begin
+  perform gbs_private.limiter('reception_site');
   if p_indice is null or p_indice < 0 or p_indice >= jsonb_array_length(r.creneaux)
      or ((r.creneaux -> p_indice) ->> 'date')::date < current_date then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
@@ -114,6 +115,7 @@ create or replace function gbs.cocher_point_reception(p_expedition uuid, p_indic
 language plpgsql security definer set search_path = '' as $$
 declare r gbs.receptions_site := gbs_private.reception_du_client(p_expedition);
 begin
+  perform gbs_private.limiter('reception_site');
   if p_indice is null or p_pret is null or p_indice < 0 or p_indice >= jsonb_array_length(r.points) then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
   end if;
@@ -126,6 +128,7 @@ create or replace function gbs.confirmer_reception_site(p_expedition uuid) retur
 language plpgsql security definer set search_path = '' as $$
 declare r gbs.receptions_site := gbs_private.reception_du_client(p_expedition);
 begin
+  perform gbs_private.limiter('reception_site');
   if r.creneau_choisi is null or exists (select 1 from jsonb_array_elements(r.points) o where not (o ->> 'pret')::boolean) then
     raise exception 'GBS_RECEPTION_INCOMPLETE' using errcode = 'P0001';
   end if;
