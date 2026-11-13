@@ -1,4 +1,5 @@
 // Assurance transport et sinistres (migration 79).
+import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { as, closePool, dossier, expectError, monde, one, rows, withTx, type Db, type Monde } from './helpers';
 
@@ -16,7 +17,10 @@ async function preparer(db: Db) {
 }
 const police = (db: Db, e: string, p: unknown) => one(db, `select gbs.enregistrer_police($1, $2) id`, [e, p]).then((x) => x.id as string);
 const sinistre = (db: Db, e: string, p: unknown) => one(db, `select gbs.declarer_sinistre($1, $2) id`, [e, p]).then((x) => x.id as string);
-const SIN = { nature: 'avarie', description: 'Porte du module 7 rayée au déchargement', constate_le: jj(-1), montant_reclame: 3000, preuves: ['dossiers/x/constat.pdf'] };
+const SIN = { nature: 'avarie', description: 'Porte du module 7 rayée au déchargement', constate_le: jj(-1), montant_reclame: 3000 };
+const AUTRE_DOSSIER = '11111111-1111-4111-8111-111111111111';
+const fichier = (d: string, ext = 'pdf') => `${d}/${randomUUID()}.${ext}`;
+
 
 describe('Assurance transport et sinistres', () => {
   it('valeur assurée et prime de référence calculées selon les paramètres ; prime réelle possible', () => withTx(async (db) => {
@@ -28,7 +32,7 @@ describe('Assurance transport et sinistres', () => {
     await police(db, e, { ...POLICE, prime: 420 });
     expect(await one(db, `select prime, prime_reelle from gbs.polices_assurance where expedition_id = $1`, [e])).toEqual({ prime: '420.00', prime_reelle: true });
     for (const p of [{ ...POLICE, garantie: 'tous_risques' }, { ...POLICE, valeur_cif: 0 }, { ...POLICE, au: jj(-40) }, { ...POLICE, x: 1 },
-      { ...POLICE, numero: '<b>' }, { ...POLICE, attestation: '../secret.pdf' }, { ...POLICE, du: 'hier' }]) {
+      { ...POLICE, numero: '<b>' }, { ...POLICE, attestation: '../secret.pdf' }, { ...POLICE, attestation: fichier(AUTRE_DOSSIER) }, { ...POLICE, du: 'hier' }]) {
       await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.enregistrer_police($1, $2)`, [e, p]);
     }
   }));
@@ -43,7 +47,11 @@ describe('Assurance transport et sinistres', () => {
     await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.declarer_sinistre($1, $2)`, [e, { ...SIN, montant_reclame: 200000 }]);
     await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.declarer_sinistre($1, $2)`, [e, { ...SIN, nature: 'casse' }]);
     await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.declarer_sinistre($1, $2)`, [e, { ...SIN, preuves: ['../x.pdf'] }]);
-    const s1 = await sinistre(db, e, SIN);
+    // Preuves : seulement des fichiers déposés dans le dossier de l'expédition (nom régénéré).
+    await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.declarer_sinistre($1, $2)`, [e, { ...SIN, preuves: [fichier(AUTRE_DOSSIER)] }]);
+    await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.declarer_sinistre($1, $2)`, [e, { ...SIN, preuves: ['dossiers/x/constat.pdf'] }]);
+    const dE = (await one(db, `select dossier_id from gbs.expeditions where id = $1`, [e])).dossier_id;
+    const s1 = await sinistre(db, e, { ...SIN, preuves: [fichier(dE, 'jpg')] });
     const s2 = await sinistre(db, e, { ...SIN, constate_le: jj(-10) });
     expect(await rows(db, `select reference like 'SIN-%-01' r1, tardif, devise from gbs.sinistres where id in ($1, $2) order by reference`, [s1, s2]))
       .toEqual([{ r1: true, tardif: false, devise: 'USD' }, { r1: false, tardif: true, devise: 'USD' }]);

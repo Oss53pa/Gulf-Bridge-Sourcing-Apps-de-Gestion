@@ -1,4 +1,5 @@
 // Entrepôt de consolidation (migration 80) : réceptions, réserves, liste de colisage, empotage.
+import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { as, asRoot, closePool, commande, dossier, expectError, monde, one, rows, withTx, type Db } from './helpers';
 
@@ -66,10 +67,11 @@ describe('Entrepôt de consolidation', () => {
     for (const p of [{ ...base, photos: [] }, { ...base, numero_conteneur: 'MSKU48', photos: ['d/x.jpg'] }, { ...base, photos: ['../x.jpg'] }]) {
       await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.confirmer_empotage($1, $2)`, [c2, p]);
     }
-    await db.query(`select gbs.confirmer_empotage($1, $2)`, [c2, { ...base, photos: ['dossiers/x/empotage-1.jpg'] }]);
+    const d2 = (await one(db, `select dossier_id from gbs.consolidations where id = $1`, [c2])).dossier_id;
+    await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.confirmer_empotage($1, $2)`, [c2, { ...base, photos: ['dossiers/x/empotage-1.jpg'] }]);
+    await db.query(`select gbs.confirmer_empotage($1, $2)`, [c2, { ...base, photos: [`${d2}/${randomUUID()}.jpg`] }]);
     expect((await one(db, `select statut from gbs.consolidations where id = $1`, [c2])).statut).toBe('empote');
     // Rattachement à l'expédition du dossier : conteneur, plomb et lieu de remise reportés une seule fois.
-    const d2 = (await one(db, `select dossier_id from gbs.consolidations where id = $1`, [c2])).dossier_id;
     const e = (await one(db, `insert into gbs.expeditions (dossier_id, mode, pays_destination, port_arrivee, conteneurs) values ($1, 'conteneur_complet', 'CI', 'Abidjan', '{MSKU4821930}') returning id`, [d2])).id;
     await expectError(db, 'GBS_EMPOTAGE_NON_CONFIRME', `select gbs.rattacher_expedition($1, $2)`, [c, e]);
     await db.query(`select gbs.rattacher_expedition($1, $2)`, [c2, e]);

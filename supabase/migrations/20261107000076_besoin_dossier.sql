@@ -79,6 +79,7 @@ begin
     raise exception 'GBS_QUESTIONS_OUVERTES' using errcode = 'P0001';
   end if;
   if p_document is null or p_document !~ '^[A-Za-z0-9/_.-]+$' or length(p_document) not between 3 and 400 or p_document ~ '\.\.' or p_signe_le is null
+     or not gbs_private.photos_valides(b.dossier_id, array[p_document])
      or p_signe_le > current_date or p_signe_le < b.soumis_le::date then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
   end if;

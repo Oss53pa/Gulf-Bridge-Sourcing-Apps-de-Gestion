@@ -1,5 +1,6 @@
 // Guide d'expression du besoin (migration 74) : référentiel versionné, réponses validées en base,
 // complétude et champs critiques, cohérence avec le réseau électrique du pays, versions, questions, validation.
+import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { as, closePool, dossier, expectError, monde, one, rows, withTx, type Db } from './helpers';
 
@@ -66,7 +67,8 @@ describe('Guide d’expression du besoin', () => {
   }));
 
   it('questions par champ, puis validation sur cahier des charges signé : le besoin est figé', () => withTx(async (db) => {
-    const { m, b } = await preparer(db);
+    const { m, d, b } = await preparer(db);
+    const doc = `${d}/${randomUUID()}.pdf`;
     await enregistrer(db, b, { ...COMPLET, tension: '230 V' });
     await db.query(`select gbs.soumettre_besoin($1)`, [b]);
     await as(db, m.achats);
@@ -74,12 +76,15 @@ describe('Guide d’expression du besoin', () => {
     await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.poser_question_besoin($1, 'inconnu', 'Question ?')`, [b]);
     await expectError(db, 'GBS_ACCES_REFUSE', `select gbs.repondre_question_besoin($1, 'Oui')`, [q]);
     await as(db, m.hub);
-    await expectError(db, 'GBS_QUESTIONS_OUVERTES', `select gbs.valider_besoin($1, 'besoins/cdc-signe.pdf', current_date)`, [b]);
+    await expectError(db, 'GBS_QUESTIONS_OUVERTES', `select gbs.valider_besoin($1, $2, current_date)`, [b, doc]);
     await db.query(`select gbs.repondre_question_besoin($1, 'Oui, 60 kVA')`, [q]);
     await expectError(db, 'GBS_DEMANDE_TRAITEE', `select gbs.repondre_question_besoin($1, 'Encore')`, [q]);
     await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.valider_besoin($1, '../x.pdf', current_date)`, [b]);
-    await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.valider_besoin($1, 'besoins/c.pdf', current_date + 1)`, [b]);
-    await db.query(`select gbs.valider_besoin($1, 'besoins/cdc-signe.pdf', current_date)`, [b]);
+    await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.valider_besoin($1, $2, current_date + 1)`, [b, doc]);
+    // Document hors du dossier (autre dossier ou nom non régénéré) : refusé.
+    await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.valider_besoin($1, $2, current_date)`, [b, `11111111-1111-4111-8111-111111111111/${randomUUID()}.pdf`]);
+    await expectError(db, 'GBS_PARAMETRES_INVALIDES', `select gbs.valider_besoin($1, $2, current_date)`, [b, `${d}/cdc-signe.pdf`]);
+    await db.query(`select gbs.valider_besoin($1, $2, current_date)`, [b, doc]);
     await expectError(db, 'GBS_BESOIN_VALIDE', `select gbs.enregistrer_besoin($1, '{"garantie":"12 mois"}')`, [b]);
     await expectError(db, 'GBS_BESOIN_VALIDE', `select gbs.poser_question_besoin($1, 'tension', 'Encore une ?')`, [b]);
     await as(db, m.admin);

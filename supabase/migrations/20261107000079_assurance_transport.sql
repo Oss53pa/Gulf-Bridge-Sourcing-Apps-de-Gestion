@@ -107,6 +107,9 @@ begin
      or (p ? 'attestation' and jsonb_typeof(p -> 'attestation') not in ('string','null')) then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
   end if;
+  if nullif(p ->> 'attestation', '') is not null and not gbs_private.photos_valides(e.dossier_id, array[p ->> 'attestation']) then
+    raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
+  end if;
   if exists (select 1 from gbs.sinistres s where s.expedition_id = e.id and s.statut in ('declare','expertise')) then
     raise exception 'GBS_SINISTRE_EN_COURS' using errcode = 'P0001';
   end if;
@@ -145,6 +148,9 @@ begin
      or (p ? 'preuves' and (jsonb_typeof(p -> 'preuves') <> 'array'
          or exists (select 1 from jsonb_array_elements(p -> 'preuves') x where jsonb_typeof(x) <> 'string'
                      or (x #>> '{}') !~ '^[A-Za-z0-9/_.-]+$' or length(x #>> '{}') > 400 or (x #>> '{}') ~ '\.\.'))) then
+    raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
+  end if;
+  if not gbs_private.photos_valides(e.dossier_id, coalesce((select array_agg(x) from jsonb_array_elements_text(p -> 'preuves') x), '{}')) then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
   end if;
   c := (p ->> 'constate_le')::date;

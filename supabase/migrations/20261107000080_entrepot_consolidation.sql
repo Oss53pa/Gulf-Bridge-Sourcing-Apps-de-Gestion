@@ -133,7 +133,8 @@ begin
      or (p ? 'emplacement' and jsonb_typeof(p -> 'emplacement') not in ('string','null'))
      or (p ? 'reserve' and jsonb_typeof(p -> 'reserve') not in ('string','null'))
      or (p ? 'photos' and not gbs_private.chemins_valides(p -> 'photos', 30))
-     or (p ->> 'recue_le')::date > current_date then
+     or (p ->> 'recue_le')::date > current_date
+     or not gbs_private.photos_valides(c.dossier_id, coalesce((select array_agg(x) from jsonb_array_elements_text(p -> 'photos') x), '{}')) then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
   end if;
   -- Commande du dossier : elle fixe le fournisseur et, par défaut, les colis attendus (liste de colisage validée).
@@ -250,7 +251,8 @@ begin
   if c.statut <> 'empotage_planifie' then raise exception 'GBS_EMPOTAGE_NON_PLANIFIE' using errcode = 'P0001'; end if;
   if jsonb_typeof(p) <> 'object' or exists (select 1 from jsonb_object_keys(p) x where x not in ('numero_conteneur','numero_plomb','photos'))
      or coalesce(jsonb_typeof(p -> 'numero_conteneur'), '') <> 'string' or coalesce(jsonb_typeof(p -> 'numero_plomb'), '') <> 'string'
-     or not gbs_private.chemins_valides(coalesce(p -> 'photos', 'null'::jsonb), 30) or jsonb_array_length(p -> 'photos') = 0 then
+     or not gbs_private.chemins_valides(coalesce(p -> 'photos', 'null'::jsonb), 30) or jsonb_array_length(p -> 'photos') = 0
+     or not gbs_private.photos_valides(c.dossier_id, (select array_agg(x) from jsonb_array_elements_text(p -> 'photos') x)) then
     raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
   end if;
   perform gbs_private.rpc('entrepot');
