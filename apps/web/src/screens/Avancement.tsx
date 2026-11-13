@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
+import { messageErreur } from '../lib/erreurs';
 import { supabase } from '../lib/supabase';
 import { ok, useAction, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
@@ -80,8 +81,8 @@ export function DeclarerAvancement({ commandeId, reference, actuel, onClose, onF
       setEtat(t('depot.envoi'));
       try { await deposerPhotoProduction(commandeId, x); setEnvoyees((n) => n + 1); setEtat(null); }
       catch (err) {
-        const code = err instanceof FichierRefuse ? (err.message === 'type' ? 'GBS_FICHIER_TYPE' : 'GBS_FICHIER_TAILLE') : String((err as Error).message ?? '');
-        setEtat(t(`erreurs.${code}`, { defaultValue: t('erreurs.generique') })); break;
+        const msg = err instanceof FichierRefuse ? t(err.message === 'type' ? 'erreurs.GBS_FICHIER_TYPE' : 'erreurs.GBS_FICHIER_TAILLE') : messageErreur(err);
+        setEtat(msg); break;
       }
     }
   };

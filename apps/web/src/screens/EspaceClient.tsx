@@ -3,6 +3,7 @@
 // de suivi par lien) ; aucune table interne n'est lue directement par un compte client.
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { messageErreur } from '../lib/erreurs';
 import { supabase } from '../lib/supabase';
 import { ok, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
@@ -203,8 +204,8 @@ function Transmettre({ pieceId, onFait }: { pieceId: string; onFait: () => void 
     setEnvoi(true); setEtat(null);
     try { await deposerPieceClient(pieceId, f); onFait(); }
     catch (err) {
-      const code = err instanceof FichierRefuse ? (err.message === 'type' ? 'GBS_FICHIER_TYPE' : 'GBS_FICHIER_TAILLE') : String((err as Error).message ?? '');
-      setEtat(t(`erreurs.${code}`, { defaultValue: t('erreurs.generique') }));
+      const msg = err instanceof FichierRefuse ? t(err.message === 'type' ? 'erreurs.GBS_FICHIER_TYPE' : 'erreurs.GBS_FICHIER_TAILLE') : messageErreur(err);
+      setEtat(msg);
     } finally { setEnvoi(false); }
   };
   return (<>
