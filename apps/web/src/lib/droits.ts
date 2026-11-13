@@ -70,6 +70,7 @@ export const ECRANS: Ecran[] = [
   { id: 'ethique', chemin: '/ethique', module: 'qualite', section: 'non_conformites', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays', 'comptable', 'inspecteur'], lot: 2 },
   { id: 'non_conformites', chemin: '/non-conformites', module: 'qualite', section: 'non_conformites', roles: ['admin', 'achats_chine'], lot: 1 },
   { id: 'expeditions', chemin: '/expeditions', module: 'logistique', section: 'transport', roles: ['admin', 'achats_chine', 'hub_afrique', 'agent_pays'], lot: 0 },
+  { id: 'entrepot', chemin: '/entrepot', module: 'logistique', section: 'transport', roles: ['admin', 'achats_chine', 'hub_afrique'], lot: 2 },
   { id: 'assurances', chemin: '/assurances', module: 'logistique', section: 'transport', roles: ['admin', 'achats_chine', 'hub_afrique'], lot: 2 },
   { id: 'conformite_import', chemin: '/conformite-import', module: 'logistique', section: 'import', roles: ['admin', 'achats_chine', 'hub_afrique'], lot: 2 },
   { id: 'livraisons', chemin: '/livraisons', module: 'logistique', section: 'import', roles: ['admin', 'hub_afrique', 'achats_chine'], lot: 1 },
@@ -121,6 +122,6 @@ export const TCODES: Record<string, string> = {
   tableau: 'TDB', rentabilite: 'RNT', alertes: 'ALR', ethique: 'ETH', negoce: 'NEG', garanties: 'GAR', documents: 'DOC', sav: 'SAV', stock: 'STK', recherche: 'RCH', retroplanning: 'RPL', journal: 'AUD', prospection: 'PRO', clients: 'CLI',
   appels_offres: 'AOF', fiches_reference: 'REF', consultations_clients: 'CNS', nouvelle_consultation: 'NCS', portefeuille: 'PTF', nouveau_dossier: 'NDO', mes_taches: 'TAC', pieces_manquantes: 'PCM', points_bloquants: 'BLQ', gantt: 'GNT', calendrier: 'CAL', productivite: 'PRD', cloture: 'ARC', fournisseurs: 'FOU',
   articles: 'ART', consultations: 'MEC', historique_prix: 'PRX', commandes: 'CMD', approbation: 'APT', fermetures: 'FRM', inspections: 'INS', non_conformites: 'NCF',
-  expeditions: 'EXP', assurances: 'ASS', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
+  expeditions: 'EXP', entrepot: 'ENT', assurances: 'ASS', conformite_import: 'IMP', reserves: 'LIV', interventions: 'INT', factures: 'FAC', paiements: 'PAY',
   rapprochement: 'BNK', flux: 'FLX', tresorerie: 'TRC', commissions: 'COM', notes_frais: 'NDF', messagerie: 'MSG', parametrage: 'PAR',
 };

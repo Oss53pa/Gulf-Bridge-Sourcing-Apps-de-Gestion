@@ -69,6 +69,7 @@ const Fermetures = paresseux(() => import('./screens/Fermetures'), 'Fermetures')
 const MiseEnConcurrence = paresseux(() => import('./screens/Achats'), 'MiseEnConcurrence');
 const Expeditions = paresseux(() => import('./screens/Operations'), 'Expeditions');
 const Assurances = paresseux(() => import('./screens/Assurance'), 'Assurances');
+const Entrepot = paresseux(() => import('./screens/Entrepot'), 'Entrepot');
 const FicheExpedition = paresseux(() => import('./screens/Operations'), 'FicheExpedition');
 const Inspections = paresseux(() => import('./screens/Operations'), 'Inspections');
 const RapportInspection = paresseux(() => import('./screens/Operations'), 'RapportInspection');
@@ -165,6 +166,7 @@ export function App() {
             <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
             <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
             <Route path="/assurances" element={g('assurances', <Assurances />)} />
+            <Route path="/entrepot" element={g('entrepot', <Entrepot />)} />
             <Route path="/interventions" element={g('interventions', <Interventions />)} />
             <Route path="/stock" element={g('stock', <StockPieces />)} />
             <Route path="/sav" element={g('sav', <GarantieSav />)} />
