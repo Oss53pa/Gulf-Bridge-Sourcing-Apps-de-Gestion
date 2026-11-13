@@ -68,6 +68,14 @@ describe('Entrepôt de consolidation', () => {
     }
     await db.query(`select gbs.confirmer_empotage($1, $2)`, [c2, { ...base, photos: ['dossiers/x/empotage-1.jpg'] }]);
     expect((await one(db, `select statut from gbs.consolidations where id = $1`, [c2])).statut).toBe('empote');
+    // Rattachement à l'expédition du dossier : conteneur, plomb et lieu de remise reportés une seule fois.
+    const d2 = (await one(db, `select dossier_id from gbs.consolidations where id = $1`, [c2])).dossier_id;
+    const e = (await one(db, `insert into gbs.expeditions (dossier_id, mode, pays_destination, port_arrivee, conteneurs) values ($1, 'conteneur_complet', 'CI', 'Abidjan', '{MSKU4821930}') returning id`, [d2])).id;
+    await expectError(db, 'GBS_EMPOTAGE_NON_CONFIRME', `select gbs.rattacher_expedition($1, $2)`, [c, e]);
+    await db.query(`select gbs.rattacher_expedition($1, $2)`, [c2, e]);
+    expect(await one(db, `select conteneurs, plombs, lieu_remise from gbs.expeditions where id = $1`, [e]))
+      .toEqual({ conteneurs: ['MSKU4821930'], plombs: ['ML-778812'], lieu_remise: 'Entrepôt de consolidation · Foshan' });
+    await expectError(db, 'GBS_DEMANDE_TRAITEE', `select gbs.rattacher_expedition($1, $2)`, [c2, e]);
   }));
 
   it('droits : écriture réservée à l’entrepôt ; écriture directe interdite ; lecture selon le dossier', () => withTx(async (db) => {

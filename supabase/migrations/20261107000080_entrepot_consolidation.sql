@@ -8,6 +8,8 @@
 -- * Clôture de la liste de colisage : au moins une réception, aucune réserve ouverte, capacité du conteneur
 --   respectée ; la liste (réceptions, totaux) est figée. Empotage : planifié après clôture, puis réalisé
 --   avec au moins une photo d'empotage.
+-- * Une consolidation empotée se rattache à une expédition du même dossier, pas encore partie : le numéro
+--   de conteneur et le plomb y sont reportés (sans doublon), le lieu de remise renseigné s'il est vide.
 -- * Écriture : administratrice et achats Chine (équipe de l'entrepôt) ; lecture : équipe interne du dossier.
 
 insert into gbs.parametres_definitions (cle, type, minimum, maximum, validateur, module, libelle) values
@@ -35,6 +37,7 @@ create table gbs.consolidations (
   photos_empotage  text[] not null default '{}' check (cardinality(photos_empotage) <= 30),
   numero_conteneur text check (numero_conteneur ~ '^[A-Z]{4}[0-9]{7}$'),
   numero_plomb     text check (length(numero_plomb) between 3 and 40),
+  expedition_id    uuid references gbs.expeditions(id),
   cree_le          timestamptz not null default now(), cree_par uuid,
   modifie_le       timestamptz not null default now(), modifie_par uuid,
   check ((statut = 'ouverte') = (liste_colisage is null)),
@@ -258,6 +261,30 @@ begin
 exception
   when check_violation then raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023';
 end $$;
+
+create or replace function gbs.rattacher_expedition(p_consolidation uuid, p_expedition uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare c gbs.consolidations; e gbs.expeditions;
+begin
+  select * into c from gbs.consolidations where id = p_consolidation for update;
+  perform gbs_private.exiger(c.id is not null and gbs_private.has_role('admin','achats_chine') and gbs_private.dossier_visible(c.dossier_id));
+  select * into e from gbs.expeditions where id = p_expedition for update;
+  if e.id is null or e.dossier_id <> c.dossier_id then raise exception 'GBS_PARAMETRES_INVALIDES' using errcode = '22023'; end if;
+  if c.statut <> 'empote' then raise exception 'GBS_EMPOTAGE_NON_CONFIRME' using errcode = 'P0001'; end if;
+  if c.expedition_id is not null then raise exception 'GBS_DEMANDE_TRAITEE' using errcode = 'P0001'; end if;
+  if e.statut not in ('preparation','remise_transporteur') then raise exception 'GBS_EXPEDITION_PARTIE' using errcode = 'P0001'; end if;
+  update gbs.expeditions set
+    conteneurs = case when c.numero_conteneur = any(conteneurs) then conteneurs else conteneurs || c.numero_conteneur end,
+    plombs = case when c.numero_plomb = any(plombs) then plombs else plombs || c.numero_plomb end,
+    lieu_remise = coalesce(lieu_remise, left('Entrepôt de consolidation · ' || c.entrepot, 200))
+   where id = e.id;
+  perform gbs_private.rpc('entrepot');
+  update gbs.consolidations set expedition_id = e.id where id = c.id;
+  perform gbs_private.rpc('');
+end $$;
+
+revoke all on function gbs.rattacher_expedition(uuid, uuid) from public, anon;
+grant execute on function gbs.rattacher_expedition(uuid, uuid) to authenticated;
 
 revoke all on function gbs_private.trg_entrepot_rpc(), gbs_private.remplissage(gbs.consolidations) from public, anon, authenticated;
 revoke all on function gbs.ouvrir_consolidation(uuid, text, text), gbs.receptionner(uuid, jsonb), gbs.lever_reserve_entrepot(uuid, text),

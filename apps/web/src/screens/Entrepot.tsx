@@ -13,7 +13,7 @@ import { Depot } from '../components/Depot';
 
 type StatutCns = 'ouverte' | 'colisage_clos' | 'empotage_planifie' | 'empote';
 interface Consolidation { id: string; reference: string; dossier_id: string; type_conteneur: '20_dv' | '40_dv' | '40_hc'; entrepot: string; statut: StatutCns;
-  empotage_prevu_le: string | null; numero_conteneur: string | null; numero_plomb: string | null; dossiers: { reference: string } | null }
+  empotage_prevu_le: string | null; numero_conteneur: string | null; numero_plomb: string | null; expedition_id: string | null; dossiers: { reference: string } | null }
 interface Reception { id: string; reference: string; fournisseur_id: string; recue_le: string; colis_attendus: number; colis_recus: number; volume_m3: number; poids_kg: number;
   emplacement: string | null; photos: string[]; statut: 'conforme' | 'reserve' | 'reserve_levee'; reserve: string | null; levee_motif: string | null }
 interface Etat { receptions: number; colis_recus: number; colis_attendus: number; volume_m3: number; poids_kg: number; reserves_ouvertes: number; capacite_m3: number; charge_kg: number }
@@ -26,7 +26,7 @@ export function Entrepot() {
   const { profil, langue } = useAuth();
   const ecrit = ['admin', 'achats_chine'].includes(profil?.role ?? '');
   const fournisseurs = useNoms('fournisseurs');
-  const cns = useAsync(async () => ok(await supabase.from('consolidations').select('id, reference, dossier_id, type_conteneur, entrepot, statut, empotage_prevu_le, numero_conteneur, numero_plomb, dossiers(reference)')
+  const cns = useAsync(async () => ok(await supabase.from('consolidations').select('id, reference, dossier_id, type_conteneur, entrepot, statut, empotage_prevu_le, numero_conteneur, numero_plomb, expedition_id, dossiers(reference)')
     .order('cree_le', { ascending: false }).limit(200)) as unknown as Consolidation[], []);
   const [sel, setSel] = useState<string | null>(null);
   const c = (cns.data ?? []).find((x) => x.id === sel) ?? (cns.data ?? []).find((x) => x.statut !== 'empote') ?? (cns.data ?? [])[0] ?? null;
@@ -37,6 +37,15 @@ export function Entrepot() {
   const [recevoir, setRecevoir] = useState(false);
   const [lever, setLever] = useState<Reception | null>(null);
   const [empotage, setEmpotage] = useState<'planifier' | 'confirmer' | null>(null);
+  const exps = useAsync(async () => (c && c.statut === 'empote' ? ok(await supabase.from('expeditions').select('id, reference, statut').eq('dossier_id', c.dossier_id)) as
+    { id: string; reference: string | null; statut: string }[] : []), [c?.id, c?.statut]);
+  const [exp, setExp] = useState('');
+  const rattacher = async () => {
+    const v = z.object({ p_consolidation: z.string().uuid(), p_expedition: z.string().uuid() }).strict().safeParse({ p_consolidation: c?.id, p_expedition: exp });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('rattacher_expedition', v.data)))) { setExp(''); recharger(); }
+  };
+  const expLiee = (exps.data ?? []).find((x) => x.id === c?.expedition_id);
   const recharger = () => { void cns.recharger(); void recs.recharger(); void et.recharger(); };
   const e = et.data;
   const pct = (v: number, m: number) => (m ? Math.round((100 * Number(v)) / Number(m)) : 0);
@@ -92,11 +101,18 @@ export function Entrepot() {
               </>}
               {c.empotage_prevu_le && <span className="sec">{t('entrepot.empotage_prevu', { d: date(c.empotage_prevu_le, langue) })}</span>}
               {c.numero_conteneur && <span className="sec ref">{c.numero_conteneur} · {c.numero_plomb}</span>}
+              {c.expedition_id && <span className="sec">{t('entrepot.rattachee', { ref: expLiee?.reference ?? '' })}</span>}
             </section>
             {ecrit && <section>
               {c.statut === 'ouverte' && <Bouton variante="primaire" disabled={a.enCours || !e || e.reserves_ouvertes > 0 || e.receptions === 0} onClick={() => void clore()}>{t('entrepot.clore')}</Bouton>}
               {(c.statut === 'colisage_clos' || c.statut === 'empotage_planifie') && <Bouton onClick={() => setEmpotage('planifier')}>{t('entrepot.planifier')}</Bouton>}
               {c.statut === 'empotage_planifie' && <Bouton variante="primaire" onClick={() => setEmpotage('confirmer')}>{t('entrepot.confirmer')}</Bouton>}
+              {c.statut === 'empote' && !c.expedition_id && (<>
+                <Champ label={t('entrepot.expedition')}><select value={exp} onChange={(x) => setExp(x.target.value)}>
+                  <option value="">—</option>{(exps.data ?? []).filter((x) => ['preparation', 'remise_transporteur'].includes(x.statut))
+                    .map((x) => <option key={x.id} value={x.id}>{x.reference ?? x.id.slice(0, 8)}</option>)}</select></Champ>
+                <Bouton variante="primaire" disabled={a.enCours || !exp} onClick={() => void rattacher()}>{t('entrepot.rattacher')}</Bouton>
+              </>)}
             </section>}
             <section><p className="mute">{t('entrepot.aide')}</p></section>
           </aside>
