@@ -1,6 +1,11 @@
 # Mise en production des migrations 69 à 81 et des fonctions serveur
 
-Projet Supabase : `vgtmljfayiysuvrcmunt`. En production aujourd'hui : migrations 1 à 68, `gbs-depot` v8.
+Projet Supabase : `vgtmljfayiysuvrcmunt`.
+
+**État : fait.** Migrations 69 à 81 appliquées le 13 novembre 2026 après 20 h GMT (vérification : aucune
+anomalie) ; fonctions redéployées le 14 novembre 2026 : `gbs-suivi` v5, `gbs-depot` v9, `gbs-demande` v6,
+`gbs-transitaire` v3, `gbs-fournisseur` v7. Reste à faire par l'équipe : les essais 1, 3 et 4 de la section 5
+(dépôt réel, demande du site, photo sans position GPS), qui exigent une session ou le site.
 
 ## 1. Avant de commencer
 
@@ -31,9 +36,11 @@ Avant application, le même script renvoie 61 anomalies : c'est attendu.
 Fonctions modifiées : `gbs-depot`, `gbs-demande`, `gbs-suivi`, `gbs-fournisseur`, `gbs-transitaire`
 (module partagé `_shared/fichiers.ts` : taille annoncée du corps exigée, métadonnées des images retirées).
 
-Point de vigilance : les fonctions refusent désormais une requête **sans en-tête `Content-Length`** (411).
-Les navigateurs l'envoient toujours ; si la passerelle Supabase le retirait, **toutes** les requêtes seraient
-refusées. D'où l'essai immédiat ci-dessous.
+Point de vigilance : les fonctions refusent une requête **sans en-tête `Content-Length`** (411).
+Constaté en production le 14 novembre 2026 : la passerelle Supabase reçoit le corps en entier et ajoute elle-même
+l'en-tête, y compris pour un envoi par morceaux ; aucune requête légitime n'est donc refusée en 411, et la borne
+de taille propre à chaque fonction répond bien 413. Le contrôle des envois par morceaux reste en place pour le cas
+où la passerelle changerait de comportement.
 
 ## 5. Essais juste après le redéploiement
 
