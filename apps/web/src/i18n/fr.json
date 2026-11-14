@@ -3053,6 +3053,40 @@
   "sans_clause": "Aucune clause de pénalité au contrat (taux par jour non renseigné).",
   "titre": "Pénalités de retard"
  },
+ "performance": {
+  "alerte": "Sous le seuil d’alerte : {{motifs}}. Le statut d’agrément ne change pas tout seul : la décision revient à l’administratrice.",
+  "aucune_inspection": "Aucune inspection réalisée sur la période",
+  "aucune_invitation": "Aucune consultation close sur la période",
+  "aucune_livraison": "Aucune livraison sur la période",
+  "col_otif": "À l’heure",
+  "col_ppm": "Défauts ppm",
+  "completes_non_controlees": "{{n}} livraisons ne sont pas passées par l’entrepôt : leur complétude n’a pas été contrôlée et elles sont comptées complètes.",
+  "def": {
+   "nc": "Non-conformités encore ouvertes sur les commandes du fournisseur.",
+   "otif": "Livraison effective au plus tard à la date promise (décalée par les avenants signés), sans réception en entrepôt incomplète.",
+   "ppm": "Défauts relevés en inspection, rapportés au million d’unités contrôlées (échantillon ISO 2859-1).",
+   "reponse": "Invitations dont la date limite est passée ; une offre reçue ou un pli déposé vaut réponse."
+  },
+  "definitions": "Comment ces chiffres sont calculés",
+  "fenetre": "Calcul depuis le {{du}}, sur les dossiers auxquels vous avez accès.",
+  "indisponible": "Indicateurs indisponibles pour ce fournisseur.",
+  "motifs": {
+   "defauts": "taux de défaut",
+   "livraison": "livraison complète et à l’heure",
+   "nc_critique": "non-conformité critique ouverte"
+  },
+  "nc": "Non-conformités ouvertes",
+  "nc_sous": "critiques : {{n}}",
+  "onglet": "Performance",
+  "otif": "Livraison complète et à l’heure",
+  "otif_sous": "{{otif}} sur {{n}} livraisons · {{heure}} à l’heure · {{completes}} complètes",
+  "ppm": "Défauts en inspection (ppm)",
+  "ppm_sous": "{{defauts}} défauts sur {{unites}} unités · {{n}} inspections",
+  "reponse": "Réponse aux cotations",
+  "reponse_sous": "{{r}} réponses sur {{n}} invitations · délai médian {{h}} h",
+  "retard_moyen": "Retard moyen des livraisons en retard : {{j}} jours.",
+  "titre_alertes": "{{n}} en alerte de performance"
+ },
  "phases": {
   "approbation_technique": "Approbation technique",
   "cloture": "Clôture",

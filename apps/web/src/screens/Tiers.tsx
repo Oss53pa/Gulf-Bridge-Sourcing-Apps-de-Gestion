@@ -7,11 +7,13 @@ import { ok, useAction, useAsync } from '../lib/data';
 import { VerificationClient } from './VerificationClient';
 import { PiecesDd } from './PiecesDueDiligence';
 import { useAuth } from '../lib/auth';
-import { date, nombre } from '../lib/format';
+import { date, nombre, pourcent } from '../lib/format';
 import { normaliser } from '../lib/droits';
 import { invaliderReferentiels } from '../lib/referentiels';
 import type { Article, Client, Compte, DueDiligence, Fournisseur } from '../lib/types';
 import { SanctionsFournisseur } from './SanctionsFournisseur';
+import { PerformanceFournisseur } from './PerformanceFournisseur';
+import { lirePerformances, ROLES_PERFORMANCE } from '../lib/performance';
 import { Bandeau, Bouton, CadreTableau, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 
 // ============================================================================ Clients
@@ -245,7 +247,7 @@ const mmaaaa = (d: string) => `${d.slice(5, 7)}.${d.slice(0, 4)}`;
 export function Fournisseurs() {
   const { t } = useTranslation();
   const nav = useNavigate();
-  const { profil } = useAuth();
+  const { profil, langue } = useAuth();
   const role = profil?.role ?? '';
   const [q, setQ] = useState('');
   const [statut, setStatut] = useState('tous');
@@ -256,6 +258,9 @@ export function Fournisseurs() {
     { fournisseur_id: string; statut: string; valide_jusqu_au: string | null }[], []);
   const cps = useAsync(async () => (voitComptes ? ok(await supabase.from('comptes_paiement').select('fournisseur_id, verifie').is('archive_le', null).limit(5000)) as
     { fournisseur_id: string; verifie: boolean }[] : []), [voitComptes]);
+  const voitPerf = ROLES_PERFORMANCE.includes(role);
+  const perfs = useAsync(async () => (voitPerf ? (await lirePerformances()).rows : []), [voitPerf]);
+  const perf = (id: string) => (perfs.data ?? []).find((x) => x.fournisseur_id === id) ?? null;
   const tous = l.data ?? [];
   const validite = (id: string) => (dds.data ?? []).filter((d) => d.fournisseur_id === id && d.valide_jusqu_au).map((d) => d.valide_jusqu_au!).sort().pop() ?? null;
   const comptes = (id: string) => (cps.data ?? []).filter((c) => c.fournisseur_id === id);
@@ -266,8 +271,10 @@ export function Fournisseurs() {
   const n = normaliser(q.trim());
   const liste = useMemo(() => tous.filter((x) => (statut === 'tous' || x.statut_agrement === statut)
     && (!n || normaliser(`${x.raison_sociale_en} ${x.raison_sociale_zh ?? ''} ${x.ville ?? ''} ${x.categories.join(' ')}`).includes(n))), [tous, statut, n]);
+  const enAlerte = tous.filter((x) => perf(x.id)?.en_alerte);
   const suite = [expirent.length ? t('fournisseurs.titre_dd', { n: expirent.length }) : null,
-    bloques.length ? t('fournisseurs.titre_comptes', { n: bloques.length }) : null].filter(Boolean).join(', ');
+    bloques.length ? t('fournisseurs.titre_comptes', { n: bloques.length }) : null,
+    enAlerte.length ? t('performance.titre_alertes', { n: enAlerte.length }) : null].filter(Boolean).join(', ');
   const titre = t('fournisseurs.titre_agrees', { n: agrees.length, total: tous.length }) + (suite ? ` ; ${suite}` : '');
   return (
     <div className="screen">
@@ -288,9 +295,11 @@ export function Fournisseurs() {
       <div className="cadre">
         {l.chargement && !l.data ? <Chargement /> : liste.length === 0 ? <Vide>{t('fournisseurs.aucun')}</Vide> : (
           <table className="t"><thead><tr><th>{t('fournisseurs.fournisseur')}</th><th>{t('champs.categories')}</th><th>{t('champs.agrement')}</th>
-            <th className="num">{t('champs.note')}</th><th className="num">{t('fournisseurs.validite')}</th>{voitComptes && <th>{t('fournisseurs.comptes_court')}</th>}</tr></thead>
+            <th className="num">{t('champs.note')}</th><th className="num">{t('fournisseurs.validite')}</th>
+            {voitPerf && <><th className="num" title={t('performance.def.otif')}>{t('performance.col_otif')}</th><th className="num" title={t('performance.def.ppm')}>{t('performance.col_ppm')}</th></>}
+            {voitComptes && <th>{t('fournisseurs.comptes_court')}</th>}</tr></thead>
             <tbody>{liste.map((x) => {
-              const v = validite(x.id), cs = comptes(x.id);
+              const v = validite(x.id), cs = comptes(x.id), p = perf(x.id);
               return (
                 <tr key={x.id} className="cliquable" onClick={() => nav(`/fournisseurs/${x.id}`)}>
                   <td><div style={{ fontWeight: 500 }}>{x.raison_sociale_en}</div><div className="mute">{[x.raison_sociale_zh, x.ville].filter(Boolean).join(' · ')}</div></td>
@@ -299,6 +308,9 @@ export function Fournisseurs() {
                     <div className="mute" style={{ fontSize: 12 }}>{x.engagement_non_commission_le ? t('fournisseurs.non_commission_signee') : t('fournisseurs.non_commission_absente')}</div></td>
                   <td className="num">{x.note ?? '—'}</td>
                   <td className={'num' + (dans(v, 45) ? ' txt-err' : '')}>{v ? (dans(v, 45) ? `${v.slice(8, 10)}.${mmaaaa(v)}` : mmaaaa(v)) : '—'}</td>
+                  {voitPerf && <>
+                    <td className={'num' + (p?.motifs_alerte.includes('livraison') ? ' txt-err' : '')}>{p?.taux_otif == null ? '—' : pourcent(p.taux_otif, langue, 0)}</td>
+                    <td className={'num' + (p?.motifs_alerte.includes('defauts') ? ' txt-err' : '')}>{p?.ppm == null ? '—' : nombre(p.ppm, langue)}</td></>}
                   {voitComptes && <td>{cs.length === 0 ? <span className="mute">—</span> : cs.every((c) => c.verifie)
                     ? <Statut statut="verifie" libelle={t('fournisseurs.verifie')} /> : <Statut statut="err" libelle={t('fournisseurs.compte_a_verifier')} />}</td>}
                 </tr>);
@@ -317,7 +329,7 @@ export function FicheFournisseur() {
   const nav = useNavigate();
   const { profil, langue } = useAuth();
   const role = profil?.role ?? '';
-  const [onglet, setOnglet] = useState<'synthese' | 'dd' | 'sanctions' | 'comptes' | 'commandes'>('synthese');
+  const [onglet, setOnglet] = useState<'synthese' | 'dd' | 'sanctions' | 'performance' | 'comptes' | 'commandes'>('synthese');
   const [dd, setDd] = useState<DueDiligence | 'nouvelle' | null>(null);
   const [compte, setCompte] = useState(false);
   const fo = useAsync(async () => ok(await supabase.from('fournisseurs').select('*').eq('id', id).maybeSingle()) as Fournisseur | null, [id]);
@@ -353,6 +365,7 @@ export function FicheFournisseur() {
         <nav className="fou-nav" aria-label={t('fournisseurs.fiche_surtitre')}>
           {([['societe', [['synthese', t('fournisseurs.o_synthese'), null]]],
             ['suivi', [['dd', t('fournisseurs.due_diligence'), ddValide?.note ?? null], ['sanctions', t('sanctions.onglet'), null],
+              ...(ROLES_PERFORMANCE.includes(role) ? [['performance', t('performance.onglet'), null]] : []),
               ...(ecrit ? [['comptes', t('fournisseurs.comptes'), (comptes.data ?? []).length]] : []),
               ['commandes', t('fournisseurs.o_commandes'), (cmds.data ?? []).length]]]] as [string, [typeof onglet, string, number | null][]][]).map(([g, items]) => (
             <div key={g} className="fou-groupe">
@@ -401,6 +414,7 @@ export function FicheFournisseur() {
               {ecrit && <PiecesDd ddId={x.id} enCours={x.statut === 'en_cours'} />}
             </section>))}
         </>}
+        {onglet === 'performance' && <PerformanceFournisseur fournisseurId={f.id} />}
         {onglet === 'sanctions' && <SanctionsFournisseur fournisseurId={f.id} onChange={() => void fo.recharger()} />}
         {onglet === 'comptes' && ecrit && <>
           <DemandesComptes fournisseurId={f.id} onTraite={() => void comptes.recharger()} />

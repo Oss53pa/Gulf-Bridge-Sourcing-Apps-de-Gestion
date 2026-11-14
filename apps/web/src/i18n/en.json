@@ -3053,6 +3053,40 @@
   "sans_clause": "No penalty clause in the contract (daily rate not set).",
   "titre": "Late-delivery penalties"
  },
+ "performance": {
+  "alerte": "Below the alert threshold: {{motifs}}. Approval status does not change automatically: the administrator decides.",
+  "aucune_inspection": "No inspection performed in the period",
+  "aucune_invitation": "No closed tender in the period",
+  "aucune_livraison": "No delivery in the period",
+  "col_otif": "OTIF",
+  "col_ppm": "Defects ppm",
+  "completes_non_controlees": "{{n}} deliveries did not go through the warehouse: completeness was not checked and they count as complete.",
+  "def": {
+   "nc": "Non-conformities still open on the supplier’s orders.",
+   "otif": "Actual delivery no later than the promised date (moved by signed amendments), with no short receipt at the warehouse.",
+   "ppm": "Defects found in inspection per million units checked (ISO 2859-1 sample).",
+   "reponse": "Invitations past their deadline; a received offer or sealed bid counts as a reply."
+  },
+  "definitions": "How these figures are computed",
+  "fenetre": "Computed since {{du}}, over the files you can access.",
+  "indisponible": "Indicators unavailable for this supplier.",
+  "motifs": {
+   "defauts": "defect rate",
+   "livraison": "on-time in-full delivery",
+   "nc_critique": "open critical non-conformity"
+  },
+  "nc": "Open non-conformities",
+  "nc_sous": "critical: {{n}}",
+  "onglet": "Performance",
+  "otif": "On time in full",
+  "otif_sous": "{{otif}} of {{n}} deliveries · {{heure}} on time · {{completes}} in full",
+  "ppm": "Inspection defects (ppm)",
+  "ppm_sous": "{{defauts}} defects in {{unites}} units · {{n}} inspections",
+  "reponse": "Quotation response rate",
+  "reponse_sous": "{{r}} replies to {{n}} invitations · median {{h}} h",
+  "retard_moyen": "Average delay of late deliveries: {{j}} days.",
+  "titre_alertes": "{{n}} with a performance alert"
+ },
  "phases": {
   "approbation_technique": "Technical approval",
   "cloture": "Closure",

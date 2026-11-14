@@ -3053,6 +3053,40 @@
   "sans_clause": "合同无罚款条款（未填日费率）。",
   "titre": "延迟交货罚款"
  },
+ "performance": {
+  "alerte": "低于预警阈值：{{motifs}}。认证状态不会自动变更，由管理员决定。",
+  "aucune_inspection": "期间内无验货",
+  "aucune_invitation": "期间内无已截止询价",
+  "aucune_livraison": "期间内无交付",
+  "col_otif": "准时",
+  "col_ppm": "缺陷 ppm",
+  "completes_non_controlees": "{{n}} 次交付未经仓库：未核验是否足量，按足量计算。",
+  "def": {
+   "nc": "该供应商订单上仍未关闭的不合格项。",
+   "otif": "实际交付不晚于承诺日期（按已签补充协议调整），且仓库收货无短缺。",
+   "ppm": "验货发现的缺陷数，按每百万抽检件数计（ISO 2859-1 抽样）。",
+   "reponse": "已过截止日期的邀请；收到报价或密封投标即视为回复。"
+  },
+  "definitions": "指标计算方法",
+  "fenetre": "自 {{du}} 起计算，仅含您可访问的项目。",
+  "indisponible": "该供应商暂无绩效指标。",
+  "motifs": {
+   "defauts": "缺陷率",
+   "livraison": "准时足量交付",
+   "nc_critique": "未关闭的严重不合格"
+  },
+  "nc": "未关闭的不合格",
+  "nc_sous": "严重：{{n}}",
+  "onglet": "绩效",
+  "otif": "准时足量交付",
+  "otif_sous": "{{n}} 次交付中 {{otif}} 次 · 准时 {{heure}} · 足量 {{completes}}",
+  "ppm": "验货缺陷（ppm）",
+  "ppm_sous": "{{unites}} 件中 {{defauts}} 个缺陷 · {{n}} 次验货",
+  "reponse": "询价回复率",
+  "reponse_sous": "{{n}} 次邀请中回复 {{r}} 次 · 中位用时 {{h}} 小时",
+  "retard_moyen": "延迟交付平均延迟 {{j}} 天。",
+  "titre_alertes": "{{n}} 家绩效预警"
+ },
  "phases": {
   "approbation_technique": "技术审批",
   "cloture": "结案",
