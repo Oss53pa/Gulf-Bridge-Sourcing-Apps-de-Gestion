@@ -3,13 +3,17 @@
 // de suivi par lien) ; aucune table interne n'est lue directement par un compte client.
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { messageErreur } from '../lib/erreurs';
 import { supabase } from '../lib/supabase';
 import { ok, useAsync } from '../lib/data';
 import { useAuth } from '../lib/auth';
 import { date, montant } from '../lib/format';
 import { deposerPieceClient, FichierRefuse, urlSignee } from '../lib/fichiers';
-import { Bandeau, Bouton, Chargement, Statut, Vide } from '../components/ui';
+import { Bandeau, Bouton, Champ, Chargement, Statut, Tiroir, Vide } from '../components/ui';
 import { MessagerieVue } from './Messagerie';
+import { Jauge, Vignettes } from './Avancement';
+import { ReceptionsClient } from './ReceptionSite';
+import { BesoinsClient } from './Besoin';
 import { z } from 'zod';
 import { useAction } from '../lib/data';
 
@@ -26,16 +30,19 @@ interface Contenu {
   expeditions: { reference: string; mode: string; statut: string; port_arrivee: string | null; etd: string | null; eta: string | null;
     etapes: { etape: string; lieu: string | null; survenue_le: string; commentaire: string | null }[] }[];
   production: {
-    commandes: { reference: string; statut: string; fabricant: string | null; produits: { designation: string; quantite: number }[] }[];
+    commandes: { reference: string; statut: string; fabricant: string | null; produits: { designation: string; quantite: number }[];
+      avancement: { pct: number; le: string } | null; photos: { chemin: string; le: string }[] }[];
     inspections: { reference: string | null; type: string; produit: string | null; date_prevue: string | null; date_realisee: string | null; statut: string;
       decision: string | null; defauts: { critiques: number; majeurs: number; mineurs: number } | null }[];
     non_conformites: { reference: string | null; gravite: string; libelle: string; statut: string; delai: string | null }[];
   };
   depots: { id: string; libelle: string; phase: string; statut: string }[];
+  reglements: { facture_id: string; numero: string | null; devise: string; reste: number; echeance: string | null;
+    coordonnees: { titulaire: string; banque: string; numero: string } | null; annonce: { reference: string; statut: string; le: string } | null }[];
   factures: { numero: string | null; objet: string; type: string; date_emission: string | null; echeance: string | null; devise: string; ttc: number; net_a_payer: number; encaisse: number; statut: string }[];
 }
-type Vue = 'accueil' | 'dossier' | 'production' | 'expedition' | 'documents' | 'factures' | 'messagerie' | 'demande';
-const VUES: Vue[] = ['accueil', 'dossier', 'production', 'expedition', 'documents', 'factures', 'messagerie', 'demande'];
+type Vue = 'accueil' | 'dossier' | 'besoin' | 'production' | 'expedition' | 'documents' | 'factures' | 'messagerie' | 'demande';
+const VUES: Vue[] = ['accueil', 'dossier', 'besoin', 'production', 'expedition', 'documents', 'factures', 'messagerie', 'demande'];
 
 export function EspaceClient() {
   const { t } = useTranslation();
@@ -43,10 +50,15 @@ export function EspaceClient() {
   const e = useAsync(async () => ok(await supabase.rpc('espace_client')) as Espace, []);
   const [sel, setSel] = useState<string | null>(null);
   const [vue, setVue] = useState<Vue>('accueil');
+  const [regler, setRegler] = useState<Contenu['reglements'][number] | null>(null);
   const nonLus = useAsync(async () => ok(await supabase.rpc('messages_non_lus')) as number, [vue]);
   const d = (e.data?.dossiers ?? []).find((x) => x.id === sel) ?? e.data?.dossiers[0] ?? null;
   const c = useAsync(async () => (d ? ok(await supabase.rpc('espace_client_dossier', { p_dossier: d.id })) as Contenu : null), [d?.id]);
   const x = c.data;
+  // Questions de l'équipe en attente de réponse sur le besoin (sous-rôle finance exclu par la base).
+  const besoins = useAsync(async () => (d && e.data?.utilisateur.sous_role !== 'finance'
+    ? ok(await supabase.rpc('besoins_client', { p_dossier: d.id })) as { questions_ouvertes: number }[] : []), [d?.id, vue]);
+  const questionsBesoin = (besoins.data ?? []).reduce((n, b) => n + Number(b.questions_ouvertes ?? 0), 0);
   const ouvrir = async (chemin: string) => { const u = await urlSignee(chemin); if (u) window.open(u, '_blank', 'noopener,noreferrer'); };
   const joursAvant = x?.ouverture ? Math.round((Date.parse(x.ouverture.date) - Date.parse(new Date().toISOString().slice(0, 10))) / 86400000) : null;
   const actions = (x?.pieces_attendues ?? []).filter((p) => p.statut !== 'recue' && p.statut !== 'validee');
@@ -61,8 +73,8 @@ export function EspaceClient() {
         </span>
       </header>
       <nav className="ecl-nav" aria-label={t('portail.navigation')}>
-        {VUES.map((v) => <button key={v} type="button" aria-current={vue === v ? 'page' : undefined} onClick={() => setVue(v)}>
-          {t(`portail.vues.${v}`)}{v === 'accueil' && actions.length > 0 && <span className="badge">{actions.length}</span>}{v === 'messagerie' && (nonLus.data ?? 0) > 0 && <span className="badge">{nonLus.data}</span>}</button>)}
+        {VUES.filter((v) => v !== 'besoin' || e.data?.utilisateur.sous_role !== 'finance').map((v) => <button key={v} type="button" aria-current={vue === v ? 'page' : undefined} onClick={() => setVue(v)}>
+          {t(`portail.vues.${v}`)}{v === 'accueil' && actions.length > 0 && <span className="badge">{actions.length}</span>}{v === 'messagerie' && (nonLus.data ?? 0) > 0 && <span className="badge">{nonLus.data}</span>}{v === 'besoin' && questionsBesoin > 0 && <span className="badge">{questionsBesoin}</span>}</button>)}
       </nav>
       <main className="screen ecl-main">
         <Bandeau type="err">{e.erreur ?? c.erreur}</Bandeau>
@@ -84,7 +96,7 @@ export function EspaceClient() {
                   <div key={p.libelle + i} className="grl-regle"><span><b>{String(i + 1).padStart(2, '0')} · {p.libelle}</b>
                     <span className="mute">{p.demandee_le ? t('portail.demandee_le', { d: date(p.demandee_le, langue) }) : t(`phases.${p.phase}`, { defaultValue: p.phase })}</span></span>
                     <span className="actions"><Statut statut={p.statut === 'refusee' || p.statut === 'expiree' ? 'err' : 'att'} libelle={t(`portail.pieces.${p.statut}`, { defaultValue: p.statut })} />
-                      {(() => { const dp = x.depots.find((y) => y.phase === p.phase && y.libelle === p.libelle); return dp ? <Transmettre pieceId={dp.id} onFait={() => void c.recharger()} /> : null; })()}</span></div>))}
+                      {(() => { const dp = (x.depots ?? []).find((y) => y.phase === p.phase && y.libelle === p.libelle); return dp ? <Transmettre pieceId={dp.id} onFait={() => void c.recharger()} /> : null; })()}</span></div>))}
                 {actions.length > 0 && <span className="mute">{t('portail.transmettre')}</span>}
                 {x.points_bloquants.filter((b) => !b.resolu).map((b) => <Bandeau key={b.description} type="err">{b.description}</Bandeau>)}
               </section>
@@ -108,6 +120,7 @@ export function EspaceClient() {
                 <td className="ref">{p.debut ? date(p.debut, langue) : '—'}</td><td className="ref">{p.fin ? date(p.fin, langue) : p.fin_prevue ? t('portail.prevue', { d: date(p.fin_prevue, langue) }) : '—'}</td>
                 <td><Statut statut={p.statut === 'terminee' ? 'ok' : p.statut === 'en_cours' ? 'info' : 'neutre'} libelle={t(`portail.statuts_phase.${p.statut}`)} /></td></tr>)}</tbody></table>
           </>}
+          {vue === 'besoin' && <BesoinsClient dossierId={d.id} />}
           {vue === 'production' && <>
             <h1 className="ecl-titre">{t('portail.vues.production')}</h1>
             <p className="sec">{t('portail.aide_production')}</p>
@@ -117,6 +130,8 @@ export function EspaceClient() {
                 <div className="liv-pv"><b className="ref">{k.reference}{k.fabricant ? <span className="mute"> · {k.fabricant}</span> : null}</b>
                   <Statut statut={['livree', 'expediee', 'production_terminee'].includes(k.statut) ? 'ok' : 'info'} libelle={t(`statuts_commande.${k.statut}`, { defaultValue: k.statut })} /></div>
                 <table className="t"><tbody>{k.produits.map((l, i) => <tr key={i}><td>{l.designation}</td><td className="num">{Number(l.quantite)}</td></tr>)}</tbody></table>
+                {k.avancement && <div className="liv-pv"><Jauge pct={k.avancement.pct} /><span className="mute">{t('avancement.au', { d: date(k.avancement.le, langue) })}</span></div>}
+                <Vignettes chemins={(k.photos ?? []).slice(0, 12).map((ph) => ph.chemin)} />
               </section>))}
             <div className="surtitre">{t('portail.inspections')}</div>
             {x.production.inspections.length === 0 ? <Vide>{t('portail.aucune_inspection')}</Vide> : (
@@ -136,6 +151,7 @@ export function EspaceClient() {
           </>}
           {vue === 'expedition' && <>
             <h1 className="ecl-titre">{t('portail.vues.expedition')}</h1>
+            <ReceptionsClient dossierId={d.id} />
             {x.expeditions.length === 0 ? <Vide>{t('portail.aucune_expedition')}</Vide> : x.expeditions.map((y) => (
               <section key={y.reference} className="ecl-bloc">
                 <div className="liv-pv"><b>{y.reference}{y.port_arrivee ? ` · ${y.port_arrivee}` : ''}</b><Statut statut="info" libelle={t(`statuts_exp.${y.statut}`)} /></div>
@@ -156,6 +172,11 @@ export function EspaceClient() {
             <div className="surtitre">{t('portail.transparence')}</div>
             <h1 className="ecl-titre">{t('portail.vues.factures')}</h1>
             <p className="sec">{t('portail.aide_factures')}</p>
+            {(x.reglements ?? []).map((r) => (
+              <div key={r.facture_id} className="grl-regle"><span><b>{t('virements.a_regler', { n: r.numero ?? '' })}</b>
+                <span className="mute">{montant(Number(r.reste), r.devise, langue)}{r.annonce ? ` · ${t('virements.annonce_le', { d: date(r.annonce.le, langue), ref: r.annonce.reference })}` : ''}</span></span>
+                <span className="actions">{r.annonce && <Statut statut={r.annonce.statut === 'rapprochee' ? 'ok' : r.annonce.statut === 'sans_suite' ? 'neutre' : 'att'} libelle={t(`virements.statuts.${r.annonce.statut}`)} />}
+                  {r.annonce?.statut !== 'annoncee' && <Bouton petit onClick={() => setRegler(r)}>{t('virements.regler')}</Bouton>}</span></div>))}
             {x.factures.length === 0 ? <Vide>{t('portail.aucune_facture')}</Vide> : (
               <table className="t"><thead><tr><th>{t('portail.facture')}</th><th>{t('portail.echeance')}</th><th className="num">{t('portail.montant')}</th><th className="num">{t('portail.reste')}</th><th>{t('champs.statut')}</th></tr></thead>
                 <tbody>{x.factures.map((f, i) => { const reste = Number(f.net_a_payer) - Number(f.encaisse); return (
@@ -164,6 +185,7 @@ export function EspaceClient() {
                     <td><Statut statut={f.statut === 'payee' ? 'ok' : f.echeance && f.echeance < new Date().toISOString().slice(0, 10) ? 'err' : 'att'} libelle={t(`portail.statuts_facture.${f.statut}`, { defaultValue: f.statut })} /></td></tr>); })}</tbody></table>)}
           </>}
         </>}
+        {regler && <Regler r={regler} onClose={() => setRegler(null)} onFait={() => { setRegler(null); void c.recharger(); }} />}
       </main>
     </div>
   );
@@ -182,8 +204,8 @@ function Transmettre({ pieceId, onFait }: { pieceId: string; onFait: () => void 
     setEnvoi(true); setEtat(null);
     try { await deposerPieceClient(pieceId, f); onFait(); }
     catch (err) {
-      const code = err instanceof FichierRefuse ? (err.message === 'type' ? 'GBS_FICHIER_TYPE' : 'GBS_FICHIER_TAILLE') : String((err as Error).message ?? '');
-      setEtat(t(`erreurs.${code}`, { defaultValue: t('erreurs.generique') }));
+      const msg = err instanceof FichierRefuse ? t(err.message === 'type' ? 'erreurs.GBS_FICHIER_TYPE' : 'erreurs.GBS_FICHIER_TAILLE') : messageErreur(err);
+      setEtat(msg);
     } finally { setEnvoi(false); }
   };
   return (<>
@@ -191,6 +213,38 @@ function Transmettre({ pieceId, onFait }: { pieceId: string; onFait: () => void 
     <Bouton petit disabled={envoi} onClick={() => ref.current?.click()}>{envoi ? t('depot.envoi') : t('portail.transmettre_piece')}</Bouton>
     {etat && <span className="txt-err">{etat}</span>}
   </>);
+}
+
+/** Régler une facture : coordonnées issues de la base (jamais d'un courriel), puis annonce du virement. */
+function Regler({ r, onClose, onFait }: { r: Contenu['reglements'][number]; onClose: () => void; onFait: () => void }) {
+  const { t } = useTranslation();
+  const { langue } = useAuth();
+  const a = useAction();
+  const [f, setF] = useState({ reference: '', date_virement: '' });
+  const envoyer = async () => {
+    const v = z.object({ reference: z.string().trim().regex(/^[A-Za-z0-9 ./_-]{3,80}$/), date_virement: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable() }).strict()
+      .safeParse({ reference: f.reference.trim(), date_virement: f.date_virement || null });
+    if (!v.success) { a.setErreur(t('formulaire.invalide')); return; }
+    if (await a.executer(async () => ok(await supabase.rpc('annoncer_virement', { p_facture: r.facture_id, p: v.data })))) onFait();
+  };
+  return (
+    <Tiroir titre={t('virements.titre', { n: r.numero ?? '' })} onClose={onClose}>
+      <Bandeau type="err">{t('virements.alerte_fraude')}</Bandeau>
+      {r.coordonnees ? <dl className="dl">
+        <dt>{t('virements.titulaire')}</dt><dd>{r.coordonnees.titulaire}</dd>
+        <dt>{t('virements.banque')}</dt><dd>{r.coordonnees.banque}</dd>
+        <dt>{t('virements.compte')}</dt><dd className="ref">{r.coordonnees.numero}</dd>
+        <dt>{t('virements.reference_a_porter')}</dt><dd className="ref">{r.numero}</dd>
+        <dt>{t('portail.reste')}</dt><dd>{montant(Number(r.reste), r.devise, langue)}</dd>
+      </dl> : <Bandeau>{t('virements.sans_coordonnees')}</Bandeau>}
+      <div className="grille2">
+        <Champ label={t('virements.votre_reference')}><input value={f.reference} maxLength={80} placeholder="VIR 091026 8812" onChange={(e) => setF({ ...f, reference: e.target.value })} /></Champ>
+        <Champ label={t('virements.date')}><input type="date" max={new Date().toISOString().slice(0, 10)} value={f.date_virement} onChange={(e) => setF({ ...f, date_virement: e.target.value })} /></Champ>
+      </div>
+      <Bandeau type="err">{a.erreur}</Bandeau>
+      <Bouton variante="primaire" disabled={a.enCours || !r.coordonnees} onClick={() => void envoyer()}>{t('virements.j_ai_vire')}</Bouton>
+    </Tiroir>
+  );
 }
 
 function Frise({ phases }: { phases: Contenu['phases'] }) {

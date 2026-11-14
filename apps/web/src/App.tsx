@@ -65,8 +65,11 @@ const Fournisseurs = paresseux(() => import('./screens/Tiers'), 'Fournisseurs');
 const Commandes = paresseux(() => import('./screens/Achats'), 'Commandes');
 const FicheCommande = paresseux(() => import('./screens/Achats'), 'FicheCommande');
 const HistoriquePrix = paresseux(() => import('./screens/Achats'), 'HistoriquePrix');
+const Fermetures = paresseux(() => import('./screens/Fermetures'), 'Fermetures');
 const MiseEnConcurrence = paresseux(() => import('./screens/Achats'), 'MiseEnConcurrence');
 const Expeditions = paresseux(() => import('./screens/Operations'), 'Expeditions');
+const Assurances = paresseux(() => import('./screens/Assurance'), 'Assurances');
+const Entrepot = paresseux(() => import('./screens/Entrepot'), 'Entrepot');
 const FicheExpedition = paresseux(() => import('./screens/Operations'), 'FicheExpedition');
 const Inspections = paresseux(() => import('./screens/Operations'), 'Inspections');
 const RapportInspection = paresseux(() => import('./screens/Operations'), 'RapportInspection');
@@ -77,6 +80,7 @@ const Paiements = paresseux(() => import('./screens/Finance'), 'Paiements');
 const Journal = paresseux(() => import('./screens/Administration'), 'Journal');
 const Parametrage = paresseux(() => import('./screens/Administration'), 'Parametrage');
 const ImprimerDueDiligence = paresseux(() => import('./screens/Imprimes'), 'ImprimerDueDiligence');
+const ImprimerBesoin = paresseux(() => import('./screens/Besoin'), 'ImprimerBesoin');
 const ImprimerFacture = paresseux(() => import('./screens/Imprimes'), 'ImprimerFacture');
 const ImprimerInspection = paresseux(() => import('./screens/Imprimes'), 'ImprimerInspection');
 const EspaceClient = paresseux(() => import('./screens/EspaceClient'), 'EspaceClient');
@@ -114,6 +118,7 @@ export function App() {
       <Route path="/imprimer/due-diligence/:id" element={g('fournisseurs', <ImprimerDueDiligence />)} />
       <Route path="/imprimer/certificat-lc/:id" element={g('portefeuille', <ImprimerCertificatLc />)} />
       <Route path="/imprimer/rapport-offres/:id" element={g('portefeuille', <ImprimerRapportOffres />)} />
+      <Route path="/imprimer/cahier-des-charges/:id" element={g('portefeuille', <ImprimerBesoin />)} />
       <Route path="*" element={
         <Coque>
           <Suspense fallback={attente}>
@@ -151,6 +156,7 @@ export function App() {
             <Route path="/articles" element={g('articles', <Articles />)} />
             <Route path="/mise-en-concurrence" element={g('consultations', <MiseEnConcurrence />)} />
             <Route path="/historique-prix" element={g('historique_prix', <HistoriquePrix />)} />
+            <Route path="/fermetures-usines" element={g('fermetures', <Fermetures />)} />
             <Route path="/approbation-technique" element={g('approbation', <ApprobationsTechniques />)} />
             <Route path="/commandes" element={g('commandes', <Commandes />)} />
             <Route path="/commandes/:id" element={g('commandes', <FicheCommande />)} />
@@ -159,6 +165,8 @@ export function App() {
             <Route path="/ethique" element={g('ethique', <Ethique />)} />
             <Route path="/inspections/:id" element={g('inspections', <RapportInspection />)} />
             <Route path="/expeditions" element={g('expeditions', <Expeditions />)} />
+            <Route path="/assurances" element={g('assurances', <Assurances />)} />
+            <Route path="/entrepot" element={g('entrepot', <Entrepot />)} />
             <Route path="/interventions" element={g('interventions', <Interventions />)} />
             <Route path="/stock" element={g('stock', <StockPieces />)} />
             <Route path="/sav" element={g('sav', <GarantieSav />)} />

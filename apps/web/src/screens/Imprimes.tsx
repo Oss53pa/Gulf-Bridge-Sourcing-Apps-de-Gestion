@@ -19,7 +19,7 @@ export function Qr({ texte }: { texte: string }) {
   return <div style={{ width: 96, height: 96 }} dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
-function BarreImpression() {
+export function BarreImpression() {
   return (
     <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: 12 }}>
       <Bouton variante="primaire" onClick={() => window.print()}>{i18n.t('commun.imprimer')}</Bouton>

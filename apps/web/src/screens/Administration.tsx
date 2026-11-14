@@ -8,6 +8,7 @@ import { date, dateHeure, montant } from '../lib/format';
 import type { Audit, Parametre, Profil } from '../lib/types';
 import { Bandeau, Bouton, Champ, Chargement, Entete, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { CalendrierParam, DelaisCiblesParam } from './Delais';
+import { QuestionnairesBesoin } from './BesoinParam';
 
 // Module de chaque table journalisée (filtre « module » du journal).
 const MODULES_AUDIT: Record<string, string[]> = {
@@ -126,7 +127,7 @@ export function Journal() {
   );
 }
 
-type OngletParam = 'grille' | 'parametres' | 'taux' | 'calendrier' | 'delais' | 'utilisateurs' | 'societes';
+type OngletParam = 'grille' | 'parametres' | 'taux' | 'calendrier' | 'delais' | 'besoins' | 'utilisateurs' | 'societes';
 
 export function Parametrage() {
   const { t } = useTranslation();
@@ -134,13 +135,14 @@ export function Parametrage() {
   return (
     <div className="screen">
       <Entete surtitre={`${t('modules.parametrage')} · ${t('parametrage.dates')}`} titre={t('parametrage.titre')} />
-      <Onglets actif={onglet} onChange={setOnglet} items={(['grille', 'parametres', 'taux', 'calendrier', 'delais', 'utilisateurs', 'societes'] as OngletParam[]).map((id) => ({ id, lib: t(`parametrage.onglets.${id}`) }))} />
+      <Onglets actif={onglet} onChange={setOnglet} items={(['grille', 'parametres', 'taux', 'calendrier', 'delais', 'besoins', 'utilisateurs', 'societes'] as OngletParam[]).map((id) => ({ id, lib: t(`parametrage.onglets.${id}`) }))} />
       <div className="cadre">
         {onglet === 'grille' && <GrilleTarifaire />}
         {onglet === 'parametres' && <Parametres />}
         {onglet === 'taux' && <Taux />}
         {onglet === 'calendrier' && <CalendrierParam />}
         {onglet === 'delais' && <DelaisCiblesParam />}
+        {onglet === 'besoins' && <QuestionnairesBesoin />}
         {onglet === 'utilisateurs' && <Utilisateurs />}
         {onglet === 'societes' && <Societes />}
       </div>
@@ -450,7 +452,8 @@ function Utilisateurs() {
 
 function Societes() {
   const { t } = useTranslation();
-  const { societes, langue } = useAuth();
+  const { societes, langue, profil } = useAuth();
+  const estAdmin = profil?.role === 'admin';
   const nom = (id: string) => societes.find((s) => s.id === id)?.raison_sociale ?? '';
   const r = useAsync(async () => ok(await supabase.from('rattachements_pays').select('*').order('pays').order('date_effet', { ascending: false })) as
     { id: string; pays: string; societe_id: string; date_effet: string; commentaire: string | null }[], []);
@@ -460,8 +463,11 @@ function Societes() {
     { id: string; code: string; raison_sociale: string; pays: string; devise: string; forme: string | null; date_creation: string; identifiants_fiscaux: Record<string, unknown>; fne: boolean }[], []);
   const series = useAsync(async () => { const x = await supabase.from('series_factures').select('societe_id, serie, annee, dernier, largeur').order('annee', { ascending: false });
     return x.error ? [] : x.data as { societe_id: string; serie: string; annee: number; dernier: number; largeur: number }[]; }, []);
-  const comptes = useAsync(async () => { const x = await supabase.from('comptes_bancaires').select('id, societe_id, libelle, banque, numero, devise, actif').order('libelle');
-    return x.error ? [] : x.data as { id: string; societe_id: string; libelle: string; banque: string; numero: string; devise: string; actif: boolean }[]; }, []);
+  const comptes = useAsync(async () => { const x = await supabase.from('comptes_bancaires').select('id, societe_id, libelle, banque, numero, devise, actif, encaissement_clients').order('libelle');
+    return x.error ? [] : x.data as { id: string; societe_id: string; libelle: string; banque: string; numero: string; devise: string; actif: boolean; encaissement_clients: boolean }[]; }, []);
+  const designer = async (id: string, oui: boolean) => {
+    if (await a.executer(async () => ok(await supabase.rpc('designer_compte_encaissement', { p_compte: id, p_oui: oui })))) void comptes.recharger();
+  };
   const [sel, setSel] = useState<string | null>(null);
   const soc = (fiches.data ?? []).find((x) => x.id === sel) ?? fiches.data?.[0] ?? null;
   const [f, setF] = useState({ pays: '', societe_id: '', date_effet: new Date().toISOString().slice(0, 10), commentaire: '' });
@@ -504,7 +510,10 @@ function Societes() {
             {(comptes.data ?? []).filter((x) => x.societe_id === soc.id).length === 0 ? <span className="mute">{t('parametrage.comptes_aucun')}</span>
               : (comptes.data ?? []).filter((x) => x.societe_id === soc.id).map((x) => (
                 <div key={x.id} className="grl-regle"><span><b>{x.banque}</b><span className="mute">{x.libelle} · •••• {x.numero.slice(-4)} · {x.devise}</span></span>
-                  <Statut statut={x.actif ? 'ok' : 'neutre'} libelle={t(x.actif ? 'parametrage.actif' : 'parametrage.inactif')} /></div>))}
+                  <span className="actions">{x.encaissement_clients && <Statut statut="info" libelle={t('parametrage.encaissement_clients')} />}
+                    <Statut statut={x.actif ? 'ok' : 'neutre'} libelle={t(x.actif ? 'parametrage.actif' : 'parametrage.inactif')} />
+                    {estAdmin && x.actif && <Bouton petit disabled={a.enCours} onClick={() => void designer(x.id, !x.encaissement_clients)}>
+                      {x.encaissement_clients ? t('parametrage.retirer_encaissement') : t('parametrage.designer_encaissement')}</Bouton>}</span></div>))}
           </section>
         </div>
       )}

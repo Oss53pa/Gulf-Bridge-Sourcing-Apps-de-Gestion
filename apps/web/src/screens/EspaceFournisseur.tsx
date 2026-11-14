@@ -12,9 +12,10 @@ import { z } from 'zod';
 import { useAction } from '../lib/data';
 import { MessagerieVue } from './Messagerie';
 import { PageFournisseur } from './PlisFournisseurs';
+import { DeclarerAvancement, DeclarerColisage, Jauge } from './Avancement';
 
 interface Paiement { nature: string; montant: number; devise: string; etat: 'recu' | 'a_venir' | 'annule'; date: string | null }
-interface Commande { id: string; reference: string; statut: string; incoterm: string; lieu: string | null; devise: string; fob_montant: number | null;
+interface Commande { id: string; reference: string; statut: string; avancement: number | null; photos: number; incoterm: string; lieu: string | null; devise: string; fob_montant: number | null;
   lignes: { designation: string; quantite: number; prix_unitaire: number; montant: number }[]; paiements: Paiement[] }
 interface Espace {
   utilisateur: { nom: string; sous_role: string };
@@ -33,6 +34,9 @@ export function EspaceFournisseur() {
   const e = useAsync(async () => ok(await supabase.rpc('espace_fournisseur')) as Espace, []);
   const [vue, setVue] = useState<Vue>('accueil');
   const [rfq, setRfq] = useState<string | null>(null);
+  const [prod, setProd] = useState<Commande | null>(null);
+  const [colis, setColis] = useState<Commande | null>(null);
+  const cols = useAsync(async () => ok(await supabase.rpc('mes_colisages')) as { commande_id: string; statut: string }[], [vue, colis?.id]);
   const nonLus = useAsync(async () => ok(await supabase.rpc('messages_non_lus')) as number, [vue]);
   const x = e.data;
   const maintenant = new Date().toISOString();
@@ -94,6 +98,15 @@ export function EspaceFournisseur() {
               <section key={c.reference} className="ecl-bloc">
                 <div className="liv-pv"><b className="ref">{c.reference}</b><Statut statut={['livree', 'expediee'].includes(c.statut) ? 'ok' : 'info'} libelle={t(`statuts_commande.${c.statut}`, { defaultValue: c.statut })} /></div>
                 <span className="sec">{c.incoterm}{c.lieu ? ` ${c.lieu}` : ''}{c.fob_montant !== null ? ` · ${montant(Number(c.fob_montant), c.devise, langue)}` : ''}</span>
+                {['contrat_signe', 'en_production', 'production_terminee'].includes(c.statut) && <div className="liv-pv">
+                  <Jauge pct={c.avancement ?? 0} /><span className="actions"><span className="mute">{t('avancement.n_photos', { n: c.photos })}</span>
+                  <Bouton petit onClick={() => setProd(c)}>{t('avancement.declarer')}</Bouton></span></div>}
+                {['en_production', 'production_terminee'].includes(c.statut) && (() => {
+                  const dernier = (cols.data ?? []).find((x) => x.commande_id === c.id);
+                  return <div className="liv-pv"><span className="sec">{t('colisage.titre_court')}</span><span className="actions">
+                    {dernier && <Statut statut={dernier.statut === 'validee' ? 'ok' : dernier.statut === 'refusee' ? 'err' : 'att'} libelle={t(`colisage.statuts.${dernier.statut}`)} />}
+                    {dernier?.statut !== 'validee' && <Bouton petit onClick={() => setColis(c)}>{t('colisage.declarer')}</Bouton>}</span></div>;
+                })()}
                 <table className="t"><tbody>{c.lignes.map((l, i) => <tr key={i}><td>{l.designation}</td><td className="num">{Number(l.quantite)}</td>
                   <td className="num">{montant(Number(l.prix_unitaire), c.devise, langue)}</td><td className="num">{montant(Number(l.montant), c.devise, langue)}</td></tr>)}</tbody></table>
               </section>))}
@@ -115,6 +128,8 @@ export function EspaceFournisseur() {
               <DemandesCompte finance={x.utilisateur.sous_role === 'finance'} />
             </section>
           </>}
+          {colis && <DeclarerColisage commandeId={colis.id} reference={colis.reference} onClose={() => setColis(null)} onFait={() => setColis(null)} />}
+          {prod && <DeclarerAvancement commandeId={prod.id} reference={prod.reference} actuel={prod.avancement ?? 0} onClose={() => setProd(null)} onFait={() => { setProd(null); void e.recharger(); }} />}
           {vue === 'messagerie' && <MessagerieVue avecEntete={false} nouveau={{ audiences: ['fournisseur'], commandes: x.commandes.map((c) => ({ id: c.id, libelle: c.reference })) }} />}
           {vue === 'agrement' && <>
             <h1 className="ecl-titre">{t('portail_f.vues.agrement')}</h1>

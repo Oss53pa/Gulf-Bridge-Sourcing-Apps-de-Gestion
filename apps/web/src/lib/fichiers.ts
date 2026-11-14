@@ -68,6 +68,24 @@ export async function deposerPieceClient(pieceId: string, f: File): Promise<void
   }
 }
 
+/** Photo d'avancement de production déposée par un compte fournisseur (images seulement). */
+export async function deposerPhotoProduction(commandeId: string, f: File): Promise<void> {
+  if (f.size === 0 || f.size > TAILLE_MAX) throw new FichierRefuse('taille');
+  const type = await detecterType(f);
+  if (!type || type.ext === 'pdf') throw new FichierRefuse('type');
+  const corps = new FormData();
+  corps.append('cible', 'photo_production');
+  corps.append('commande_id', commandeId);
+  corps.append('fichier', f);
+  const r = await supabase.functions.invoke('gbs-depot', { body: corps });
+  if (r.error) {
+    const code = await (r.error as { context?: Response }).context?.json?.().then((x: { erreur?: string }) => x.erreur).catch(() => undefined);
+    if (code === 'GBS_FICHIER_TYPE') throw new FichierRefuse('type');
+    if (code === 'GBS_FICHIER_TAILLE') throw new FichierRefuse('taille');
+    throw new Error(code ?? 'GBS_DEPOT_ECHEC');
+  }
+}
+
 /** URL signée de courte durée (aucun fichier public). */
 export async function urlSignee(chemin: string): Promise<string | null> {
   const r = await supabase.storage.from('gbs-documents').createSignedUrl(chemin, 300);

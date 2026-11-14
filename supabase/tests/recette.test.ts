@@ -4,6 +4,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import {
   as, asRoot, closePool, commande, compteVerifie, contratSigne, dossier, expectError, fournisseurAgree,
   inspectionValidee, mandatSigne, monde, one, rows, withTx, type Db, type Monde,
+  revueSanctions,
 } from './helpers';
 
 afterAll(closePool);
@@ -157,6 +158,7 @@ describe('Agrément des fournisseurs et vérification des clients', () => {
     await as(db, m.achats);
     const f = (await one(db, `insert into gbs.fournisseurs (raison_sociale_en) values ('Sans engagement') returning id`)).id;
     const dd = (await one(db, `insert into gbs.due_diligences (fournisseur_id, grille) values ($1, '[{"critere":"x","poids":1,"note":5}]') returning id`, [f])).id;
+    await revueSanctions(db, m, f);
     await as(db, m.admin);
     await db.query(`select gbs.valider_due_diligence($1, 'validee')`, [dd]);
     await expectError(db, 'GBS_ENGAGEMENT_NON_COMMISSION', `select gbs.agreer_fournisseur($1)`, [f]);
