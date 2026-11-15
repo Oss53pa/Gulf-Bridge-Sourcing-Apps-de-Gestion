@@ -7,6 +7,8 @@ anomalie) ; fonctions redéployées le 14 novembre 2026 : `gbs-suivi` v5, `gbs-d
 `gbs-transitaire` v3, `gbs-fournisseur` v7. Reste à faire par l'équipe : les essais 1, 3 et 4 de la section 5
 (dépôt réel, demande du site, photo sans position GPS), qui exigent une session ou le site.
 
+Migration 82 (`performance_fournisseurs`) appliquée le 15 novembre 2026 vers 2 h 55 GMT : voir la section 8.
+
 ## 1. Avant de commencer
 
 - Fenêtre : en dehors de 7 h – 20 h GMT, jours ouvrés (règle de modification de la base).
@@ -65,3 +67,24 @@ fonction concernée (historique des versions dans le tableau de bord Supabase, E
 - Activer le tronc commun du guide (administratrice), saisir les questionnaires par catégorie.
 - Confirmer le réseau électrique des pays (Paramétrage), les taux d'assurance et les capacités des conteneurs.
 - Les portails client et fournisseur restent fermés jusqu'au test d'intrusion indépendant.
+
+## 8. Migration 82 · performance des fournisseurs
+
+**État : fait** le 15 novembre 2026 (dimanche, vers 2 h 55 GMT), par l'éditeur SQL du tableau de bord.
+
+- Méthode : un script unique, en une transaction, qui reprend sans modification
+  `20261107000082_performance_fournisseurs.sql`, précédé de garde-fous (arrêt si la 81 n'est pas inscrite dans
+  l'historique, si la 82 l'est déjà ou si ses paramètres existent) et suivi de l'inscription dans
+  `supabase_migrations.schema_migrations`. Testé en local sur une base à l'état 81 : refus sans la 81, application,
+  refus d'une deuxième application.
+- L'historique des migrations est partagé avec les autres applications du projet : les dernières lignes ne sont
+  pas celles de GBS. Chercher les versions `20261107000081` et `20261107000082` par leur numéro.
+- Premier essai depuis un téléphone : texte tronqué au collage, « Success. No rows returned », rien d'écrit
+  (transaction abandonnée). Coller depuis un ordinateur, ou vérifier que la ligne de contrôle finale s'affiche.
+- Vérification : `supabase/verifications/apres_82.sql` (lecture seule). Contrôlée après validation : historique,
+  3 paramètres, droits (connectés oui, anonymes non), droits du propriétaire, chemin de recherche vide. Le code de
+  la fonction est identique à celui du dépôt aux blancs près (le collage a ajouté de l'indentation).
+- Reste à faire par l'équipe : ouvrir l'onglet « Performance » d'une fiche fournisseur et le registre des
+  fournisseurs avec un compte administratrice ou achats. Une fonction PL/pgSQL ne signale une colonne mal nommée
+  qu'à son premier appel ; des chiffres affichés, même à zéro, confirment qu'elle fonctionne.
+- Retour en arrière : aucun prévu. Les seuils et la fenêtre de calcul se corrigent dans Paramétrage, sans migration.
