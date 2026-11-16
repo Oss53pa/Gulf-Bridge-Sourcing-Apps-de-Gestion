@@ -8,6 +8,7 @@ import { date, dateHeure, montant } from '../lib/format';
 import type { Audit, Parametre, Profil } from '../lib/types';
 import { Bandeau, Bouton, Champ, Chargement, Entete, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { CalendrierParam, DelaisCiblesParam } from './Delais';
+import { DroitsImportParam } from './DroitsImport';
 import { QuestionnairesBesoin } from './BesoinParam';
 
 // Module de chaque table journalisée (filtre « module » du journal).
@@ -127,7 +128,7 @@ export function Journal() {
   );
 }
 
-type OngletParam = 'grille' | 'parametres' | 'taux' | 'calendrier' | 'delais' | 'besoins' | 'utilisateurs' | 'societes';
+type OngletParam = 'grille' | 'parametres' | 'taux' | 'droits' | 'calendrier' | 'delais' | 'besoins' | 'utilisateurs' | 'societes';
 
 export function Parametrage() {
   const { t } = useTranslation();
@@ -135,11 +136,12 @@ export function Parametrage() {
   return (
     <div className="screen">
       <Entete surtitre={`${t('modules.parametrage')} · ${t('parametrage.dates')}`} titre={t('parametrage.titre')} />
-      <Onglets actif={onglet} onChange={setOnglet} items={(['grille', 'parametres', 'taux', 'calendrier', 'delais', 'besoins', 'utilisateurs', 'societes'] as OngletParam[]).map((id) => ({ id, lib: t(`parametrage.onglets.${id}`) }))} />
+      <Onglets actif={onglet} onChange={setOnglet} items={(['grille', 'parametres', 'taux', 'droits', 'calendrier', 'delais', 'besoins', 'utilisateurs', 'societes'] as OngletParam[]).map((id) => ({ id, lib: t(`parametrage.onglets.${id}`) }))} />
       <div className="cadre">
         {onglet === 'grille' && <GrilleTarifaire />}
         {onglet === 'parametres' && <Parametres />}
         {onglet === 'taux' && <Taux />}
+        {onglet === 'droits' && <DroitsImportParam />}
         {onglet === 'calendrier' && <CalendrierParam />}
         {onglet === 'delais' && <DelaisCiblesParam />}
         {onglet === 'besoins' && <QuestionnairesBesoin />}
