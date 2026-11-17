@@ -134,11 +134,20 @@ export async function fournisseurAgree(db: Db, m: Monde, nom: string) {
   const dd = (await one(db, `insert into gbs.due_diligences (fournisseur_id, grille, realisee_le)
     values ($1, '[{"critere":"Existence légale","poids":30,"note":5},{"critere":"Capacité","poids":70,"note":4}]', current_date - 20)
     returning id`, [f])).id;
+  await revueSanctions(db, m, f);
   await as(db, m.admin);
   await db.query(`select gbs.valider_due_diligence($1, 'validee', 'Conforme')`, [dd]);
   await db.query(`select gbs.agreer_fournisseur($1)`, [f]);
   await asRoot(db);
   return f as string;
+}
+
+/** Revue annuelle (M16) : bénéficiaire effectif déclaré et contrôle des sanctions récent, préalables à la validation d'une due diligence. */
+export async function revueSanctions(db: Db, m: Monde, f: string) {
+  await as(db, m.achats);
+  await db.query(`insert into gbs.beneficiaires_fournisseurs (fournisseur_id, nom, nationalite, pourcentage) values ($1, 'Chen Guohua', 'CN', 70)`, [f]);
+  await db.query(`select gbs.enregistrer_controle_sanctions($1, $2)`, [f, { realise_le: new Date().toISOString().slice(0, 10), listes: ['onu', 'ue', 'ofac'],
+    source: 'Listes consolidées ONU, UE et OFAC', resultat: 'aucune_correspondance' }]);
 }
 
 export async function compteVerifie(db: Db, m: Monde, fournisseur: string, type: string, devise: string) {

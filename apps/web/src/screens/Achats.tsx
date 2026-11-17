@@ -15,11 +15,14 @@ import { CataloguePieces } from './PiecesRechange';
 import { Depot } from '../components/Depot';
 import { useNoms } from '../lib/referentiels';
 import { DonneesCoutGlobal, ListeRapports } from './RapportOffres';
+import { RenduConsultation } from './DroitsImport';
+import { AvancementCommande, ColisageCommande } from './Avancement';
 
 const INCOTERMS = ['FOB', 'FCA', 'FAS', 'EXW', 'CFR', 'CPT', 'CIF', 'CIP'] as const;
 
 // ============================================================================ Mise en concurrence
-interface Rfq { id: string; reference: string; dossier_id: string; objet: string; incoterm_demande: string; date_limite: string; fuseau: string; statut: string; quantite: number | null; specifications: string | null; }
+interface Rfq { id: string; reference: string; dossier_id: string; objet: string; incoterm_demande: string; date_limite: string; fuseau: string; statut: string; quantite: number | null; specifications: string | null;
+  article_id: string | null; fret_estime_xof: number | null; fret_source: string | null; }
 interface Ligne { id: string; fournisseur_id: string; incoterm: string; devise: string; montant: number; fob_montant: number; fob_xof: number;
   delai_jours: number | null; garantie_mois: number | null; note_technique: number | null; retenue: boolean; rang_prix: number; anormalement_basse: boolean; cout_global_manquant: boolean; }
 
@@ -67,6 +70,7 @@ export function MiseEnConcurrence() {
               <dt>{t('rfq.date_limite')}</dt><dd>{dateHeure(r.date_limite, langue, fuseau)} ({t('rfq.votre_fuseau')}) · {dateHeure(r.date_limite, langue, r.fuseau)} ({r.fuseau})</dd>
               <dt>{t('champs.quantite')}</dt><dd>{r.quantite ?? '—'}</dd>
             </dl>
+            <RenduConsultation rfq={r} onSaved={() => void l.recharger()} />
             <div className="section-titre">{t('rfq.invites')}</div>
             <div className="mute">{(invites.data ?? []).map((i) => fournisseurs[i.fournisseur_id]).join(' · ') || t('rfq.aucun_invite')}</div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -323,7 +327,7 @@ export function FicheCommande() {
   const [exec, setExec] = useState<Paiement | null>(null);
   const [motif, setMotif] = useState('');
   const [annuler, setAnnuler] = useState(false);
-  const [onglet, setOnglet] = useState<'dossier' | 'lignes' | 'approbation' | 'paiements' | 'contrat'>('dossier');
+  const [onglet, setOnglet] = useState<'dossier' | 'lignes' | 'approbation' | 'paiements' | 'contrat' | 'production'>('dossier');
   const phases = useAsync(async () => (c.data ? ok(await supabase.from('dossier_phases').select('phase, ordre, statut, reelle_debut, reelle_fin, prevue_fin')
     .eq('dossier_id', c.data.dossier_id).order('ordre')) as { phase: string; ordre: number; statut: string; reelle_debut: string | null; reelle_fin: string | null; prevue_fin: string | null }[] : []), [c.data?.dossier_id]);
   const cmd = c.data;
@@ -376,9 +380,12 @@ export function FicheCommande() {
         { id: 'lignes', lib: `${t('commandes.lignes')} · ${(lignes.data ?? []).length}` },
         { id: 'approbation', lib: t('commandes.o_approbation') },
         { id: 'paiements', lib: `${t('commandes.o_paiements')} · ${(paiements.data ?? []).length}` },
-        { id: 'contrat', lib: t('commandes.o_contrat') }]} />
+        { id: 'contrat', lib: t('commandes.o_contrat') },
+        { id: 'production', lib: t('avancement.onglet') }]} />
       <Bandeau type="err">{a.erreur}</Bandeau>
       <div className="cadre" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {onglet === 'production' && <><AvancementCommande commandeId={cmd.id} publier={['admin', 'achats_chine'].includes(role)} />
+          <ColisageCommande commandeId={cmd.id} traiter={['admin', 'achats_chine'].includes(role)} /></>}
         {onglet === 'dossier' && <>
           <div className="cmd-plan">
             {GROUPES.map(([g, codes]) => {

@@ -6,6 +6,7 @@
 //   jeton (empreinte), l'expiration, la révocation et le plafond par lien ;
 // - documents remis par URL signée de 5 minutes, chemin revérifié ;
 // - erreurs génériques ; aucun jeton ni donnée personnelle dans les journaux.
+import { longueurCorps } from '../_shared/fichiers.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.46.1';
 import { adresseClient, CHEMIN_DOCUMENT, Limiteur, lireJeton } from '../_shared/suivi.ts';
 
@@ -32,7 +33,8 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return refus(405, 'GBS_METHODE');
   if (ORIGINE && req.headers.get('origin') && req.headers.get('origin') !== ORIGINE) return refus(403, 'GBS_ORIGINE');
   if (!limiteur.autorise(adresseClient(req.headers))) return refus(429, 'GBS_TROP_DE_CONSULTATIONS');
-  if (Number(req.headers.get('content-length') ?? '0') > 1024) return refus(413, 'GBS_PARAMETRES_INVALIDES');
+  const lg = longueurCorps(req.headers.get('content-length'), 1024);
+  if (lg !== 'ok') return refus(lg === 'absente' ? 411 : 413, 'GBS_PARAMETRES_INVALIDES');
 
   let jeton: string | null = null;
   try {
