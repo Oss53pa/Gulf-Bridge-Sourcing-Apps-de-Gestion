@@ -38,7 +38,7 @@ export function Commissions() {
       <Onglets items={items} actif={onglet} onChange={setOnglet} />
       {onglet === 'releves' && <Releves />}
       {onglet === 'contrats' && <Contrats />}
-      {onglet === 'export' && finance && <Export />}
+      {onglet === 'export' && finance && <ExportComptable rpc="export_commissions_agents" prefixe="commissions-agents" titre={t('commissions.export')} aide={t('commissions.aide_export')} />}
     </div>
   );
 }
@@ -192,7 +192,9 @@ function NouveauContrat({ onClose, onSaved }: { onClose: () => void; onSaved: ()
   );
 }
 
-function Export() {
+/** Export comptable d'une période pour une société (CSV au format des écritures, cellules neutralisées).
+ *  Réutilisé pour les commissions des agents et pour les ventes et règlements. */
+export function ExportComptable({ rpc, prefixe, titre, aide, libelleSociete }: { rpc: 'export_commissions_agents' | 'export_ecritures'; prefixe: string; titre: string; aide: string; libelleSociete?: string }) {
   const { t } = useTranslation();
   const { societes, profil } = useAuth();
   const visibles = profil?.role === 'admin' ? societes : societes.filter((s) => profil?.societes?.includes(s.id));
@@ -203,26 +205,26 @@ function Export() {
     const v = z.object({ p_societe: z.string().uuid(), p_du: DATE, p_au: DATE }).strict().safeParse({ p_societe: f.societe, p_du: f.du, p_au: f.au });
     if (!v.success || v.data.p_au < v.data.p_du) { a.setErreur(t('formulaire.invalide')); return; }
     await a.executer(async () => {
-      const lignes = ok(await supabase.rpc('export_commissions_agents', v.data)) as Record<string, unknown>[];
+      const lignes = ok(await supabase.rpc(rpc, v.data)) as Record<string, unknown>[];
       const cols = ['date_ecriture', 'journal', 'compte', 'compte_tiers', 'piece', 'libelle', 'debit_xof', 'credit_xof', 'devise_tenue', 'debit_devise', 'credit_devise'];
       const csv = [cols.map(celluleCsv).join(';'), ...lignes.map((l) => cols.map((c) => celluleCsv(l[c])).join(';'))].join('\r\n');
       const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
       const lien = document.createElement('a');
       const code = societes.find((s) => s.id === v.data.p_societe)?.code ?? 'societe';
-      lien.href = url; lien.download = `commissions-agents_${code}_${v.data.p_du}_${v.data.p_au}.csv`;
+      lien.href = url; lien.download = `${prefixe}_${code}_${v.data.p_du}_${v.data.p_au}.csv`;
       lien.click();
       URL.revokeObjectURL(url);
     });
   };
   return (
-    <CadreTableau titre={t('commissions.export')}>
-      <Champ label={t('commissions.societe')}><select value={f.societe} onChange={(e) => setF({ ...f, societe: e.target.value })}>
+    <CadreTableau titre={titre}>
+      <Champ label={libelleSociete ?? t('commissions.societe')}><select value={f.societe} onChange={(e) => setF({ ...f, societe: e.target.value })}>
         {visibles.map((s) => <option key={s.id} value={s.id}>{s.raison_sociale}</option>)}</select></Champ>
       <div className="actions">
         <Champ label={t('commissions.du')}><input type="date" value={f.du} onChange={(e) => setF({ ...f, du: e.target.value })} /></Champ>
         <Champ label={t('commissions.au')}><input type="date" value={f.au} min={f.du} onChange={(e) => setF({ ...f, au: e.target.value })} /></Champ>
       </div>
-      <p className="mute">{t('commissions.aide_export')}</p>
+      <p className="mute">{aide}</p>
       <Bandeau type="err">{a.erreur}</Bandeau>
       <Bouton variante="primaire" disabled={a.enCours || !f.societe} onClick={() => void exporter()}>{t('commissions.telecharger')}</Bouton>
     </CadreTableau>

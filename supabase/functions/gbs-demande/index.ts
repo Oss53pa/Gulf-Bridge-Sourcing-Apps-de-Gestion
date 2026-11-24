@@ -5,6 +5,7 @@
 // - limitation de débit en mémoire par appelant, puis plafonds en base par visiteur (empreinte
 //   HMAC de son adresse, jamais l'adresse en clair) et par jour ;
 // - erreurs génériques ; ni corps, ni adresse, ni donnée personnelle dans les journaux.
+import { longueurCorps } from '../_shared/fichiers.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.46.1';
 import { adresseClient, Limiteur } from '../_shared/suivi.ts';
 import { avisNouvelleDemande, CORPS_MAX, destinataires, empreinteIp, lireDemande, signatureValide } from '../_shared/demande.ts';
@@ -40,7 +41,8 @@ Deno.serve(async (req) => {
   if (SECRET.length < 32) return repondre(503, { erreur: 'GBS_INDISPONIBLE' });
   const appelant = adresseClient(req.headers);
   if (!limiteur.autorise(appelant)) return repondre(429, { erreur: 'GBS_TROP_DE_DEMANDES' });
-  if (Number(req.headers.get('content-length') ?? '0') > CORPS_MAX) return repondre(413, { erreur: 'GBS_DEMANDE_INVALIDE' });
+  const lg = longueurCorps(req.headers.get('content-length'), CORPS_MAX);
+  if (lg !== 'ok') return repondre(lg === 'absente' ? 411 : 413, { erreur: 'GBS_DEMANDE_INVALIDE' });
 
   const texte = await req.text();
   if (texte.length > CORPS_MAX) return repondre(413, { erreur: 'GBS_DEMANDE_INVALIDE' });

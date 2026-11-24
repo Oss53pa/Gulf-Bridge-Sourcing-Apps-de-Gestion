@@ -14,7 +14,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.46.1';
 import { adresseClient, Limiteur } from '../_shared/suivi.ts';
 import { chiffrer, cle, contenuPli, dechiffrer, empreinte, hex, lireDemande, lireDemandeCompte, lireOffre } from '../_shared/plis.ts';
 import { lireDepotPiece, TAILLE_PIECE_MAX } from '../_shared/piecesdd.ts';
-import { detecter } from '../_shared/fichiers.ts';
+import { detecter, longueurCorps } from '../_shared/fichiers.ts';
 
 const ORIGINE = Deno.env.get('GBS_ORIGINE') ?? '';
 const limiteur = new Limiteur(Number(Deno.env.get('GBS_FOURNISSEUR_LIMITE_MINUTE') ?? '20'), 60_000);
@@ -43,7 +43,8 @@ Deno.serve(async (req) => {
 
   // Dépôt d'une pièce de due diligence (formulaire multipart).
   if ((req.headers.get('content-type') ?? '').startsWith('multipart/form-data')) {
-    if (Number(req.headers.get('content-length') ?? '0') > TAILLE_PIECE_MAX + 64 * 1024) return refus(413, 'GBS_FICHIER_TAILLE');
+    const lgp = longueurCorps(req.headers.get('content-length'), TAILLE_PIECE_MAX + 64 * 1024);
+    if (lgp !== 'ok') return refus(lgp === 'absente' ? 411 : 413, 'GBS_FICHIER_TAILLE');
     let form: FormData;
     try { form = await req.formData(); } catch { return refus(400, 'GBS_PARAMETRES_INVALIDES'); }
     const fichier = form.get('fichier');
@@ -69,7 +70,8 @@ Deno.serve(async (req) => {
     return repondre(201, data);
   }
 
-  if (Number(req.headers.get('content-length') ?? '0') > TAILLE_MAX) return refus(413, 'GBS_PARAMETRES_INVALIDES');
+  const lg = longueurCorps(req.headers.get('content-length'), TAILLE_MAX);
+  if (lg !== 'ok') return refus(lg === 'absente' ? 411 : 413, 'GBS_PARAMETRES_INVALIDES');
   let corps: unknown;
   try {
     const t = await req.text();

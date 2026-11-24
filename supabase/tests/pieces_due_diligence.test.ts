@@ -1,6 +1,6 @@
 // Lot 1, M17 niveau 1 et M16 : pièces de due diligence déposées par le fournisseur, par lien.
 import { afterAll, describe, expect, it } from 'vitest';
-import { as, asRoot, closePool, expectError, monde, one, rows, withTx, type Db, type Monde } from './helpers';
+import { as, asRoot, closePool, expectError, monde, one, revueSanctions, rows, withTx, type Db, type Monde } from './helpers';
 
 afterAll(closePool);
 
@@ -22,7 +22,7 @@ const chemin = (dd: string, n: number) => `dd/${dd}/${String(n).padStart(8, '0')
 describe('Pièces de due diligence par lien (M17, M16)', () => {
   it('dépôt par lien, chemin contrôlé ; acceptation ou refus motivé ; lien caduc une fois la due diligence statuée', () => withTx(async (db) => {
     const m = await monde(db);
-    const { dd, l } = await preparer(db, m);
+    const { f, dd, l } = await preparer(db, m);
     await service(db);
     const vue = (await one(db, `select gbs.formulaire_due_diligence($1) v`, [l.jeton])).v;
     expect(vue.fournisseur).toBe('Shunde Cold Chain Co.');
@@ -50,6 +50,7 @@ describe('Pièces de due diligence par lien (M17, M16)', () => {
     // Due diligence statuée : le lien ne sert plus.
     await as(db, m.achats);
     await db.query(`update gbs.due_diligences set grille = '[{"critere":"Existence légale","poids":100,"note":4}]' where id = $1`, [dd]);
+    await revueSanctions(db, m, f);
     await as(db, m.admin);
     await db.query(`select gbs.valider_due_diligence($1, 'validee', 'Conforme')`, [dd]);
     await service(db);

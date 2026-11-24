@@ -13,6 +13,7 @@ import { Depot as Depotx } from '../components/Depot';
 import { FicheNc } from './NonConformites';
 import { PackDocumentaire } from './PackDocumentaire';
 import { TransitaireExpedition } from './Transitaires';
+import { PreparerReception } from './ReceptionSite';
 
 // ============================================================================ Inspections
 type InspectionListe = Inspection & { commandes: { fournisseur_id: string } | null };
@@ -523,6 +524,7 @@ export function FicheExpedition() {
             </section>
           )}
           {['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role) && <PackDocumentaire expeditionId={x.id} dossierId={x.dossier_id} />}
+          {(ecrit || role === 'hub_afrique') && <PreparerReception expeditionId={x.id} livree={x.statut === 'livree'} />}
           {(ecrit || role === 'hub_afrique') && (
             <section>
               <div className="section-titre">{t('expeditions.ajouter_etape')}</div>

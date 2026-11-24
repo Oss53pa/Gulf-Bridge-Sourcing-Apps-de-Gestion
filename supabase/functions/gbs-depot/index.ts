@@ -1,12 +1,15 @@
 // Fonction serveur « gbs-depot » : seul point d'écriture dans le bucket privé « gbs-documents ».
 // Vérifie l'utilisateur (session AAL2 via les droits en base), le dossier, la taille
 // et le type réel du fichier sur ses octets, régénère le nom, calcule l'empreinte SHA-256.
+// Les métadonnées des images (EXIF, XMP, IPTC, textes) sont retirées avant stockage ; l'empreinte porte
+// sur le fichier stocké.
 // Variables : SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (fournies par
 // Supabase), GBS_ORIGINE (origine autorisée de l'application, ex. https://app.gulfbridge.ci).
 // Compte client (cible « piece_client ») : droit vérifié en base avec la session (double facteur,
 // pièce attendue de lui), puis la pièce est enregistrée par le rôle de service ; fichier retiré en cas d'échec.
+// Compte fournisseur (cible « photo_production ») : même principe pour une photo d'avancement (images seulement).
 import { createClient } from 'npm:@supabase/supabase-js@2.46.1';
-import { detecter, hex, TAILLE_MAX, UUID } from '../_shared/fichiers.ts';
+import { TAILLE_MAX, UUID, detecter, hex, longueurCorps, retirerMetadonnees } from '../_shared/fichiers.ts';
 
 const ORIGINE = Deno.env.get('GBS_ORIGINE') ?? '';
 const ROLES = ['admin', 'achats_chine', 'hub_afrique', 'agent_pays'];
@@ -40,8 +43,8 @@ Deno.serve(async (req) => {
   if (ORIGINE && req.headers.get('origin') && req.headers.get('origin') !== ORIGINE) return refus(403, 'GBS_ORIGINE');
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return refus(401, 'GBS_ACCES_REFUSE');
-  const longueur = Number(req.headers.get('content-length') ?? '0');
-  if (longueur > TAILLE_MAX + 64 * 1024) return refus(413, 'GBS_FICHIER_TAILLE');
+  const lg = longueurCorps(req.headers.get('content-length'), TAILLE_MAX + 64 * 1024);
+  if (lg !== 'ok') return refus(lg === 'absente' ? 411 : 413, 'GBS_FICHIER_TAILLE');
 
   const url = Deno.env.get('SUPABASE_URL')!;
   const utilisateur = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -62,15 +65,46 @@ Deno.serve(async (req) => {
     if (f.size === 0 || f.size > TAILLE_MAX) return refus(413, 'GBS_FICHIER_TAILLE');
     const acces = await utilisateur.rpc('verifier_depot_piece_client', { p_piece: pieceId });
     if (acces.error || typeof acces.data !== 'string' || !UUID.test(acces.data)) return refus(403, 'GBS_ACCES_REFUSE');
-    const octets = new Uint8Array(await f.arrayBuffer());
-    const type = detecter(octets.subarray(0, 12));
+    const brut = new Uint8Array(await f.arrayBuffer());
+    const type = detecter(brut.subarray(0, 12));
     if (!type) return refus(415, 'GBS_FICHIER_TYPE');
+    // Métadonnées des images retirées (lieu, appareil, auteur) ; fichier mal formé refusé.
+    const octets = retirerMetadonnees(brut, type.ext);
+    if (!octets) return refus(415, 'GBS_FICHIER_TYPE');
     const chemin = `${acces.data}/${crypto.randomUUID()}.${type.ext}`;
     const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false }, db: { schema: 'gbs' } });
     const up = await service.storage.from('gbs-documents').upload(chemin, octets, { contentType: type.mime, upsert: false });
     if (up.error) { console.error('depot: echec de stockage'); return refus(500, 'GBS_DEPOT_ECHEC'); }
     const empreinte = hex(await crypto.subtle.digest('SHA-256', octets));
     const r = await service.rpc('enregistrer_piece_client', { p_user: u.user.id, p_piece: pieceId, p_chemin: chemin, p_empreinte: empreinte });
+    if (r.error) {
+      await service.storage.from('gbs-documents').remove([chemin]);
+      return refus(r.error.code === '42501' ? 403 : 409, 'GBS_DEPOT_ECHEC');
+    }
+    return new Response(JSON.stringify({ empreinte }), { status: 201, headers: entetes({ 'Content-Type': 'application/json' }) });
+  }
+
+  // Photo d'avancement de production déposée par un compte fournisseur.
+  if (form.get('cible') === 'photo_production') {
+    const commandeId = String(form.get('commande_id') ?? '');
+    const f = form.get('fichier');
+    if (!UUID.test(commandeId) || !(f instanceof File) || form.getAll('fichier').length !== 1
+        || [...form.keys()].some((k) => !['cible', 'commande_id', 'fichier'].includes(k))) return refus(400, 'GBS_PARAMETRES_INVALIDES');
+    if (f.size === 0 || f.size > TAILLE_MAX) return refus(413, 'GBS_FICHIER_TAILLE');
+    const acces = await utilisateur.rpc('verifier_depot_photo_production', { p_commande: commandeId });
+    if (acces.error || typeof acces.data !== 'string' || !UUID.test(acces.data)) return refus(403, 'GBS_ACCES_REFUSE');
+    const brut = new Uint8Array(await f.arrayBuffer());
+    const type = detecter(brut.subarray(0, 12));
+    if (!type || type.ext === 'pdf') return refus(415, 'GBS_FICHIER_TYPE');
+    // Métadonnées des images retirées (lieu, appareil, auteur) ; fichier mal formé refusé.
+    const octets = retirerMetadonnees(brut, type.ext);
+    if (!octets) return refus(415, 'GBS_FICHIER_TYPE');
+    const chemin = `${acces.data}/${crypto.randomUUID()}.${type.ext}`;
+    const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false }, db: { schema: 'gbs' } });
+    const up = await service.storage.from('gbs-documents').upload(chemin, octets, { contentType: type.mime, upsert: false });
+    if (up.error) { console.error('depot: echec de stockage'); return refus(500, 'GBS_DEPOT_ECHEC'); }
+    const empreinte = hex(await crypto.subtle.digest('SHA-256', octets));
+    const r = await service.rpc('enregistrer_photo_production', { p_user: u.user.id, p_commande: commandeId, p_chemin: chemin, p_empreinte: empreinte });
     if (r.error) {
       await service.storage.from('gbs-documents').remove([chemin]);
       return refus(r.error.code === '42501' ? 403 : 409, 'GBS_DEPOT_ECHEC');
@@ -96,9 +130,12 @@ Deno.serve(async (req) => {
     return refus(403, 'GBS_ACCES_REFUSE');
   }
 
-  const octets = new Uint8Array(await fichier.arrayBuffer());
-  const type = detecter(octets.subarray(0, 12));
+  const brut = new Uint8Array(await fichier.arrayBuffer());
+  const type = detecter(brut.subarray(0, 12));
   if (!type) return refus(415, 'GBS_FICHIER_TYPE');
+  // Métadonnées des images retirées (lieu, appareil, auteur) ; fichier mal formé refusé.
+  const octets = retirerMetadonnees(brut, type.ext);
+  if (!octets) return refus(415, 'GBS_FICHIER_TYPE');
 
   const chemin = frais ? `frais/${u.user.id}/${crypto.randomUUID()}.${type.ext}` : `${dossierId}/${crypto.randomUUID()}.${type.ext}`;
   const service = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });

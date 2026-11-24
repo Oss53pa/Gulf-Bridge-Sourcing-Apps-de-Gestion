@@ -748,9 +748,10 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 .aud-integrite.ok { background: var(--ok-bg); color: var(--ok); }
 .aud-integrite .pt { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .aud-filtres { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.aud-filtres .segment { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: var(--r); background: var(--sable); }
-.aud-filtres .segment button { border: 1px solid transparent; background: none; padding: 7px 10px; border-radius: var(--r); font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
-.aud-filtres .segment button[aria-pressed="true"] { background: var(--white); border-color: var(--bronze); }
+.portee-taches { margin: 0 0 12px; width: fit-content; }
+.aud-filtres .segment, .portee-taches.segment { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: var(--r); background: var(--sable); }
+.aud-filtres .segment button, .portee-taches.segment button { border: 1px solid transparent; background: none; padding: 7px 10px; border-radius: var(--r); font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+.aud-filtres .segment button[aria-pressed="true"], .portee-taches.segment button[aria-pressed="true"] { background: var(--white); border-color: var(--bronze); }
 .aud-filtres .segment button:disabled { opacity: .45; cursor: default; }
 .aud-recherche { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .aud-recherche .search { width: 340px; max-width: 100%; }
@@ -886,3 +887,47 @@ button.lien:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2p
 @media (max-width: 1500px) { .topbar .sync { display: none; } }
 .msg-fils b .badge { margin-left: 6px; }
 .dcl { margin-bottom: 12px; flex: none; }
+
+/* Avancement de production : jauge commune et vignettes photo */
+.avt { flex: 1 1 220px; min-width: 160px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.avt > b { font-family: var(--serif); font-size: 20px; font-weight: 400; line-height: 1.2; }
+.vignettes { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; flex-shrink: 0; }
+.vignettes img, .vignette-vide { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--sable); }
+
+/* Fiche facture : annonce de virement (colonne étroite) */
+.annonce-vir { display: flex; flex-direction: column; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.annonce-vir .actions { flex-wrap: wrap; }
+.annonce-vir .ref { overflow-wrap: anywhere; }
+
+.nowrap { white-space: nowrap; flex-shrink: 0; }
+
+/* Guide d'expression du besoin (BES) */
+.besoin-creer { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
+.besoin-grille { display: grid; grid-template-columns: minmax(200px, 0.6fr) minmax(0, 1.6fr) minmax(220px, 0.8fr); gap: 20px; align-items: start; }
+.besoin-etapes { display: flex; flex-direction: column; gap: 2px; }
+.besoin-etape { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 2px 8px; text-align: left; background: none; border: 0; border-radius: var(--r); padding: 8px 10px; font: inherit; color: var(--ink); cursor: pointer; }
+.besoin-etape .statut { grid-column: 2; justify-self: start; }
+.besoin-etape.choisi { background: var(--sable); font-weight: 600; }
+.besoin-etape:disabled { cursor: default; }
+.besoin-champs { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.besoin-champ { display: flex; flex-direction: column; gap: 6px; padding: 0 0 14px; border-bottom: 1px solid var(--rule); }
+.besoin-question { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--sable); border-radius: var(--r); }
+.besoin-reponse { padding-left: 10px; border-left: 2px solid var(--bronze); }
+.besoin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.besoin-aside { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--rule); border-radius: var(--r); }
+.besoin-pct { font-size: 32px; font-weight: 500; }
+.besoin-valider { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--rule); }
+@media (max-width: 1100px) { .besoin-grille { grid-template-columns: 1fr; } .besoin-etapes { flex-direction: row; overflow-x: auto; } }
+.besoin-champ > button.lien, .besoin-question > .btn, .besoin-question > button { align-self: flex-start; }
+.besoin-champ > button.lien { color: var(--action, var(--ink)); text-decoration: underline; font-size: 13px; }
+.besoin-param-actions { margin: 12px 0 0; }
+
+/* Assurance et sinistres (ASS) */
+.sin-etapes { list-style: none; display: flex; gap: 6px; padding: 0; margin: 0 0 6px; flex-wrap: wrap; }
+.sin-etapes li { flex: 1; min-width: 90px; padding-top: 6px; border-top: 3px solid var(--border); color: var(--mute); font-size: 13px; }
+.sin-etapes li.fait { border-top-color: var(--nuit); color: var(--ink); }
+
+/* Entrepôt de consolidation (ENT) */
+.ref-grille.ent-grille { grid-template-columns: minmax(0, 1.6fr) minmax(240px, 0.6fr); }
+.ent-jauge { display: flex; justify-content: space-between; font-size: 13px; color: var(--sec); }
+@media (max-width: 1100px) { .ref-grille.ent-grille { grid-template-columns: 1fr; } }

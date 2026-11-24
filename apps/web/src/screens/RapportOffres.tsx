@@ -10,6 +10,7 @@ import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant } from '../lib/format';
 import { deposer, FichierRefuse } from '../lib/fichiers';
 import { Bandeau, Bouton, Champ, Chargement, Statut, Tiroir, Vide } from '../components/ui';
+import { PrixRendu } from './DroitsImport';
 
 const UUID = z.string().uuid();
 const CHAMPS_NUM = ['puissance_kw', 'heures_an', 'duree_vie_ans', 'entretien_heures_an', 'pieces_cout_an', 'pieces_disponibles_ans', 'delai_pieces_jours'] as const;
@@ -17,7 +18,8 @@ const CHAMPS_NUM = ['puissance_kw', 'heures_an', 'duree_vie_ans', 'entretien_heu
 interface OffreRapport {
   lettre: string; incoterm: string; devise: string; montant: number; fob_xof: number; delai_jours: number | null; garantie_mois: number | null;
   conditions_paiement: string | null; note_totale: number; notes: Record<string, number>; points_forts: string[]; risques: string[];
-  cout_global: { complet: boolean; manquants: string[]; horizon_ans: number; prix_xof: number; energie_xof?: number; entretien_xof?: number; pieces_xof?: number; total_xof: number | null };
+  cout_global: { complet: boolean; manquants: string[]; horizon_ans: number; prix_xof: number; energie_xof?: number; entretien_xof?: number; pieces_xof?: number; total_xof: number | null;
+    rendu?: { estime: boolean; rendu_xof?: number } };
 }
 interface Contenu {
   consultation: { reference: string; objet: string; quantite: number | null; incoterm: string; date_limite: string };
@@ -31,8 +33,8 @@ interface Rapport { id: string; consultation_id: string; dossier_id: string; ver
 /** Données de coût global déclarées par le fournisseur, et notes de paiement et de capacité. */
 export function DonneesCoutGlobal({ offreId, onClose, onSaved }: { offreId: string; onClose: () => void; onSaved: () => void }) {
   const { t } = useTranslation();
-  const o = useAsync(async () => ok(await supabase.from('offres').select('cout_global, note_paiement, note_capacite').eq('id', offreId).single()) as
-    { cout_global: Record<string, number | string> | null; note_paiement: number | null; note_capacite: number | null }, [offreId]);
+  const o = useAsync(async () => ok(await supabase.from('offres').select('cout_global, note_paiement, note_capacite, fob_xof').eq('id', offreId).single()) as
+    { cout_global: Record<string, number | string> | null; note_paiement: number | null; note_capacite: number | null; fob_xof: number | null }, [offreId]);
   const a = useAction();
   const [f, setF] = useState<Record<string, string> | null>(null);
   const v0 = o.data;
@@ -59,6 +61,7 @@ export function DonneesCoutGlobal({ offreId, onClose, onSaved }: { offreId: stri
   return (
     <Tiroir titre={t('rapport.donnees_cout_global')} onClose={onClose}>
       {!valeurs ? <Chargement /> : (<>
+        <PrixRendu offreId={offreId} fobXof={o.data?.fob_xof ?? null} />
         <p className="mute">{t('rapport.aide_cout_global')}</p>
         <div className="grille2">
           {CHAMPS_NUM.map((k) => (
@@ -142,6 +145,7 @@ export function ImprimerRapportOffres() {
           <tbody>
             <tr><td>{t('rapport.prix_offre')}</td>{c.offres.map((o) => <td key={o.lettre} className="num">{montant(o.montant, o.devise, langue)} {o.incoterm}</td>)}</tr>
             <tr><td>{t('rapport.prix_fob')}</td>{c.offres.map((o) => <td key={o.lettre} className="num">{m(o.fob_xof)}</td>)}</tr>
+            <tr><td>{t('rapport.prix_rendu')}</td>{c.offres.map((o) => <td key={o.lettre} className="num">{o.cout_global.rendu?.estime ? m(o.cout_global.rendu.rendu_xof ?? null) : t('rapport.rendu_non_estime')}</td>)}</tr>
             <tr><td>{t('rapport.cout_global', { n: c.offres[0]?.cout_global.horizon_ans ?? '' })}</td>{c.offres.map((o) => <td key={o.lettre} className="num">{o.cout_global.complet ? m(o.cout_global.total_xof) : t('rapport.incomplet')}</td>)}</tr>
             <tr><td>{t('rapport.delai')}</td>{c.offres.map((o) => <td key={o.lettre} className="num">{o.delai_jours ?? '—'}</td>)}</tr>
             <tr><td>{t('rapport.garantie')}</td>{c.offres.map((o) => <td key={o.lettre} className="num">{o.garantie_mois ?? '—'}</td>)}</tr>

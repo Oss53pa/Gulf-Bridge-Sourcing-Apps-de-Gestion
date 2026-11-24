@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth';
 import { date, dateHeure, montant, pourcent } from '../lib/format';
 import { deposer, FichierRefuse, urlSignee } from '../lib/fichiers';
 import type { Audit, Commande, Devis, Dossier, Phase, Piece, PointBloquant } from '../lib/types';
+import { BesoinDossier } from './Besoin';
 import { Bandeau, Bouton, Champ, Chargement, Entete, Kpis, Onglets, Statut, Tiroir, Vide } from '../components/ui';
 import { useNoms } from '../lib/referentiels';
 import { Depot } from '../components/Depot';
@@ -23,7 +24,7 @@ import { InterventionsDossier } from './Interventions';
 import { ListeRapports } from './RapportOffres';
 import { EchantillonsDossier } from './Echantillons';
 
-type Onglet = 'phases' | 'delais' | 'blocages' | 'rapports' | 'echantillons' | 'devis' | 'commandes' | 'avenants' | 'lc' | 'qualite' | 'receptions' | 'interventions' | 'suivi' | 'couts' | 'journal';
+type Onglet = 'phases' | 'besoin' | 'delais' | 'blocages' | 'rapports' | 'echantillons' | 'devis' | 'commandes' | 'avenants' | 'lc' | 'qualite' | 'receptions' | 'interventions' | 'suivi' | 'couts' | 'journal';
 
 export function FicheDossier() {
   const { id = '' } = useParams();
@@ -53,6 +54,7 @@ export function FicheDossier() {
     { id: 'blocages', lib: `${t('fiche.points_bloquants')} · ${nbBlocages.data ?? 0}` },
     { id: 'delais', lib: t('fiche.delais_taches') },
   ];
+  if (['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role ?? '')) onglets.push({ id: 'besoin', lib: t('fiche.besoin') });
   if (['admin', 'achats_chine', 'hub_afrique', 'agent_pays'].includes(role ?? '')) onglets.push({ id: 'rapports', lib: t('fiche.rapports_offres') });
   if (['admin', 'achats_chine', 'hub_afrique', 'comptable'].includes(role ?? '')) onglets.push({ id: 'echantillons', lib: t('fiche.echantillons') });
   if (['admin', 'hub_afrique', 'agent_pays', 'comptable'].includes(role ?? '')) onglets.push({ id: 'devis', lib: t('fiche.devis') });
@@ -99,6 +101,7 @@ export function FicheDossier() {
           planning={planning.data ?? null} />}
         {onglet === 'delais' && <DelaisDossier dossier={d} phases={phases.data ?? []} onChange={recharger} />}
         {onglet === 'blocages' && <Blocages dossierId={d.id} />}
+        {onglet === 'besoin' && <BesoinDossier dossier={d} />}
         {onglet === 'rapports' && <ListeRapports dossierId={d.id} />}
         {onglet === 'echantillons' && <EchantillonsDossier dossierId={d.id} />}
         {onglet === 'devis' && <DevisDossier dossier={d} />}

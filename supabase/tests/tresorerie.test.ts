@@ -13,10 +13,11 @@ describe('Trésorerie prévisionnelle', () => {
     await db.query(`insert into gbs.taux_change (devise, date_taux, taux_xof) values ('CNY', current_date - 1, 80)`).catch(() => undefined);
     await as(db, m.comptable);
     const l = lundi();
+    // La prévision ne retient que les flux d'aujourd'hui ou plus tard : l'acompte est daté du jour (semaine courante, quel que soit le jour).
     const creer = (p: Record<string, unknown>) => db.query(`select gbs.creer_flux_prevu($1)`, [JSON.stringify({ societe_id: m.ci, ...p })]);
     await creer({ sens: 'sortie', categorie: 'salaires', libelle: 'Salaires et loyers', montant: 1000000, date_prevue: plus(l, 9), mensuel: true, jusqu_au: plus(l, 80) });
     await creer({ sens: 'entree', categorie: 'client', libelle: 'Commission attendue', montant: 3000000, date_prevue: plus(l, 16) });
-    await creer({ sens: 'sortie', categorie: 'fournisseur', libelle: 'Acompte fournisseur CNY', montant: 10000, devise: 'CNY', date_prevue: plus(l, 2) });
+    await creer({ sens: 'sortie', categorie: 'fournisseur', libelle: 'Acompte fournisseur CNY', montant: 10000, devise: 'CNY', date_prevue: new Date().toISOString().slice(0, 10) });
     const p = await rows(db, `select semaine::text s, entrees::int e, sorties::int o, solde::int solde, principal from gbs.prevision_tresorerie($1, 4)`, [m.ci]);
     expect(p.map((x) => x.s)).toEqual([l, plus(l, 7), plus(l, 14), plus(l, 21)]);
     expect(p[0]).toMatchObject({ e: 0, o: 800000, solde: -800000, principal: 'Acompte fournisseur CNY' });
