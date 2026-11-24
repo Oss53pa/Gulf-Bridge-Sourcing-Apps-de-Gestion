@@ -187,13 +187,14 @@ grant execute on function gbs_private.zone_douaniere(text), gbs_private.droits_a
 revoke all on function gbs.droits_import_enregistrer(jsonb), gbs.droits_import_retirer(uuid) from public, anon;
 grant execute on function gbs.droits_import_enregistrer(jsonb), gbs.droits_import_retirer(uuid) to authenticated;
 
--- Lecture du prix rendu d'une offre pour l'écran de mise en concurrence (équipe achats).
+-- Lecture du prix rendu d'une offre pour l'écran de mise en concurrence (équipe achats). Les agents pays n'y ont pas
+-- accès : le détail révèle la valeur FOB et le fret, que la table des offres leur cache déjà.
 create or replace function gbs.prix_rendu(p_offre uuid)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare o gbs.offres;
 begin
   select * into o from gbs.offres where id = p_offre;
-  perform gbs_private.exiger(o.id is not null and gbs_private.has_role('admin','achats_chine','hub_afrique','agent_pays')
+  perform gbs_private.exiger(o.id is not null and gbs_private.has_role('admin','achats_chine','hub_afrique')
                              and gbs_private.dossier_visible(o.dossier_id));
   return gbs_private.prix_rendu_offre(p_offre);
 end $$;

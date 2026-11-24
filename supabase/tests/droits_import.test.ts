@@ -108,5 +108,7 @@ describe('Barème des droits et taxes à l’import', () => {
     await expectError(db, 'GBS_ACCES_REFUSE', `select gbs.prix_rendu($1)`, [o]);
     await as(db, m.inspecteur);
     await expectError(db, 'GBS_ACCES_REFUSE', `select gbs.prix_rendu($1)`, [o]);
+    await as(db, m.agentGA);
+    await expectError(db, 'GBS_ACCES_REFUSE', `select gbs.prix_rendu($1)`, [o]);
   }));
 });
