@@ -88,3 +88,24 @@ fonction concernée (historique des versions dans le tableau de bord Supabase, E
   fournisseurs avec un compte administratrice ou achats. Une fonction PL/pgSQL ne signale une colonne mal nommée
   qu'à son premier appel ; des chiffres affichés, même à zéro, confirment qu'elle fonctionne.
 - Retour en arrière : aucun prévu. Les seuils et la fenêtre de calcul se corrigent dans Paramétrage, sans migration.
+
+## 9. Migration 83 · droits et taxes à l'import, prix rendu
+
+**État : à appliquer.** Hors 7 h–20 h GMT les jours ouvrés, depuis un ordinateur.
+
+- Méthode : celle de la 82. Script unique en une transaction, qui reprend sans modification
+  `20261107000083_droits_import.sql`. Garde-fous : arrêt si la 82 n'est pas inscrite, si la 83 l'est déjà ou si la
+  table `gbs.droits_import` existe. Ligne de contrôle finale attendue : `2 | t | t | t | t | f`. Testé en local sur une
+  base à l'état 82 (refus sans la 82, application, refus d'une deuxième application).
+- Prérequis vérifiés en production le 24 novembre 2026 : 83 absente, table absente, paramètres
+  `assurance.majoration_valeur` (0,1) et `assurance.taux_prime` (0,0035) présents. Sans eux, le prix rendu serait vide.
+- Choix validés : un seul fret par consultation ; TVA à l'import hors coût global (information seulement) ; barème
+  lu à la date du jour (le prix rendu d'une offre déjà comparée change si une nouvelle ligne entre en vigueur) ; un
+  seul article par consultation (une consultation multi-articles serait taxée au code SH de son article).
+- Accès au prix rendu : administratrice, achats Chine, hub Afrique. Pas les agents pays (la valeur FOB et le fret
+  leur restent cachés, comme la table des offres).
+- Vérification : `supabase/verifications/apres_83.sql` (lecture seule).
+- Après application : l'administratrice saisit dans Administration › Droits à l'import les taux confirmés par le
+  transitaire (zone, code SH, date d'effet, source). Barème vide : aucun prix rendu estimé, le coût global reste sur
+  la base FOB et signale l'estimation manquante. Une ligne en vigueur ne se corrige pas : saisir une nouvelle date.
+- Retour en arrière : aucun prévu ; corriger par une nouvelle migration.
