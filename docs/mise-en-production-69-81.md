@@ -91,7 +91,8 @@ fonction concernée (historique des versions dans le tableau de bord Supabase, E
 
 ## 9. Migration 83 · droits et taxes à l'import, prix rendu
 
-**État : à appliquer.** Hors 7 h–20 h GMT les jours ouvrés, depuis un ordinateur.
+**État : fait** le 24 novembre 2026 (mardi, vers 4 h 35 GMT), par l'éditeur SQL du tableau de bord, projet
+« Atlas Studio - Autres Applications » (vgtmljfayiysuvrcmunt ; ne pas confondre avec la Suite financière, fbt…).
 
 - Méthode : celle de la 82. Script unique en une transaction, qui reprend sans modification
   `20261107000083_droits_import.sql`. Garde-fous : arrêt si la 82 n'est pas inscrite, si la 83 l'est déjà ou si la
@@ -104,7 +105,9 @@ fonction concernée (historique des versions dans le tableau de bord Supabase, E
   seul article par consultation (une consultation multi-articles serait taxée au code SH de son article).
 - Accès au prix rendu : administratrice, achats Chine, hub Afrique. Pas les agents pays (la valeur FOB et le fret
   leur restent cachés, comme la table des offres).
-- Vérification : `supabase/verifications/apres_83.sql` (lecture seule).
+- Vérification : `supabase/verifications/apres_83.sql` (lecture seule). Contrôlée après validation :
+  `2|t|t|3|t|f|f|t|0`. Les 7 fonctions de la migration sont identiques à celles du dépôt aux blancs près
+  (empreinte comparée), `gbs.prix_rendu` sans les agents pays.
 - Après application : l'administratrice saisit dans Administration › Droits à l'import les taux confirmés par le
   transitaire (zone, code SH, date d'effet, source). Barème vide : aucun prix rendu estimé, le coût global reste sur
   la base FOB et signale l'estimation manquante. Une ligne en vigueur ne se corrige pas : saisir une nouvelle date.
